@@ -1,0 +1,54 @@
+#!/usr/bin/env node
+// status.mjs - Where this brain stands, for the person and for the skill that
+// guides its construction (/create-hyperbrain reads it to resume at the right
+// stage). Reads only; changes nothing.
+//
+//   node scripts/status.mjs [--json]
+
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { DB_PATH, EMB_DIR, ROOT, config, loadEnv, readVault, validate } from "./lib.mjs";
+import { embeddingsAvailable } from "./embeddings.mjs";
+import { hasRemote, isRepo, tryGit } from "./git.mjs";
+
+loadEnv();
+const cfg = config();
+const { fiches, errors: parseErrors } = readVault();
+const { errors, warnings } = validate(fiches, cfg);
+const byStatus = {};
+const byDomain = Object.fromEntries(cfg.domains.map((d) => [d, 0]));
+for (const f of fiches) {
+  byStatus[f.fm.status] = (byStatus[f.fm.status] ?? 0) + 1;
+  for (const d of [].concat(f.fm.domains)) byDomain[d] = (byDomain[d] ?? 0) + 1;
+}
+const reviews = existsSync(join(ROOT, "reviews")) ? readdirSync(join(ROOT, "reviews")).filter((n) => /^\d{4}-\d{2}-\d{2}\.md$/.test(n)).sort() : [];
+const sources = existsSync(join(ROOT, "SOURCES.md")) ? readFileSync(join(ROOT, "SOURCES.md"), "utf8") : "";
+const s = {
+  name: cfg.name,
+  stage: cfg.stage ?? null,
+  notes: fiches.length,
+  byStatus,
+  byDomain,
+  errors: errors.length + parseErrors.length,
+  warnings: warnings.length,
+  indexBuilt: existsSync(DB_PATH),
+  searchByMeaning: embeddingsAvailable(),
+  vectorFiles: existsSync(EMB_DIR) ? readdirSync(EMB_DIR).filter((n) => n.endsWith(".json")).length : 0,
+  git: isRepo(),
+  remote: isRepo() && hasRemote(),
+  autoPush: cfg.autoPush === true,
+  lastCommit: isRepo() ? tryGit(["log", "-1", "--format=%cs %s"]).out || null : null,
+  uncommitted: isRepo() ? tryGit(["status", "--porcelain"]).out.split("\n").filter(Boolean).length : null,
+  sourcesDone: (sources.match(/^\s*- \[x\]/gim) ?? []).length,
+  sourcesPlanned: (sources.match(/^\s*- \[[ x]\]/gim) ?? []).length,
+  lastReview: reviews.at(-1)?.slice(0, 10) ?? null,
+};
+
+if (process.argv.includes("--json")) console.log(JSON.stringify(s, null, 2));
+else {
+  console.log(`\n${s.name}: ${s.notes} note(s) ${JSON.stringify(s.byStatus)}, stage ${s.stage ?? "?"}`);
+  console.log(`  domains: ${Object.entries(s.byDomain).map(([d, n]) => `${d} ${n}`).join(", ")}`);
+  console.log(`  ${s.errors} error(s), ${s.warnings} warning(s); index ${s.indexBuilt ? "built" : "NOT built"}; search by meaning ${s.searchByMeaning ? `on (${s.vectorFiles} vectors)` : "off"}`);
+  console.log(`  git: ${s.git ? `yes, ${s.remote ? "backed up online" : "local only"}${s.autoPush ? ", automatic push" : ""}; last commit ${s.lastCommit}; ${s.uncommitted} file(s) not committed` : "no"}`);
+  console.log(`  sources: ${s.sourcesDone}/${s.sourcesPlanned} ingested; last review: ${s.lastReview ?? "never"}\n`);
+}
