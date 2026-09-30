@@ -8,7 +8,7 @@
 // ~/.hyperbrain/logs/.
 //
 // The weekly REVIEW is not armed here: it needs Claude, so it is a scheduled
-// task of Claude itself, armed by the /hyperbrain:brain-routines skill.
+// task of Claude itself, armed by the /hyperbrain:add-routines skill.
 //
 // WHY A LAUNCHER. The scheduler runs ~/.hyperbrain/nightly.mjs, which looks
 // up where the plugin lives at run time (pluginRoot in the settings file, or

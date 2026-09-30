@@ -17,7 +17,7 @@ try {
   const HOME = process.env.HYPERBRAIN_HOME || homedir();
   const config = JSON.parse(readFileSync(join(HOME, ".hyperbrain", "config.json"), "utf8"));
   const brain = JSON.parse(readFileSync(join(config.brain, "hyperbrain.json"), "utf8"));
-  if (brain.components?.journal !== true) process.exit(0);
+  if (brain.sources?.journal !== true) process.exit(0);
 
   let input = {};
   try {
@@ -41,7 +41,9 @@ try {
   });
   if (!recent) {
     mkdirSync(dirname(file), { recursive: true });
-    appendFileSync(file, `${JSON.stringify({ t: new Date(now).toISOString(), cwd, project: basename(cwd), session })}\n`, "utf8");
+    // The same event as the sensors of the brain this plugin grew from
+    // (type "session"): one format for every journal.
+    appendFileSync(file, `${JSON.stringify({ t: new Date(now).toISOString(), type: "session", cwd, project: basename(cwd), session })}\n`, "utf8");
   }
   // Now and then, forget what is older than 90 days.
   if (lines.length > 2000) {

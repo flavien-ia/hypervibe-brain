@@ -9,13 +9,17 @@
 // never for ideas, whose maturity is the person's call. Every promotion is
 // listed in the report: the person can send a note back to seed in one word.
 //
-// THE COMPONENTS it reports on, when the person chose them (hyperbrain.json):
-//   journal  the projects worked on with Claude this week (~/.hyperbrain/journal.jsonl)
+// THE LIVE SOURCES it reports on, when the person chose them (hyperbrain.json):
+//   journal  the projects worked on with Claude this week (~/.hyperbrain/journal.jsonl),
+//            with their commits, read from each project's own git history: no
+//            global git hook (that setting belongs to other tools, Hypervibe's
+//            secret scanner among them)
 //   watch    the files that moved in the folders the person asked to follow
 // and always: the sources that point to a file that no longer exists.
 //
 //   node scripts/review.mjs [--apply] [--days 7] [--json]
 
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { HOME, ROOT, config, readVault, requireBrain, today, validate } from "./lib.mjs";
@@ -36,7 +40,7 @@ const rootLimit = dayOffset(ROOT_DAYS);
 
 const cfg = config();
 const L = t(brainLang(ROOT)).review;
-const components = cfg.components ?? {};
+const sources = cfg.sources ?? {};
 const { fiches, errors: parseErrors } = readVault();
 const { errors, warnings } = validate(fiches, cfg);
 const bySlug = new Map(fiches.map((f) => [f.slug, f]));
@@ -63,7 +67,7 @@ const dead = fiches.filter((f) => {
 
 // The work journal: sessions of Claude Code, by project, this week.
 let journal = [];
-if (components.journal) {
+if (sources.journal) {
   const byProject = new Map();
   try {
     for (const line of readFileSync(join(HOME, ".hyperbrain", "journal.jsonl"), "utf8").split("\n")) {
@@ -72,7 +76,7 @@ if (components.journal) {
         const e = JSON.parse(line);
         if (String(e.t).slice(0, 10) < since) continue;
         const k = e.project ?? basename(String(e.cwd ?? ""));
-        const cur = byProject.get(k) ?? { project: k, sessions: 0, last: "" };
+        const cur = byProject.get(k) ?? { project: k, cwd: String(e.cwd ?? ""), sessions: 0, last: "" };
         cur.sessions++;
         if (e.t > cur.last) cur.last = e.t;
         byProject.set(k, cur);
@@ -84,11 +88,20 @@ if (components.journal) {
     // no journal yet
   }
   journal = [...byProject.values()].sort((a, b) => b.last.localeCompare(a.last));
+  // Their commits of the week, from each project's own history.
+  for (const j of journal) {
+    try {
+      const log = execFileSync("git", ["-C", j.cwd, "log", `--since=${since}`, "--no-merges", "--format=%s"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 15_000, windowsHide: true }).trim();
+      j.commits = log ? log.split("\n") : [];
+    } catch {
+      j.commits = [];
+    }
+  }
 }
 
 // The watched folders: what moved this week, newest first.
 let moved = [];
-if (Array.isArray(components.watch) && components.watch.length) {
+if (Array.isArray(sources.watch) && sources.watch.length) {
   const limit = Date.now() - DAYS * 86400_000;
   const walk = (dir, depth) => {
     if (depth > 6 || !existsSync(dir) || moved.length > 2000) return;
@@ -112,7 +125,7 @@ if (Array.isArray(components.watch) && components.watch.length) {
       }
     }
   };
-  for (const d of components.watch) walk(d, 0);
+  for (const d of sources.watch) walk(d, 0);
   moved.sort((a, b) => b.mtime - a.mtime);
 }
 
@@ -145,7 +158,14 @@ if (APPLY && promoted.length) out.push("", L.disagree);
 out.push("", L.orphans(orphans.length), "", ...(orphans.length ? orphans.slice(0, 40).map(line) : [L.none]));
 if (broken.length) out.push("", L.brokenTitle, "", ...broken.slice(0, 40).map((w) => `- ${w.rel}: ${w.msg}`));
 if (dead.length) out.push("", L.deadTitle, "", ...dead.slice(0, 40).map((f) => `- [[${f.slug}]]: ${f.fm.source}`));
-if (components.journal) out.push("", L.journal(journal.length), "", ...(journal.length ? journal.map((j) => L.journalLine(j.project, j.sessions, j.last.slice(0, 10))) : [L.none]));
+if (sources.journal) {
+  out.push("", L.journal(journal.length), "");
+  if (!journal.length) out.push(L.none);
+  for (const j of journal) {
+    out.push(L.journalLine(j.project, j.sessions, j.last.slice(0, 10)) + (j.commits.length ? L.journalCommits(j.commits.length) : ""));
+    for (const c of j.commits.slice(0, 5)) out.push(`  - ${c}`);
+  }
+}
 if (moved.length) out.push("", L.watch(moved.length), "", ...moved.slice(0, 50).map((m) => `- ${m.path}`), ...(moved.length > 50 ? [L.watchMore(moved.length - 50)] : []));
 out.push("");
 

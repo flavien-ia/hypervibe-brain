@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 (in progress)
+
+- **Architecture like Hypervibe's `/bootstrap`**: `create-brain` builds the core (decisions, creation, first notes, sources, Claude reading it everywhere), then proposes the modules by family, each a skill of its own that can also be added later.
+- **The sources are the core**: `brain-sources` sets up the living sources (mail and calendar, watched folders, work with Claude) and lists the writings to bring in.
+- **`add-backup`** gathers the GitHub copy and the cold copy (one, the other, or both); **`add-routines`** replaces `brain-routines`; **`add-meaning`** sets up search by meaning.
+- **Work with Claude**: the same event format as the sensors of the brain Hyperbrain grew from, and the week's commits read from each project's own history, without any global git hook.
+- **`adopt.mjs`**: makes an existing brain (restored, cloned, or built before the plugin) the active one.
+- Test bench: 107 checks.
+
 ## 0.2.0 (2026-09-30)
 
 - **Components**, chosen at the start of `create-brain` with what each one implies: search by meaning, online backup, evening save, weekly review, work journal (a hook of the plugin, nothing written into Claude's settings), mail and calendar (through the person's own Claude connectors), watched folders, cold copy (a weekly, verified git bundle).

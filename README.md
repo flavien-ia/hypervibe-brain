@@ -29,20 +29,30 @@ Then, in a new session: **`/hyperbrain:start-hyperbrain`**.
 
 ## The skills
 
+**The core**, what every brain has:
+
 | Skill | What it does |
 |---|---|
-| `/hyperbrain:start-hyperbrain` | Checks this computer (Node, git, your git identity; GitHub and Cloudflare as options), installs what is missing, offers to create the brain. |
-| `/hyperbrain:create-brain` | The guided construction, in five steps with a gate each: decisions, creation and first notes, Claude reading it everywhere, your sources, the routines. Resumes where you left off. |
+| `/hyperbrain:start-hyperbrain` | Checks this computer (Node, git, your git identity), installs what is missing, offers to create the brain. |
+| `/hyperbrain:create-brain` | The guided construction, like Hypervibe's `/bootstrap`: the decisions, the creation and first notes, the sources, then the modules you want. Resumes where you left off. |
+| `/hyperbrain:brain-sources` | What feeds the brain: your mail and calendar, the folders you work in, your work with Claude, your existing writings. |
+| `/hyperbrain:brain-ingest` | Bring one of your writings in (notes, articles, documents), three trial notes first. |
 | `/hyperbrain:brain` | Capture a thought, classified right away (searches first, never duplicates). |
-| `/hyperbrain:brain-ingest` | Bring one existing source in (notes, articles, documents), three trial notes first. |
-| `/hyperbrain:brain-review` | The weekly review: what is new, promotions, orphans, broken links, proposed links. |
+| `/hyperbrain:brain-review` | The weekly review: what is new, what the sources brought, promotions, orphans, proposed links. |
 | `/hyperbrain:brain-status` | Where the brain stands, and the next useful step. |
-| `/hyperbrain:brain-routines` | Set up, check or stop the evening save and the weekly review. |
-| `/hyperbrain:brain-viz` | See the brain as a map: a page on your computer, or a private web app if Hypervibe is installed. |
+
+**The modules**, proposed at the end of `create-brain`, or added whenever you want:
+
+| Family | Skill | What it does |
+|---|---|---|
+| Protect | `/hyperbrain:add-backup` | A private copy on GitHub, a weekly cold copy in a place you choose, or both. |
+| Make it live | `/hyperbrain:add-routines` | A save every evening (no AI, no cost) and a review every week by Claude. |
+| Use | `/hyperbrain:add-meaning` | Search by meaning. |
+| | `/hyperbrain:brain-viz` | See the brain as a map: a page on your computer, or a private web app if Hypervibe is installed. |
 
 ## Coming next
 
-Using the brain from a second computer, reaching it from the cloud for online agents, and receiving the weekly review by email.
+Your types of notes discovered on your computer and validated with you, your own custom sources, a contacts directory, the weekly letter by email, the brain on a second computer (`add-second-computer`), and reached from the cloud by online agents (`add-cloud`).
 
 ## How it is built
 

@@ -1,9 +1,9 @@
 ---
-name: brain-routines
+name: add-routines
 description: Set up, check or stop the two things that happen without you asking - the evening save of your second brain (no AI, no cost) and its weekly review by Claude.
 ---
 
-# /brain-routines - What happens without the person asking
+# /add-routines - What happens without the person asking
 
 Two automatic tasks, of two different natures. Present them in these words (translated), before setting anything up:
 

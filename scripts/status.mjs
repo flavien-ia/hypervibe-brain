@@ -31,6 +31,7 @@ const s = {
   domains: cfg.domains,
   stage: cfg.stage ?? null,
   lang: cfg.lang ?? null,
+  sources: cfg.sources ?? {},
   components: cfg.components ?? {},
   notes: fiches.length,
   byStatus,

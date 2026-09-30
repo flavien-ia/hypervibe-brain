@@ -25,9 +25,9 @@ A compact picture, in this order:
 2. **Its health**: errors (must be zero: an error blocks the index), warnings, search by meaning on or off.
 3. **Its safety**: saved online or local only, last save, files not yet saved.
 4. **Its life**: the evening save (set up? last run and its result), the weekly review (set up? last report).
-5. **Its components**: which ones are on (`components`), in plain words ("search by meaning, online backup, work journal"), and the watched folders and cold copy folder if any.
+5. **What feeds it and what it does**: the living sources that are on (`sources`: mail and calendar, work with Claude, watched folders) and the modules in place (`components`: online backup, cold copy, search by meaning, map), in plain words.
 6. **The construction**: `stage` below 6 means `/hyperbrain:create-brain` has not been completed; say which step comes next.
 
 ## Recommend one thing
 
-The single most useful next step, by priority: fix errors > finish the construction > arm the routines > put the brain online (backup) > ingest the next source (`/hyperbrain:brain-ingest`) > turn on search by meaning. One sentence, and offer to do it now.
+The single most useful next step, by priority: fix errors > finish the construction (`/hyperbrain:create-brain`) > protect it (`/hyperbrain:add-backup`) > set up the automatic tasks (`/hyperbrain:add-routines`) > add a source (`/hyperbrain:brain-sources`) or bring in the next writing (`/hyperbrain:brain-ingest`) > search by meaning (`/hyperbrain:add-meaning`). One sentence, and offer to do it now.

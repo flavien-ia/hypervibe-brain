@@ -1,24 +1,30 @@
 #!/usr/bin/env node
-// components.mjs - What this brain does beyond its notes, as the person chose
-// it (/hyperbrain:create-brain asks, and it can change at any time). Kept in
-// hyperbrain.json, under "components".
+// components.mjs - What feeds this brain (its SOURCES) and what it does beyond
+// its notes (its MODULES), as the person chose them. Kept in hyperbrain.json.
 //
-//   meaning    search by meaning (needs an embeddings key in the brain's .env)
+// SOURCES, the heart of the brain: what builds and enriches it, week after week.
+//   mail       the week's mail and calendar, read through the person's own
+//              Claude connectors (Gmail, Google Calendar, Outlook...): new
+//              people, meetings, decisions
+//   journal    the work done with Claude: which projects, and their commits
+//   watch      folders whose new and changed files are looked at every week
+// (The person's existing writings are sources too, but they come in once,
+// through /hyperbrain:brain-ingest, and are listed in SOURCES.md.)
+//
+// MODULES, added by the add-* skills:
 //   backup     an online, private copy on GitHub (the brain's git remote)
-//   save       the evening save, armed in the computer's scheduler
-//   review     the weekly review by Claude, as a scheduled task of Claude
-//   journal    the work journal: which projects were worked on with Claude
-//   mail       the weekly review also reads the week's mail and calendar,
-//              through the person's own Claude connectors (Gmail, Google
-//              Calendar, Outlook...): new people, meetings, decisions
-//   watch      folders whose moved files the weekly review lists
-//   coldCopy   a weekly archive of the brain's whole history, in a folder
-//              the person chooses (an external drive, a synced folder...)
+//   coldCopy   a weekly archive of the whole history, in a chosen folder
+//   save       the evening save, in the computer's scheduler
+//   review     the weekly review by Claude
+//   meaning    search by meaning (an embeddings key in the brain's .env)
+//   viz        the persistent app built with Hypervibe
 //
 //   node scripts/components.mjs show [--json]
-//   node scripts/components.mjs set <meaning|backup|save|review|journal|mail> on|off
+//   node scripts/components.mjs source <mail|journal> on|off
 //   node scripts/components.mjs watch add|remove <folder>
+//   node scripts/components.mjs set <backup|save|review|meaning> on|off
 //   node scripts/components.mjs cold-copy <folder> | off
+//   node scripts/components.mjs viz-app <folder> [--auto-push] | off
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -26,10 +32,13 @@ import { HOME, ROOT, requireBrain } from "./lib.mjs";
 
 requireBrain();
 const FILE = join(ROOT, "hyperbrain.json");
-const SWITCHES = ["meaning", "backup", "save", "review", "journal", "mail"];
+const LIVE_SOURCES = ["mail", "journal"];
+const MODULES = ["backup", "save", "review", "meaning"];
 const args = process.argv.slice(2);
 const cfg = JSON.parse(readFileSync(FILE, "utf8"));
+cfg.sources ??= {};
 cfg.components ??= {};
+const src = cfg.sources;
 const c = cfg.components;
 const write = () => writeFileSync(FILE, `${JSON.stringify(cfg, null, 2)}\n`, "utf8");
 const fail = (error) => {
@@ -40,16 +49,20 @@ const fail = (error) => {
 const fwd = (p) => resolve(String(p).replace(/^~(?=[\\/]|$)/, HOME)).replace(/\\/g, "/");
 
 const [command, a1, a2] = args;
-if (command === "set") {
-  if (!SWITCHES.includes(a1) || !["on", "off"].includes(a2)) fail(`usage: set <${SWITCHES.join("|")}> on|off`);
-  c[a1] = a2 === "on";
+if (command === "source") {
+  if (!LIVE_SOURCES.includes(a1) || !["on", "off"].includes(a2)) fail(`usage: source <${LIVE_SOURCES.join("|")}> on|off`);
+  src[a1] = a2 === "on";
   write();
 } else if (command === "watch") {
   if (!["add", "remove"].includes(a1) || !a2) fail("usage: watch add|remove <folder>");
   const dir = fwd(a2);
   if (a1 === "add" && !existsSync(dir)) fail(`${dir} does not exist`);
-  c.watch = [...new Set([...(c.watch ?? []).filter((d) => d !== dir), ...(a1 === "add" ? [dir] : [])])];
-  if (!c.watch.length) delete c.watch;
+  src.watch = [...new Set([...(src.watch ?? []).filter((d) => d !== dir), ...(a1 === "add" ? [dir] : [])])];
+  if (!src.watch.length) delete src.watch;
+  write();
+} else if (command === "set") {
+  if (!MODULES.includes(a1) || !["on", "off"].includes(a2)) fail(`usage: set <${MODULES.join("|")}> on|off`);
+  c[a1] = a2 === "on";
   write();
 } else if (command === "cold-copy") {
   if (!a1) fail("usage: cold-copy <folder> | off");
@@ -72,13 +85,19 @@ if (command === "set") {
     c.viz = { app: { dir, dataFile: "data/brain-graph.json", autoPush: args.includes("--auto-push") } };
   }
   write();
-} else if (command !== "show") fail("usage: show | set | watch | cold-copy | viz-app (see the top of scripts/components.mjs)");
+} else if (command !== "show") fail("usage: show | source | watch | set | cold-copy | viz-app (see the top of scripts/components.mjs)");
 
-const state = Object.fromEntries(SWITCHES.map((s) => [s, c[s] === true]));
-const result = { ok: true, ...state, watch: c.watch ?? [], coldCopy: c.coldCopy?.dir ?? null, vizApp: c.viz?.app ?? null };
+const result = {
+  ok: true,
+  sources: { ...Object.fromEntries(LIVE_SOURCES.map((s) => [s, src[s] === true])), watch: src.watch ?? [] },
+  modules: { ...Object.fromEntries(MODULES.map((m) => [m, c[m] === true])), coldCopy: c.coldCopy?.dir ?? null, vizApp: c.viz?.app ?? null },
+};
 if (args.includes("--json") || command !== "show") console.log(JSON.stringify(result));
 else {
-  for (const s of SWITCHES) console.log(`  ${state[s] ? "on " : "off"}  ${s}`);
-  console.log(`  watch: ${result.watch.length ? result.watch.join(", ") : "none"}`);
-  console.log(`  cold copy: ${result.coldCopy ?? "none"}`);
+  console.log("  sources:");
+  for (const s of LIVE_SOURCES) console.log(`    ${result.sources[s] ? "on " : "off"}  ${s}`);
+  console.log(`    watch: ${result.sources.watch.length ? result.sources.watch.join(", ") : "none"}`);
+  console.log("  modules:");
+  for (const m of MODULES) console.log(`    ${result.modules[m] ? "on " : "off"}  ${m}`);
+  console.log(`    cold copy: ${result.modules.coldCopy ?? "none"}`);
 }
