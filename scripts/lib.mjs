@@ -134,7 +134,37 @@ export function isRunner(cfg = config()) {
 
 /** What only the runner writes and commits. Everything else in the brain is canon. */
 export const DERIVED = [/^index\/embeddings\//, /^index\/(annuaire|directory)\.json$/, /^reviews\//, /^sources\/[^/]+\/(seen|state)\.json$/];
-export const isDerived = (rel) => DERIVED.some((re) => re.test(String(rel).replace(/\\/g, "/")));
+/** What the saves commit at all: anything else in the folder stays out of git. */
+export const OWNED = [/^vault\//, /^index\/embeddings\//, /^reviews\//, /^sources\//, /^index\/(annuaire|directory)\.json$/, /^(BRAIN|SOURCES)\.md$/, /^hyperbrain\.json$/];
+
+// A brain may add its own rules in hyperbrain.json, `ownership`:
+//   "canon":   files any computer commits (settings kept by hand...)
+//   "derived": files only the runner commits (what its own programs compute)
+// A path ending with "/" is a folder. "{computer}" stands for this computer's
+// name: "index/activity/{computer}.jsonl" is each computer's own journal,
+// committed by it and by no other.
+const rulesCache = new Map();
+function ownRules(cfg) {
+  const key = JSON.stringify([cfg.ownership ?? null, computerName()]);
+  if (!rulesCache.has(key)) {
+    const m = (list) => (list ?? []).map((p) => {
+      const s = String(p).replace(/\\/g, "/").replace(/^\.?\//, "").replaceAll("{computer}", computerName());
+      return s.endsWith("/") ? (r) => r.startsWith(s) : (r) => r === s;
+    });
+    rulesCache.set(key, { canon: m(cfg.ownership?.canon), derived: m(cfg.ownership?.derived) });
+  }
+  return rulesCache.get(key);
+}
+const norm = (rel) => String(rel).replace(/\\/g, "/");
+export const isDerived = (rel, cfg = config()) => {
+  const r = norm(rel);
+  return DERIVED.some((re) => re.test(r)) || ownRules(cfg).derived.some((f) => f(r));
+};
+export const isOwned = (rel, cfg = config()) => {
+  const r = norm(rel);
+  const o = ownRules(cfg);
+  return OWNED.some((re) => re.test(r)) || o.canon.some((f) => f(r)) || o.derived.some((f) => f(r));
+};
 
 /** For the scripts that compute: refuse clearly on a computer that is not the runner. */
 export function requireRunner(cfg = config()) {

@@ -14,15 +14,15 @@
 
 import { statSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, config, isDerived, isRunner, readVault, requireBrain, userConfig, validate } from "./lib.mjs";
+import { ROOT, config, isDerived, isOwned, isRunner, readVault, requireBrain, userConfig, validate } from "./lib.mjs";
 
 requireBrain();
 import { commitPaths, isRepo, pushIfAgreed, tryGit } from "./git.mjs";
 import { brainLang, t } from "./i18n.mjs";
 
 const REST_MS = process.argv.includes("--now") ? 0 : 30 * 60_000;
-const runner = isRunner(config());
-const OWNED = [/^vault\//, /^index\/embeddings\//, /^reviews\//, /^sources\//, /^index\/(annuaire|directory)\.json$/, /^(BRAIN|SOURCES)\.md$/, /^hyperbrain\.json$/];
+const cfgNow = config();
+const runner = isRunner(cfgNow);
 
 if (!isRepo()) {
   console.log("not a git repository: nothing to save");
@@ -37,8 +37,8 @@ for (let i = 0; i < status.length; i++) {
   const code = entry.slice(0, 2);
   const path = entry.slice(3);
   if (code[0] === "R" || code[0] === "C") i++; // the old name follows a rename
-  if (!OWNED.some((re) => re.test(path))) continue;
-  if (!runner && isDerived(path)) continue;
+  if (!isOwned(path, cfgNow)) continue;
+  if (!runner && isDerived(path, cfgNow)) continue;
   if (code.includes("?") || code.includes("D") || code.includes("A") || !path.startsWith("vault/")) {
     paths.push(path);
     continue;

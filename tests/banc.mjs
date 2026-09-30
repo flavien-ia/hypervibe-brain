@@ -481,6 +481,17 @@ try {
     const cleared = d.contacts[0].tierFloor === undefined && d.contacts[0].tier === 0;
     check("a source's tier counts only when it declares setsTier, as a floor, and 0 removes it", ignored && floored && kept && cleared, JSON.stringify(d.contacts));
   }
+  {
+    // A brain's own ownership rules (hyperbrain.json, `ownership`).
+    const { isOwned, isDerived, computerName } = await import(pathToFileURL(join(SCRIPTS, "lib.mjs")).href);
+    const own = { ownership: { canon: ["index/contacts-alias.json", "index/activity/{computer}.jsonl"], derived: ["vault/log.md", "index/graph.json", "index/digests/"] } };
+    const me = computerName();
+    const okRules = isOwned("index/contacts-alias.json", own) && !isDerived("index/contacts-alias.json", own)
+      && isOwned(`index/activity/${me}.jsonl`, own) && !isOwned("index/activity/another-computer.jsonl", own)
+      && isOwned("vault/log.md", own) && isDerived("vault/log.md", own) && isDerived("index/digests/2026.json", own)
+      && !isOwned("index/brain.sqlite", own) && isOwned("vault/notes/a.md", {}) && !isDerived("vault/notes/a.md", own);
+    check("a brain's own ownership rules: settings kept by hand, each computer's journal, its own derived files", okRules);
+  }
   const mc = await mcpSession();
   await mc.ask("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "banc", version: "1" } });
   const toolsNow = await mc.ask("tools/list", {});
