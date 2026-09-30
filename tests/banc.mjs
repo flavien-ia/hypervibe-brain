@@ -265,7 +265,23 @@ try {
   const notePath = join(BRAIN, "vault", "notes", "vieille-note.md");
   writeFileSync(notePath, "---\ntype: note\ntitle: \"Vieille note\"\ndomains: [travail]\nstatus: seed\nvisibility: internal\ncreated: 2026-01-01\nupdated: 2026-01-01\nsource: \"banc\"\n---\n\nUne note ancienne.\n", "utf8");
   writeFileSync(idPath, `${readFileSync(idPath, "utf8")}\n[[vieille-note]]\n`, "utf8");
+  // Read by Claude, never linked: it serves, it rises. Linked only by a
+  // program's line: plumbing, it stays a seed.
+  const oldSeed = (slug, title) => writeFileSync(join(BRAIN, "vault", "notes", `${slug}.md`), `---\ntype: note\ntitle: "${title}"\ndomains: [travail]\nstatus: seed\nvisibility: internal\ncreated: 2026-01-02\nupdated: 2026-01-02\nsource: "banc"\n---\n\n${title}.\n`, "utf8");
+  oldSeed("note-lue", "Note lue par Claude");
+  oldSeed("note-plomberie", "Note citee par un programme");
+  writeFileSync(idPath, `${readFileSync(idPath, "utf8")}\nClient : [[note-plomberie]] <!-- client:auto -->\n`, "utf8");
+  {
+    const mc = await mcpSession();
+    await mc.ask("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "banc", version: "1" } });
+    await mc.ask("tools/call", { name: "brain_get", arguments: { slug: "note-lue" } });
+    mc.close();
+  }
+  check("what Claude reads is journaled, locally", existsSync(join(BRAIN, "index", "reads.jsonl")) && readFileSync(join(BRAIN, "index", "reads.jsonl"), "utf8").includes('"slug":"note-lue"'));
   r = node("review.mjs", ["--apply"]);
+  check("a seed Claude read is promoted; one linked only by a program's line is not", readFileSync(join(BRAIN, "vault", "notes", "note-lue.md"), "utf8").includes("status: trusted") && readFileSync(join(BRAIN, "vault", "notes", "note-plomberie.md"), "utf8").includes("status: seed"));
+  const promoLog = readFileSync(join(BRAIN, "index", "promotions.jsonl"), "utf8");
+  check("every promotion is kept with its reason", promoLog.includes('"slug":"vieille-note"') && promoLog.includes('"links":["le-travail-se-deplace"]') && /"slug":"note-lue".*"reads":1/.test(promoLog), promoLog);
   check("the review writes its report", r.ok && existsSync(join(BRAIN, "reviews", `${localDay()}.md`)), r.out);
   check("an old seed linked from another day is promoted", readFileSync(notePath, "utf8").includes("status: trusted"), readFileSync(notePath, "utf8"));
   check("an idea is never promoted by the machine", readFileSync(idPath, "utf8").includes("status: seed"));
@@ -277,7 +293,7 @@ try {
   check("the report lists what moved in the watched folders", report.includes("chapitre-1.md"), report);
   r = node("status.mjs", ["--json"]);
   const st = json(r.out);
-  check("status reads the brain and its components", r.ok && st.notes === 5 && st.git === true && st.remote === false && st.dir === BRAIN.replace(/\\/g, "/") && st.sources.journal === true, r.out);
+  check("status reads the brain and its components", r.ok && st.notes === 7 && st.git === true && st.remote === false && st.dir === BRAIN.replace(/\\/g, "/") && st.sources.journal === true, r.out);
 
   // ---- the cold copy
   node("save.mjs", ["--now"]);

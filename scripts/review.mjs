@@ -5,9 +5,17 @@
 // and meetings bring) is Claude's, in the skill that runs this script.
 //
 // PROMOTION. A seed becomes "trusted" when it has taken root: at least two
-// weeks old, and linked FROM a note born another day. Only with --apply, and
-// never for ideas, whose maturity is the person's call. Every promotion is
-// listed in the report: the person can send a note back to seed in one word.
+// weeks old, and either linked FROM a note born another day, or read by Claude
+// through the tools (the reads journal). Only with --apply, and never for the
+// types the person keeps for themselves (ideas by default). Every promotion is
+// listed in the report and kept in index/promotions.jsonl: the person can send
+// a note back to seed in one word.
+// What does not count as a link (hyperbrain.json, `promotion`):
+//   ignoreLinksFrom  types, or folders (ending with /), whose links are
+//                    plumbing: a domain note that lists everything, a directory
+//                    of people that names each one's company...
+//   a line marked ":auto"  written by a program, not by thought
+//   minDays          the age a seed must reach (14 by default)
 //
 // THE LIVE SOURCES it reports on, when the person chose them (hyperbrain.json):
 //   journal  the projects worked on with Claude this week (~/.hyperbrain/journal.jsonl),
@@ -22,7 +30,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { HOME, ROOT, config, readVault, requireBrain, requireRunner, today, validate, vocab } from "./lib.mjs";
+import { appendFileSync } from "node:fs";
+import { HOME, ROOT, config, promotionsFile, readVault, readsFile, requireBrain, requireRunner, today, validate, vocab } from "./lib.mjs";
 import { brainLang, t } from "./i18n.mjs";
 import { readDirectory } from "./directory.mjs";
 
@@ -32,7 +41,7 @@ requireRunner();
 const args = process.argv.slice(2);
 const APPLY = args.includes("--apply");
 const DAYS = Number(args.includes("--days") ? args[args.indexOf("--days") + 1] : 7);
-const ROOT_DAYS = 14;
+const ROOT_DAYS = Number(config().promotion?.minDays ?? 14);
 
 const dayOffset = (n) => {
   const d = new Date(Date.now() - n * 86400_000);
@@ -51,10 +60,35 @@ const incoming = new Map();
 for (const f of fiches) for (const l of f.links) if (bySlug.has(l)) (incoming.get(l) ?? incoming.set(l, []).get(l)).push(f);
 
 const fresh = fiches.filter((f) => String(f.fm.created) >= since).sort((a, b) => String(b.fm.created).localeCompare(String(a.fm.created)));
-const promotable = fiches.filter(
-  (f) => f.fm.status === "seed" && !cfg.neverPromoted.includes(f.fm.type) && String(f.fm.created) <= rootLimit &&
-    (incoming.get(f.slug) ?? []).some((src) => String(src.fm.created) !== String(f.fm.created)),
-);
+const ignoreFrom = (cfg.promotion?.ignoreLinksFrom ?? []).map(String);
+const plumbing = (src) => ignoreFrom.some((x) => (x.endsWith("/") ? src.rel.startsWith(x) || src.rel.startsWith(`vault/${x}`) : src.fm.type === x));
+// A link counts if one of the lines that make it was not written by a program.
+const byHand = (body, slug) => {
+  const lines = String(body).split("\n").filter((l) => l.includes(`[[${slug}]]`) || l.includes(`[[${slug}|`) || l.includes(`[[${slug}#`));
+  return lines.length > 0 && lines.some((l) => !l.includes(":auto"));
+};
+const reads = new Map();
+try {
+  for (const l of readFileSync(readsFile(cfg), "utf8").split("\n")) {
+    try {
+      const e = JSON.parse(l);
+      if (e.slug) reads.set(e.slug, (reads.get(e.slug) ?? 0) + 1);
+    } catch {
+      // a damaged line does not count
+    }
+  }
+} catch {
+  // no reads yet
+}
+const why = new Map();
+const promotable = fiches.filter((f) => {
+  if (f.fm.status !== "seed" || cfg.neverPromoted.includes(f.fm.type) || String(f.fm.created) > rootLimit) return false;
+  const links = (incoming.get(f.slug) ?? []).filter((src) => String(src.fm.created) !== String(f.fm.created) && !plumbing(src) && byHand(src.body, f.slug)).map((src) => src.slug);
+  const n = reads.get(f.slug) ?? 0;
+  if (!links.length && !n) return false;
+  why.set(f.slug, { links, reads: n });
+  return true;
+});
 const orphans = fiches.filter((f) => f.fm.status !== "archived" && !f.links.length && !(incoming.get(f.slug) ?? []).length);
 const noSource = fiches.filter((f) => !f.fm.source);
 const broken = warnings.filter((w) => w.msg.startsWith("link to a note"));
@@ -173,6 +207,7 @@ if (APPLY && !errors.length && !parseErrors.length) {
     if (next !== raw) {
       writeFileSync(abs, next.replace(/\r?\n/g, nl), "utf8");
       promoted.push(f);
+      appendFileSync(promotionsFile(), `${JSON.stringify({ date: today(), slug: f.slug, type: f.fm.type, ...why.get(f.slug) })}\n`, "utf8");
     }
   }
 }
@@ -187,7 +222,7 @@ out.push(L.health, "", nErr ? L.errors(nErr) : L.noError, L.broken(broken.length
 out.push(L.domains, "", ...cfg.domains.map((d) => `- ${d}: ${byDomain[d] ?? 0}`), "");
 out.push(L.fresh(fresh.length), "", ...(fresh.length ? fresh.slice(0, 60).map(line) : [L.nothingNew]), "");
 const promoList = APPLY ? promoted : promotable;
-out.push(APPLY ? L.promoted(promoted.length) : L.promotable(promotable.length), "", ...(promoList.length ? promoList.map(line) : [L.none]));
+out.push(APPLY ? L.promoted(promoted.length) : L.promotable(promotable.length), "", ...(promoList.length ? promoList.map((f) => { const w = why.get(f.slug) ?? {}; return `${line(f)}${w.links?.length ? ` <- ${w.links.map((x) => `[[${x}]]`).join(", ")}` : ""}${w.reads ? ` (MCP x${w.reads})` : ""}`; }) : [L.none]));
 if (APPLY && promoted.length) out.push("", L.disagree);
 out.push("", L.orphans(orphans.length), "", ...(orphans.length ? orphans.slice(0, 40).map(line) : [L.none]));
 if (broken.length) out.push("", L.brokenTitle, "", ...broken.slice(0, 40).map((w) => `- ${w.rel}: ${w.msg}`));

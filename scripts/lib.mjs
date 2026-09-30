@@ -61,6 +61,10 @@ export function requireBrain() {
 export const ROOT = BRAIN ?? join(HOME, ".hyperbrain", "no-brain");
 export const VAULT = join(ROOT, "vault");
 export const INDEX = join(ROOT, "index");
+/** Which notes Claude read through the tools: a promotion signal, local to each computer, never in git. */
+export const readsFile = (cfg = config()) => join(INDEX, cfg.format === "fr" ? "mcp-journal.jsonl" : "reads.jsonl");
+/** Every promotion, kept: which seed rose, when, and why. */
+export const promotionsFile = () => join(INDEX, "promotions.jsonl");
 export const DB_PATH = join(INDEX, "brain.sqlite");
 export const EMB_DIR = join(INDEX, "embeddings");
 
@@ -133,9 +137,9 @@ export function isRunner(cfg = config()) {
 }
 
 /** What only the runner writes and commits. Everything else in the brain is canon. */
-export const DERIVED = [/^index\/embeddings\//, /^index\/(annuaire|directory)\.json$/, /^reviews\//, /^sources\/[^/]+\/(seen|state)\.json$/];
+export const DERIVED = [/^index\/embeddings\//, /^index\/(annuaire|directory)\.json$/, /^index\/promotions\.jsonl$/, /^reviews\//, /^sources\/[^/]+\/(seen|state)\.json$/];
 /** What the saves commit at all: anything else in the folder stays out of git. */
-export const OWNED = [/^vault\//, /^index\/embeddings\//, /^reviews\//, /^sources\//, /^index\/(annuaire|directory)\.json$/, /^(BRAIN|SOURCES)\.md$/, /^hyperbrain\.json$/];
+export const OWNED = [/^vault\//, /^index\/embeddings\//, /^reviews\//, /^sources\//, /^index\/(annuaire|directory)\.json$/, /^index\/promotions\.jsonl$/, /^(BRAIN|SOURCES)\.md$/, /^hyperbrain\.json$/];
 
 // A brain may add its own rules in hyperbrain.json, `ownership`:
 //   "canon":   files any computer commits (settings kept by hand...)

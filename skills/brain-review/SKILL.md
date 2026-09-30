@@ -30,7 +30,7 @@ With errors: note them for the report, and **do not** run step 3 (a promotion on
 node "${CLAUDE_SKILL_DIR}/../../scripts/review.mjs" --apply
 ```
 
-It writes `reviews/<today>.md`, in the brain's language: the new notes, the seeds that took root and become `trusted` (at least two weeks old and linked from a note born another day; never an idea, whose maturity is the person's call), orphans, broken links, sources that no longer exist, domain coverage, and, depending on the living sources chosen (`sources` in `status.mjs --json`), the projects worked on with Claude with their commits of the week, and the files that moved in the watched folders.
+It writes `reviews/<today>.md`, in the brain's language: the new notes, the seeds that took root and become `trusted` (at least two weeks old, and either linked by hand from a note born another day, or read by Claude through the brain's tools; never an idea, whose maturity is the person's call; `promotion` in `hyperbrain.json` can set the age and which notes' links are plumbing, and each promotion is kept with its reason in `index/promotions.jsonl`), orphans, broken links, sources that no longer exist, domain coverage, and, depending on the living sources chosen (`sources` in `status.mjs --json`), the projects worked on with Claude with their commits of the week, and the files that moved in the watched folders.
 
 4. Rebuild: `node "${CLAUDE_SKILL_DIR}/../../scripts/build.mjs" --quiet`.
 5. **Your part, the thinking.** Read the report, and add to it, in the brain's language:

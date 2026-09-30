@@ -8,3 +8,6 @@ node_modules/
 vault/danger-zone/
 # The viewer is rebuilt from the notes.
 viz/
+# What Claude read on this computer: a promotion signal, never shared.
+index/reads.jsonl
+index/mcp-journal.jsonl

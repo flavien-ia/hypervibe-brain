@@ -9,8 +9,8 @@
 //
 //   node scripts/tool.mjs <tool name>     (arguments as JSON on stdin; result as JSON on stdout)
 
-import { readFileSync } from "node:fs";
-import { hasBrain } from "./lib.mjs";
+import { appendFileSync, readFileSync } from "node:fs";
+import { hasBrain, readsFile } from "./lib.mjs";
 import { freshDb, get, neighbors, search, stats, timeline } from "./engine.mjs";
 import { readDirectory, searchDirectory } from "./directory.mjs";
 
@@ -45,6 +45,16 @@ try {
     try {
       const result = await RUN[name](db, args);
       console.log(JSON.stringify({ ok: true, result: warning ? { warning, result } : result }));
+      // What Claude read: a seed read is a seed that serves (see review.mjs).
+      const read = name === "brain_get" && result && !result.error ? [args.slug] : name === "brain_search" && Array.isArray(result) ? result.slice(0, 5).map((r) => r.slug) : [];
+      if (read.length) {
+        try {
+          const at = new Date().toISOString();
+          appendFileSync(readsFile(), read.map((slug) => JSON.stringify({ at, tool: name, slug })).join("\n") + "\n", "utf8");
+        } catch {
+          // a comfort, not a guarantee
+        }
+      }
     } finally {
       db.close();
     }
