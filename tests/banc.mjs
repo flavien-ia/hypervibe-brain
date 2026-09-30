@@ -547,6 +547,8 @@ try {
     writeFileSync(join(posts, "data.json"), JSON.stringify([item(1, "Premier post", "Trente likes."), item(2, "Vieux post", "Le vieux post, relu.")]), "utf8");
     r = node("sources.mjs", ["run", "fil"]);
     check("while nobody touches them, the source keeps its records up to date", r.ok && json(r.out).runs[0].updated === 2 && readFileSync(firstPost, "utf8").includes("Trente likes."), r.out);
+    r = node("save.mjs");
+    check("what a source just wrote is saved the same evening, without waiting like a note being edited", r.ok && git("status", "--porcelain", "vault/sources/linkedin/premier-post.md").trim() === "", r.out);
     writeFileSync(firstPost, readFileSync(firstPost, "utf8").replace("Trente likes.", "Trente likes. Ma note a la main."), "utf8");
     writeFileSync(join(posts, "data.json"), JSON.stringify([item(1, "Premier post", "Cent likes."), item(2, "Vieux post", "Le vieux post, relu.")]), "utf8");
     r = node("sources.mjs", ["run", "fil"]);

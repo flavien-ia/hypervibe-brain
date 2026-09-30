@@ -63,6 +63,43 @@ export const VAULT = join(ROOT, "vault");
 export const INDEX = join(ROOT, "index");
 /** Which notes Claude read through the tools: a promotion signal, local to each computer, never in git. */
 export const readsFile = (cfg = config()) => join(INDEX, cfg.format === "fr" ? "mcp-journal.jsonl" : "reads.jsonl");
+// WHAT THE SOURCES JUST WROTE. The evening save holds back a note modified
+// less than 30 minutes ago (a person may be editing it). A note a source wrote
+// a minute ago is not being edited: the sources record what they wrote, with
+// the file's date, and the save takes it at once if it has not changed since.
+// Local to this computer (~/.hyperbrain/written.json), by brain.
+const WRITTEN = () => join(HOME, ".hyperbrain", "written.json");
+export function readWritten() {
+  try {
+    return JSON.parse(readFileSync(WRITTEN(), "utf8"))[ROOT.replace(/\\/g, "/")] ?? {};
+  } catch {
+    return {};
+  }
+}
+export function setWritten(map) {
+  let all = {};
+  try {
+    all = JSON.parse(readFileSync(WRITTEN(), "utf8"));
+  } catch {
+    // first time
+  }
+  all[ROOT.replace(/\\/g, "/")] = map;
+  mkdirSync(join(HOME, ".hyperbrain"), { recursive: true });
+  writeFileSync(WRITTEN(), `${JSON.stringify(all)}\n`, "utf8");
+}
+/** Records notes a source has just written (paths relative to the brain). */
+export function noteWritten(rels) {
+  if (!rels.length) return;
+  const m = readWritten();
+  for (const rel of rels) {
+    try {
+      m[rel] = statSync(join(ROOT, rel)).mtimeMs;
+    } catch {
+      // gone meanwhile
+    }
+  }
+  setWritten(m);
+}
 /** Every promotion, kept: which seed rose, when, and why. */
 export const promotionsFile = () => join(INDEX, "promotions.jsonl");
 // Where the index and the vectors live. A brain that already has files of

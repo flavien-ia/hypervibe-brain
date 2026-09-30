@@ -40,7 +40,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, config, readVault, requireBrain, requireRunner, setUserConfig, sha256, today, userConfig } from "./lib.mjs";
+import { ROOT, config, noteWritten, readVault, requireBrain, requireRunner, setUserConfig, sha256, today, userConfig } from "./lib.mjs";
 import { checkNote, createNote, fileHash, refreshOwn, refreshSeed, slugIndex } from "./notes.mjs";
 import { readDirectory, upsert, writeDirectory } from "./directory.mjs";
 
@@ -200,6 +200,7 @@ function runOne(n) {
   const slugs = slugIndex();
   const bySource = sourceIndex();
   const res = { name: n, ok: true, created: 0, updated: 0, unchanged: 0, adopted: 0, touched: 0, contacts: 0, refused: [...x.bad] };
+  const wrote = [];
   // A source may also feed the contacts directory: lines { "kind": "contact", "address", ... }.
   // Its counts are added (a period observed) or, with "contactCounts": "set" in its
   // definition, replace the old ones (a harvest that recounts everything).
@@ -230,19 +231,23 @@ function runOne(n) {
         }
         const u = d.finished ? refreshOwn(entry.slug, note, cfg, slugs, entry.hash) : refreshSeed(entry.slug, note, cfg, slugs);
         if (u.hash) seen[id] = { ...entry, hash: u.hash };
-        if (u.updated) res.updated++;
-        else if (u.reason === "touched") res.touched++;
+        if (u.updated) {
+          res.updated++;
+          wrote.push(u.rel);
+        } else if (u.reason === "touched") res.touched++;
         else res.unchanged++;
       } else {
         const c = createNote(note, cfg, slugs);
         seen[id] = { slug: c.slug, hash: fileHash(join(ROOT, c.rel)) };
         res.created++;
+        wrote.push(c.rel);
       }
     } catch (e) {
       res.refused.push(`${id}: ${e.message}`);
     }
   }
   writeJson(join(DIR, n, "seen.json"), seen);
+  noteWritten(wrote);
   writeJson(join(DIR, n, "state.json"), {
     ...st,
     lastRun: now,

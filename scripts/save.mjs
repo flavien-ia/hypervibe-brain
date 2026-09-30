@@ -14,7 +14,7 @@
 
 import { statSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, config, isDerived, isOwned, isRunner, readVault, requireBrain, userConfig, validate } from "./lib.mjs";
+import { ROOT, config, isDerived, isOwned, isRunner, readVault, readWritten, requireBrain, setWritten, userConfig, validate } from "./lib.mjs";
 
 requireBrain();
 import { commitPaths, isRepo, pushIfAgreed, tryGit } from "./git.mjs";
@@ -23,6 +23,8 @@ import { brainLang, t } from "./i18n.mjs";
 const REST_MS = process.argv.includes("--now") ? 0 : 30 * 60_000;
 const cfgNow = config();
 const runner = isRunner(cfgNow);
+// What a source wrote this evening, untouched since: at rest at once (lib.mjs).
+const written = readWritten();
 
 if (!isRepo()) {
   console.log("not a git repository: nothing to save");
@@ -44,12 +46,14 @@ for (let i = 0; i < status.length; i++) {
     continue;
   }
   let age = Infinity;
+  let mtime = null;
   try {
-    age = Date.now() - statSync(join(ROOT, path)).mtimeMs;
+    mtime = statSync(join(ROOT, path)).mtimeMs;
+    age = Date.now() - mtime;
   } catch {
     // gone meanwhile
   }
-  (age >= REST_MS ? paths : waiting).push(path);
+  (age >= REST_MS || (written[path] !== undefined && written[path] === mtime) ? paths : waiting).push(path);
 }
 
 // No commit hook guards this repository (a global hooks setting, such as the
@@ -70,6 +74,8 @@ else {
     console.log(`NOT saved: ${c.err.split("\n").slice(0, 3).join(" | ").slice(0, 400)}`);
     process.exitCode = 1;
   } else {
+    // What was committed no longer needs remembering.
+    if (Object.keys(written).length) setWritten(Object.fromEntries(Object.entries(written).filter(([rel]) => !paths.includes(rel))));
     const p = process.argv.includes("--no-push") || userConfig().sync === true ? { pushed: false, reason: "the synchronisation sends it" } : pushIfAgreed();
     console.log(`saved: ${paths.length} file(s)${waiting.length ? `, ${waiting.length} still being edited` : ""}; ${p.pushed ? "pushed" : p.reason}`);
   }
