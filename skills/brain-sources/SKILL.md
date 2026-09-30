@@ -51,6 +51,8 @@ Beyond what every brain has, each person has sources of their own: their posts k
 
 `node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" list` shows the ones already defined.
 
+**One to offer to everyone who has the mail source: a capture address.** A thought on the go, sent by email to an address of theirs (an alias such as `brain@...`, or a label or a subject word such as `[brain]`), becomes a seed. Ask which address or mark they want. If they do, define it as a source done by Claude, every week, type the brain's note type, and write its instructions with them: search the mail sent to that address (or bearing that mark) since the source's last success; each message becomes one seed, its subject as the title, its text reworded as a note (never pasted whole), its source `mail:<message id>`, and nothing else from the mailbox is read. A person who wants it every evening instead needs a small program that reads their mail by itself (a `script` source, with a key of their own): define it with them the same way.
+
 For each one they want, define it **with them**, in plain words first:
 
 1. **What it reads**, and where (a folder of exports, a web address, a database, an app...).
