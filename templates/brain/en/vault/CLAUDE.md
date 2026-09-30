@@ -18,21 +18,11 @@ The body, a few sentences or a few pages. Links to other notes
 are written [[slug-of-the-other-note]].
 ```
 
-## The nine types, and their folder
+## The types of this brain, and their folder
 
-The folder **is** the type: an `idea` lives in `vault/ideas/`, and nowhere else.
+Chosen with {{NAME}} at the creation. The folder **is** the type: a note of a type lives in its folder, and nowhere else. A type is added by asking Claude.
 
-| type | folder | for |
-|---|---|---|
-| `idea` | `ideas/` | an intuition, a hypothesis, something to dig into |
-| `concept` | `concepts/` | a notion one defines and reuses |
-| `note` | `notes/` | a fact, an observation, a decision and its reason |
-| `project` | `projects/` | a project, ongoing or finished |
-| `person` | `people/` | someone who matters |
-| `organization` | `organizations/` | a company, an institution, a group |
-| `publication` | `publications/` | something published (article, post, book, video) |
-| `event` | `events/` | a talk, a meeting, a dated moment |
-| `source` | `sources/` | a work or a reading that feeds the thinking |
+{{TYPES}}
 
 ## The fields
 
@@ -41,6 +31,8 @@ The folder **is** the type: an `idea` lives in `vault/ideas/`, and nowhere else.
 - `visibility`: `public`, `internal` (the default), `private` (the content is never shown to an AI).
 - `created`, `updated`: dates `YYYY-MM-DD`.
 - `source`: where the content comes from. A file path, a web address, `claude://chat/2026-09-30`... Always fill it: it is what allows checking.
+
+Other fields may be added as the brain needs them (a date of event, a web address...): they are kept as they are.
 
 ## What is not a note
 

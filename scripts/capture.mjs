@@ -14,7 +14,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { ROOT, STATUSES, TYPES, VISIBILITIES, VAULT, config, listFiches, parseFiche, requireBrain, slugify, toPosix, today, validate } from "./lib.mjs";
+import { ROOT, STATUSES, VISIBILITIES, VAULT, config, listFiches, parseFiche, requireBrain, slugify, toPosix, today, validate, vocab } from "./lib.mjs";
 import { commitPaths, isRepo, pushIfAgreed } from "./git.mjs";
 import { brainLang, t } from "./i18n.mjs";
 
@@ -28,20 +28,25 @@ const fail = (msg) => {
 
 requireBrain();
 const cfg = config();
+const voc = vocab(cfg);
+const TYPES = cfg.types;
+// A status or a visibility may be given in the brain's words (graine, prive)
+// or in the canonical ones (seed, private): both are understood.
+const understand = (map, v) => Object.entries(map).find(([canon, word]) => v === canon || v === word)?.[0] ?? v;
 const title = opt("--title");
 const type = opt("--type");
 const domains = list(opt("--domains"));
 const links = list(opt("--links"));
-const status = opt("--status", "seed");
-const visibility = opt("--visibility", "internal");
+const status = understand(voc.status, opt("--status", "seed"));
+const visibility = understand(voc.visibility, opt("--visibility", "internal"));
 const source = opt("--source", `claude://chat/${today()}`);
 
 if (!title) fail("--title is required");
-if (!TYPES[type]) fail(`--type must be one of ${Object.keys(TYPES).join(", ")}`);
+if (!TYPES[type]) fail(`--type must be one of this brain's types: ${Object.keys(TYPES).join(", ")}`);
 if (!domains.length) fail(`--domains is required (this brain's domains: ${cfg.domains.join(", ")})`);
 for (const d of domains) if (!cfg.domains.includes(d)) fail(`"${d}" is not a domain of this brain (${cfg.domains.join(", ")})`);
-if (!STATUSES.includes(status)) fail(`--status must be one of ${STATUSES.join(", ")}`);
-if (!VISIBILITIES.includes(visibility)) fail(`--visibility must be one of ${VISIBILITIES.join(", ")}`);
+if (!STATUSES.includes(status)) fail(`--status must be one of ${Object.values(voc.status).join(", ")}`);
+if (!VISIBILITIES.includes(visibility)) fail(`--visibility must be one of ${Object.values(voc.visibility).join(", ")}`);
 
 let body = opt("--body-file") ? readFileSync(opt("--body-file"), "utf8") : readFileSync(0, "utf8");
 body = body.replace(/\r\n/g, "\n").trim();
@@ -55,16 +60,18 @@ const missing = links.filter((l) => !listFiches().some((f) => f.replace(/\\/g, "
 if (missing.length) fail(`these links point to no note: ${missing.join(", ")}`);
 
 const q = (s) => JSON.stringify(String(s));
+// Written in the brain's own words.
+const k = voc.keys;
 const text = [
   "---",
-  `type: ${type}`,
-  `title: ${q(title)}`,
-  `domains: [${domains.join(", ")}]`,
-  `status: ${status}`,
-  `visibility: ${visibility}`,
-  `created: ${today()}`,
-  `updated: ${today()}`,
-  `source: ${q(source)}`,
+  `${k.type}: ${type}`,
+  `${k.title}: ${q(title)}`,
+  `${k.domains}: [${domains.join(", ")}]`,
+  `${k.status}: ${voc.status[status]}`,
+  `${k.visibility}: ${voc.visibility[visibility]}`,
+  `${k.created}: ${today()}`,
+  `${k.updated}: ${today()}`,
+  `${k.source}: ${q(source)}`,
   "---",
   "",
   body,

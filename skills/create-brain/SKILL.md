@@ -49,10 +49,17 @@ The most important step, and it produces no code. Ask the questions **one at a t
 
 1. **Why?** What do they expect from their brain? Finding again what they thought, writing in their own voice, not losing the people they meet, preparing a book... One or two sentences.
 2. **Their domains**: the 3 to 8 big areas of their life and work (for instance work, writing, family, money, health, learning). One word each. Every note will carry one or two: too few and they sort nothing, too many and every note is a hesitation.
-3. **What never goes in**: health, family, money? Explain the two levels:
+3. **Their types of notes**: the kinds of things their brain will hold. They are theirs, not the plugin's: a speaker has talks, a writer books, a consultant clients and missions, a researcher papers. Look at their computer first, **with their agreement** (say that you only read folder names and count files, never open one):
+
+```bash
+node "${CLAUDE_SKILL_DIR}/../../scripts/discover.mjs"
+```
+
+   From what it shows (the folders and their sub-folders, the kinds of files, the code projects, the way their Claude already sorts its memory), and from the conversation, **propose a list of 5 to 12 types**, each with one sentence of what goes in it and the evidence that suggested it ("*talks*: your folder Travail/Conférences holds 60 presentations"). Always include a few basics: notes (facts, decisions), ideas, people, projects. Then discuss: they remove, rename, add. Names are single lowercase words without accents, in their language (`conference`, `livre`, `oeuvre` for a French brain), each with its folder (usually the plural). One question to settle: which types hold ideas whose maturity is theirs to judge (never promoted by the machine; ideas by default).
+4. **What never goes in**: health, family, money? Explain the two levels:
    - a *private* note exists in the brain, but its content is **never shown to an AI** (neither by search nor to Claude);
    - a "danger zone" folder is not even read, nor backed up: the last resort.
-4. **Where it lives.** By default a `hyperbrain` folder in their home folder (find its real path with `node -e "console.log(require('os').homedir())"`), or next to their other projects if they have a place for them. **Never inside a synchronised folder**: these tools damage the history and the search index of the brain (the creation refuses such a folder). What to say depends on `os`:
+5. **Where it lives.** By default a `hyperbrain` folder in their home folder (find its real path with `node -e "console.log(require('os').homedir())"`), or next to their other projects if they have a place for them. **Never inside a synchronised folder**: these tools damage the history and the search index of the brain (the creation refuses such a folder). What to say depends on `os`:
    - **windows**: not in Dropbox, OneDrive or Google Drive. Careful: Windows often places the *Documents* and *Desktop* folders inside OneDrive without saying so.
    - **mac**: not in Dropbox, OneDrive, Google Drive or iCloud Drive. Careful: when "Desktop and Documents Folders" is ticked in the iCloud settings, the *Desktop* and *Documents* folders keep their usual place but are stored in iCloud (the creation detects it and refuses them).
    - **linux**: not in a folder synchronised by Dropbox, Nextcloud or similar.
@@ -64,12 +71,12 @@ Summarise the answers in a short block and have it validated. **Gate 1: the summ
 ### Create
 
 ```bash
-node "${CLAUDE_SKILL_DIR}/../../scripts/init.mjs" --dir "BRAIN_DIR" --name "<first name>" --domains "<d1>,<d2>,<d3>" --lang <fr|en>
+node "${CLAUDE_SKILL_DIR}/../../scripts/init.mjs" --dir "BRAIN_DIR" --name "<first name>" --domains "<d1>,<d2>,<d3>" --types "<type>:<folder>,<type>:<folder>,..." --lang <fr|en>
 ```
 
-`--lang`: the language of the conversation if it is French or English; for any other language, `en`, and you translate the brain's documents when you fill them. One JSON line comes back. `identity: null` means git has no name: go back to `/hyperbrain:start-hyperbrain`, Step 3. If it answers that a brain already exists, ask whether the new one should replace it as the active brain (the old one is not deleted), and repeat with `--switch` only if they say so.
+`--lang`: the language of the conversation if it is French or English; for any other language, `en`, and you translate the brain's documents when you fill them. **The format of the notes follows it**: a French brain writes `titre`, `domaines`, `statut: graine`... `--types`: the types validated in Step 1. If some types never promoted by the machine differ from the default (ideas), set `neverPromoted` in `hyperbrain.json`. One JSON line comes back. `identity: null` means git has no name: go back to `/hyperbrain:start-hyperbrain`, Step 3. If it answers that a brain already exists, ask whether the new one should replace it as the active brain (the old one is not deleted), and repeat with `--switch` only if they say so.
 
-Then write the founding document `BRAIN.md` from Step 1, **in the person's language**, keeping its structure: fill `{{WHY}}`, `{{DOMAINS}}`, `{{PRIVACY}}`; leave `{{COMPONENTS}}` for Step 5. Show it, then save:
+In `vault/CLAUDE.md`, the table of types has a column "for": fill it for the types that have no description yet, with the sentence agreed in Step 1. Then write the founding document `BRAIN.md` from Step 1, **in the person's language**, keeping its structure: fill `{{WHY}}`, `{{DOMAINS}}`, `{{PRIVACY}}`; leave `{{COMPONENTS}}` for Step 5. Show it, then save:
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/../../scripts/save.mjs" --now

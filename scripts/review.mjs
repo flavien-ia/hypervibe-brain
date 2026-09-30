@@ -22,7 +22,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { HOME, ROOT, config, readVault, requireBrain, today, validate } from "./lib.mjs";
+import { HOME, ROOT, config, readVault, requireBrain, today, validate, vocab } from "./lib.mjs";
 import { brainLang, t } from "./i18n.mjs";
 
 requireBrain();
@@ -49,7 +49,7 @@ for (const f of fiches) for (const l of f.links) if (bySlug.has(l)) (incoming.ge
 
 const fresh = fiches.filter((f) => String(f.fm.created) >= since).sort((a, b) => String(b.fm.created).localeCompare(String(a.fm.created)));
 const promotable = fiches.filter(
-  (f) => f.fm.status === "seed" && f.fm.type !== "idea" && String(f.fm.created) <= rootLimit &&
+  (f) => f.fm.status === "seed" && !cfg.neverPromoted.includes(f.fm.type) && String(f.fm.created) <= rootLimit &&
     (incoming.get(f.slug) ?? []).some((src) => String(src.fm.created) !== String(f.fm.created)),
 );
 const orphans = fiches.filter((f) => f.fm.status !== "archived" && !f.links.length && !(incoming.get(f.slug) ?? []).length);
@@ -135,7 +135,11 @@ if (APPLY && !errors.length && !parseErrors.length) {
     const abs = join(ROOT, f.rel);
     const raw = readFileSync(abs, "utf8");
     const nl = raw.includes("\r\n") ? "\r\n" : "\n";
-    const next = raw.replace(/^status:\s*seed\s*$/m, "status: trusted").replace(/^updated:\s*\S+\s*$/m, `updated: ${today()}`);
+    // In the brain's own words: `statut: graine` in a French brain.
+    const v = vocab(cfg);
+    const next = raw
+      .replace(new RegExp(`^${v.keys.status}:\\s*${v.status.seed}\\s*$`, "m"), `${v.keys.status}: ${v.status.trusted}`)
+      .replace(new RegExp(`^${v.keys.updated}:\\s*\\S+\\s*$`, "m"), `${v.keys.updated}: ${today()}`);
     if (next !== raw) {
       writeFileSync(abs, next.replace(/\r?\n/g, nl), "utf8");
       promoted.push(f);

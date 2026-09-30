@@ -64,21 +64,39 @@ export const INDEX = join(ROOT, "index");
 export const DB_PATH = join(INDEX, "brain.sqlite");
 export const EMB_DIR = join(INDEX, "embeddings");
 
-/** The nine types, and the folder each one lives in. The folder IS the type. */
-export const TYPES = {
-  idea: "ideas",
-  concept: "concepts",
-  note: "notes",
-  project: "projects",
-  person: "people",
-  organization: "organizations",
-  publication: "publications",
-  event: "events",
-  source: "sources",
+// THE FORMAT SPEAKS THE BRAIN'S LANGUAGE. A French brain writes `titre`,
+// `domaines`, `statut: graine`; an English one `title`, `domains`,
+// `status: seed`. Inside the scripts everything is read into one canonical
+// shape (the English words below), so that no script cares which language a
+// brain speaks. The French vocabulary is exactly the format of the brain this
+// plugin grew from: such a brain passes as it is, not a letter changed.
+export const VOCAB = {
+  en: {
+    keys: { type: "type", title: "title", domains: "domains", status: "status", visibility: "visibility", created: "created", updated: "updated", source: "source" },
+    status: { seed: "seed", trusted: "trusted", archived: "archived" },
+    visibility: { public: "public", internal: "internal", private: "private" },
+  },
+  fr: {
+    keys: { type: "type", title: "titre", domains: "domaines", status: "statut", visibility: "visibilite", created: "cree", updated: "touche", source: "source" },
+    status: { seed: "graine", trusted: "fiable", archived: "archive" },
+    visibility: { public: "public", internal: "interne", private: "prive" },
+  },
 };
-export const FOLDER_TO_TYPE = Object.fromEntries(Object.entries(TYPES).map(([t, f]) => [f, t]));
 export const STATUSES = ["seed", "trusted", "archived"];
 export const VISIBILITIES = ["public", "internal", "private"];
+
+// THE TYPES BELONG TO THE BRAIN, not to the plugin: they live in
+// hyperbrain.json (`types`: type => folder, the folder IS the type), proposed
+// from what the person's computer shows and validated with them at the
+// creation. These are only what a brain gets when it has none.
+export const DEFAULT_TYPES = {
+  en: { note: "notes", idea: "ideas", concept: "concepts", project: "projects", person: "people", organization: "organizations", publication: "publications", event: "events", source: "sources" },
+  fr: { note: "notes", idee: "idees", concept: "concepts", projet: "projets", personne: "personnes", organisation: "organisations", publication: "publications", evenement: "evenements", source: "sources" },
+};
+// The maturity of an idea is the person's call: the weekly review never
+// promotes these types by itself.
+export const DEFAULT_NEVER_PROMOTED = { en: ["idea"], fr: ["idee"] };
+
 /** Never read, never indexed, never copied anywhere: the last resort. */
 const SKIPPED_DIRS = new Set(["danger-zone"]);
 const SKIPPED_FILES = new Set(["CLAUDE.md", "README.md"]);
@@ -89,8 +107,25 @@ export function config() {
   cfg.embeddings.model ??= "text-embedding-3-small";
   cfg.embeddings.dims ??= 512;
   cfg.domains ??= [];
+  cfg.format = VOCAB[cfg.format] ? cfg.format : cfg.lang === "fr" ? "fr" : "en";
+  cfg.types = cfg.types && Object.keys(cfg.types).length ? cfg.types : DEFAULT_TYPES[cfg.format];
+  cfg.neverPromoted ??= DEFAULT_NEVER_PROMOTED[cfg.format];
+  // Paths inside vault/ that are not notes (an inbox, a log...), as the brain declares them.
+  cfg.exclude ??= [];
   return cfg;
 }
+
+/** config(), or null when there is no brain (listing a vault must not need one). */
+function safeConfig() {
+  try {
+    return config();
+  } catch {
+    return null;
+  }
+}
+
+/** The words of this brain's format. */
+export const vocab = (cfg = safeConfig()) => VOCAB[cfg?.format] ?? VOCAB.en;
 
 /** Reads the brain's own .env into process.env (without overriding). */
 export function loadEnv() {
@@ -126,11 +161,13 @@ export function slugify(title) {
 /** Every note of the vault, as absolute paths. */
 export function listFiches() {
   const out = [];
+  const excluded = new Set((safeConfig()?.exclude ?? []).map((x) => String(x).replace(/\\/g, "/").replace(/^\/+|\/+$/g, "")));
   const walk = (dir) => {
     if (!existsSync(dir)) return;
     for (const e of readdirSync(dir, { withFileTypes: true })) {
       if (e.name.startsWith(".")) continue;
       const p = join(dir, e.name);
+      if (excluded.has(toPosix(relative(VAULT, p)))) continue;
       if (e.isDirectory()) {
         if (!SKIPPED_DIRS.has(e.name)) walk(p);
       } else if (e.name.endsWith(".md") && !SKIPPED_FILES.has(e.name)) out.push(p);
@@ -219,12 +256,34 @@ export const sha256 = (s) => createHash("sha256").update(s).digest("hex");
  * checks files out with CRLF, and a hash that depends on line endings makes a
  * fresh clone believe every note changed (and re-embed all of them).
  */
-export function parseFiche(abs) {
+/**
+ * The frontmatter as the brain wrote it, read into the canonical shape: the
+ * scripts only ever see `title`, `status: seed`... whatever the brain's
+ * language. The other fields the brain uses (a date of event, a url, roles...)
+ * are kept as they are.
+ */
+function canonical(raw, voc) {
+  const k = voc.keys;
+  const back = (map, v) => Object.entries(map).find(([, word]) => word === v)?.[0] ?? v;
+  return {
+    ...raw,
+    type: raw[k.type],
+    title: raw[k.title],
+    domains: raw[k.domains],
+    status: back(voc.status, raw[k.status]),
+    visibility: back(voc.visibility, raw[k.visibility]),
+    created: raw[k.created],
+    updated: raw[k.updated],
+    source: raw[k.source],
+  };
+}
+
+export function parseFiche(abs, voc = vocab()) {
   const raw = readFileSync(abs, "utf8").replace(/\r\n/g, "\n").replace(/^﻿/, "");
   const m = /^---\n([\s\S]*?)\n---[ \t]*(?:\n([\s\S]*))?$/.exec(raw);
   const rel = toPosix(relative(ROOT, abs));
   if (!m) throw new Error(`${rel}: no frontmatter (the note must start with ---)`);
-  const fm = parseFrontmatter(m[1]);
+  const fm = canonical(parseFrontmatter(m[1]), voc);
   const body = (m[2] ?? "").trim();
   const links = [...body.matchAll(/\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/g)].map((x) => x[1].trim());
   const folder = toPosix(relative(VAULT, dirname(abs))).split("/")[0];
@@ -244,18 +303,22 @@ export function validate(fiches, cfg) {
   const errors = [];
   const warnings = [];
   const bySlug = new Map();
+  const types = cfg.types;
+  // Messages name the fields and values as this brain writes them.
+  const v = VOCAB[cfg.format] ?? VOCAB.en;
+  const k = v.keys;
   for (const f of fiches) {
     const e = (msg) => errors.push({ rel: f.rel, msg });
     const { fm } = f;
-    if (!TYPES[fm.type]) e(`unknown type "${fm.type ?? ""}" (allowed: ${Object.keys(TYPES).join(", ")})`);
-    else if (TYPES[fm.type] !== f.folder) e(`type "${fm.type}" must live in vault/${TYPES[fm.type]}/, not vault/${f.folder}/`);
-    if (!fm.title || typeof fm.title !== "string") e("missing title");
+    if (!types[fm.type]) e(`unknown ${k.type} "${fm.type ?? ""}" (this brain's types: ${Object.keys(types).join(", ")})`);
+    else if (types[fm.type] !== f.folder) e(`${k.type} "${fm.type}" must live in vault/${types[fm.type]}/, not vault/${f.folder}/`);
+    if (!fm.title || typeof fm.title !== "string") e(`missing ${k.title}`);
     const domains = asList(fm.domains);
-    if (!domains.length) e("no domain (at least one is required)");
-    for (const d of domains) if (cfg.domains.length && !cfg.domains.includes(d)) e(`domain "${d}" is not one of this brain's domains (${cfg.domains.join(", ")})`);
-    if (!STATUSES.includes(fm.status)) e(`status must be one of ${STATUSES.join(", ")}`);
-    if (!VISIBILITIES.includes(fm.visibility)) e(`visibility must be one of ${VISIBILITIES.join(", ")}`);
-    for (const k of ["created", "updated"]) if (!DATE.test(String(fm[k] ?? ""))) e(`${k} must be a date YYYY-MM-DD`);
+    if (!domains.length) e(`no ${k.domains} (at least one is required)`);
+    for (const d of domains) if (cfg.domains.length && !cfg.domains.includes(d)) e(`${k.domains}: "${d}" is not one of this brain's domains (${cfg.domains.join(", ")})`);
+    if (!STATUSES.includes(fm.status)) e(`${k.status} must be one of ${Object.values(v.status).join(", ")}`);
+    if (!VISIBILITIES.includes(fm.visibility)) e(`${k.visibility} must be one of ${Object.values(v.visibility).join(", ")}`);
+    for (const key of ["created", "updated"]) if (!DATE.test(String(fm[key] ?? ""))) e(`${k[key]} must be a date YYYY-MM-DD`);
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(f.slug)) e("file name must be lowercase words joined by dashes");
     if (!fm.source) warnings.push({ rel: f.rel, msg: "no source: where does this come from?" });
     if (!f.body) warnings.push({ rel: f.rel, msg: "empty body" });

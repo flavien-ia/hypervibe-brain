@@ -31,15 +31,15 @@ With `brain_search` (by words, then `meaning: true` if the words may differ).
 
 ## 3. Classify
 
-- `--type`: `idea` (intuition, hypothesis), `note` (fact, observation, a decision taken and its reason), `concept`, `project`, `person`, `organization`, `publication`, `event`, `source`. When in doubt: `note`.
+- `--type`: one of **this brain's own types**, listed by `brain_stats` (`types`) and described in the brain's `vault/CLAUDE.md`. Its intuitions and hypotheses go to its type for ideas, facts and decisions to its type for notes. When in doubt: the notes type. A kind of thing that fits no type: capture it in the closest one and propose a new type to the person (`types.mjs add`), never invent one in the command.
 - `--domains`: one or two of the brain's domains (`brain_stats` lists them in `byDomain`). Nothing else: the script refuses.
-- `--status`: `seed` if you worded it; `trusted` only if the person just validated the text word for word.
+- `--status`: `seed` if you worded it; `trusted` only if the person just validated the text word for word. (A French brain writes them `graine` and `fiable`: both spellings are understood.)
 - `--visibility private` if the person asks: the content will never be shown to an AI again.
 
 ## 4. Write
 
 ```bash
-printf '%s' "<the body>" | node "${CLAUDE_SKILL_DIR}/../../scripts/capture.mjs" --title "<short, telling title>" --type idea --domains <domain> --links <slug-a>,<slug-b> --source "<where it comes from>"
+printf '%s' "<the body>" | node "${CLAUDE_SKILL_DIR}/../../scripts/capture.mjs" --title "<short, telling title>" --type <type> --domains <domain> --links <slug-a>,<slug-b> --source "<where it comes from>"
 ```
 
 The script refuses a name already taken, an unknown domain, a link to a note that does not exist. It commits the note (and pushes it if the person allowed it). You commit nothing yourself.

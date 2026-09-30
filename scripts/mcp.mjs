@@ -47,7 +47,7 @@ function instructions() {
   return [
     `${b.name} has a second brain: their ideas, projects, the people who matter to them, their publications and decisions, as linked notes.`,
     `Query it WITHOUT BEING ASKED whenever an answer depends on what ${b.name} thinks, has already written or decided, or on who they know: before writing in their voice, summarising one of their positions, or talking about one of their projects. Search by words first, then by meaning (meaning: true) if nothing comes up.`,
-    "Read it by its rules: a `trusted` note can be quoted as it is; a `seed` was written by a machine and not validated yet, handle it with care and say so; follow the `source` before asserting anything important.",
+    "Read it by its rules: a `trusted` note (`fiable` in a French brain) can be quoted as it is; a `seed` (`graine`) was written by a machine and not validated yet, handle it with care and say so; follow the `source` before asserting anything important.",
     "Write to it ONLY through the /hyperbrain:brain skill (capture), never by writing a file by hand.",
   ].join(" ");
 }
@@ -62,7 +62,7 @@ const TOOLS = [
         query: { type: "string", description: "What to look for" },
         meaning: { type: "boolean", description: "Search by meaning instead of by words" },
         limit: { type: "number", description: "How many results (default 10)" },
-        type: { type: "string", description: "Only this type: idea, concept, note, project, person, organization, publication, event, source" },
+        type: { type: "string", description: "Only this type (the brain's own types: brain_stats lists them)" },
         domain: { type: "string", description: "Only this domain" },
       },
       required: ["query"],
@@ -70,7 +70,7 @@ const TOOLS = [
   },
   {
     name: "brain_get",
-    description: "Open one note of the second brain: its full text, where it comes from (source), how trustworthy it is (status: seed = written by a machine and not yet validated, trusted = validated), its links and the notes that link to it.",
+    description: "Open one note of the second brain: its full text, where it comes from (source), how trustworthy it is (status: seed, or graine in a French brain = written by a machine and not yet validated; trusted, or fiable = validated), its links and the notes that link to it.",
     inputSchema: { type: "object", properties: { slug: { type: "string" } }, required: ["slug"] },
   },
   {
@@ -85,7 +85,7 @@ const TOOLS = [
   },
   {
     name: "brain_stats",
-    description: "The state of the second brain: how many notes, by type, domain and status, and whether search by meaning is available.",
+    description: "The state of the second brain: how many notes, by type, domain and status, its own types (with their folders) and the language of its format, and whether search by meaning is available. Read it before capturing a note.",
     inputSchema: { type: "object", properties: {} },
   },
 ];

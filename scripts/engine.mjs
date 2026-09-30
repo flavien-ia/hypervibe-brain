@@ -7,7 +7,18 @@
 // line can do, for the person sitting at this computer.
 
 import { buildIndex, openDb } from "./build.mjs";
-import { config, loadEnv } from "./lib.mjs";
+import { config, loadEnv, vocab } from "./lib.mjs";
+
+// The index keeps the canonical words (seed, private...); what the engine
+// returns speaks the brain's own (graine, prive in a French brain).
+const say = (kind, v) => {
+  try {
+    return vocab()[kind][v] ?? v;
+  } catch {
+    return v;
+  }
+};
+const sayKeys = (kind, o) => Object.fromEntries(Object.entries(o).map(([k, n]) => [say(kind, k), n]));
 import { embed, embeddingsAvailable } from "./embeddings.mjs";
 
 /** Always answer from an up-to-date index: rebuilt on the fly when a note moved. */
@@ -106,7 +117,7 @@ export function get(db, slug, { includePrivate = false } = {}) {
   const out = db.prepare("SELECT dst FROM link WHERE src = ?").all(slug).map((l) => exists.get(l.dst) ?? { slug: l.dst, missing: true });
   const inn = db.prepare("SELECT f.slug, f.title, f.type FROM link l JOIN fiche f ON f.slug = l.src WHERE l.dst = ?").all(slug);
   return {
-    slug: f.slug, file: f.rel, type: f.type, title: f.title, domains: f.domains, status: f.status, visibility: f.visibility,
+    slug: f.slug, file: f.rel, type: f.type, title: f.title, domains: f.domains, status: say("status", f.status), visibility: say("visibility", f.visibility),
     created: f.created, updated: f.updated, source: f.source,
     body: f.visibility === "private" && !includePrivate ? MASK : f.body,
     links: out, backlinks: inn,
@@ -131,18 +142,22 @@ export function timeline(db, { since, until, limit = 30, type } = {}) {
   const rows = db.prepare("SELECT slug, title, type, created, status FROM fiche WHERE created >= ? AND created <= ? ORDER BY created DESC LIMIT ?")
     // Dates compare as text: "2026-09" is before every day of September, "2026-09~" after them.
     .all(since ? String(since) : "0000", until ? `${until}~` : "9999", type ? 100000 : limit);
-  return (type ? rows.filter((r) => r.type === type) : rows).slice(0, limit);
+  return (type ? rows.filter((r) => r.type === type) : rows).slice(0, limit).map((r) => ({ ...r, status: say("status", r.status) }));
 }
 
 export function stats(db) {
   const count = (sql) => Object.fromEntries(db.prepare(sql).all().map((r) => [r.k, r.n]));
   const domains = Object.fromEntries(config().domains.map((d) => [d, 0]));
   for (const r of db.prepare("SELECT domains FROM fiche").all()) for (const d of JSON.parse(r.domains)) domains[d] = (domains[d] ?? 0) + 1;
+  const cfg = config();
   return {
     notes: db.prepare("SELECT COUNT(*) n FROM fiche").get().n,
+    // The brain's types and their folders, and its format: what a capture needs to know.
+    types: cfg.types,
+    format: cfg.format,
     byType: count("SELECT type k, COUNT(*) n FROM fiche GROUP BY type"),
-    byStatus: count("SELECT status k, COUNT(*) n FROM fiche GROUP BY status"),
-    byVisibility: count("SELECT visibility k, COUNT(*) n FROM fiche GROUP BY visibility"),
+    byStatus: sayKeys("status", count("SELECT status k, COUNT(*) n FROM fiche GROUP BY status")),
+    byVisibility: sayKeys("visibility", count("SELECT visibility k, COUNT(*) n FROM fiche GROUP BY visibility")),
     byDomain: domains,
     links: db.prepare("SELECT COUNT(*) n FROM link").get().n,
     vectors: db.prepare("SELECT COUNT(*) n FROM vec").get().n,

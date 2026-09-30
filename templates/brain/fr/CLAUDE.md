@@ -11,14 +11,14 @@ Par les outils MCP du plugin (`brain_search`, `brain_get`, `brain_neighbors`, `b
 ## Écrire
 
 - **Une fiche neuve** passe par la skill `/hyperbrain:brain` : elle cherche d'abord, classe, valide et sauvegarde. Jamais un fichier écrit à la main.
-- **Modifier une fiche existante** ne se fait qu'avec l'accord de {{NAME}}, devant lui ou elle, puis `updated` à la date du jour.
+- **Modifier une fiche existante** ne se fait qu'avec l'accord de {{NAME}}, devant lui ou elle, puis `touche` à la date du jour.
 - `/hyperbrain:brain-status` dit où en est le brain ; la sauvegarde du soir enregistre ce qui est au repos.
 
 ## Les règles qui ne plient pas
 
-1. **La machine crée, elle ne modifie jamais une fiche validée.** Ce qu'elle écrit entre en `seed` (graine) avec une `source` ; {{NAME}} garde un droit de veto. Une graine passe `trusted` (fiable) quand elle a pris racine (revue de la semaine) ou quand {{NAME}} la valide.
+1. **La machine crée, elle ne modifie jamais une fiche validée.** Ce qu'elle écrit entre en `graine` avec une `source` ; {{NAME}} garde un droit de veto. Une graine passe `fiable` quand elle a pris racine (revue de la semaine) ou quand {{NAME}} la valide.
 2. **Une graine se cite avec prudence, en le disant ; une fiche fiable se cite telle quelle.** Suivre la `source` avant d'affirmer quelque chose d'important.
-3. **Une fiche `private` n'est jamais montrée à une IA** : elle existe (titre, liens) mais son contenu ne sort ni par la recherche ni par les outils MCP, et elle n'a pas de vecteur. `vault/danger-zone/` n'est même pas lu.
+3. **Une fiche `prive` n'est jamais montrée à une IA** : elle existe (titre, liens) mais son contenu ne sort ni par la recherche ni par les outils MCP, et elle n'a pas de vecteur. `vault/danger-zone/` n'est même pas lu.
 4. **Aucun secret dans une fiche** : ni clé, ni mot de passe, ni contenu de `.env`.
 5. **Une source à la fois** : on n'ingère une nouvelle source qu'une fois la précédente vérifiée (`SOURCES.md`).
 6. **Git** : jamais `git add -A` ni `git add .`, jamais de stash ni de `pull --autostash`, jamais de `push --force`. D'autres sessions peuvent travailler dans ce dossier.

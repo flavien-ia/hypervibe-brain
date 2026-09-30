@@ -13,7 +13,8 @@
 - **It lives on its own**: a save every evening (no AI, no cost) and a weekly review by Claude.
 - **You choose what it does**: search by meaning, online backup, evening save, weekly review, work journal, mail and calendar, watched folders, cold copy. Each one is explained with what it implies before you choose.
 - **You see it**: a map of your notes, as a page on your computer, or as a private web app if you use Hypervibe.
-- **In your language**: Claude speaks yours, and everything the plugin writes for you (your brain's documents, the weekly report, the history) is in French or English, from your computer's settings.
+- **In your language**: Claude speaks yours, and everything the plugin writes for you (your brain's documents, the weekly report, the history, the notes' own format) is in French or English, from your computer's settings.
+- **Your own types of notes**: talks, books, clients, artworks... proposed from what your computer shows, and validated with you.
 - **Windows, macOS and Linux**.
 
 ## Install
@@ -52,7 +53,7 @@ Then, in a new session: **`/hyperbrain:start-hyperbrain`**.
 
 ## Coming next
 
-Your types of notes discovered on your computer and validated with you, your own custom sources, a contacts directory, the weekly letter by email, the brain on a second computer (`add-second-computer`), and reached from the cloud by online agents (`add-cloud`).
+Your own custom sources, a contacts directory, the weekly letter by email, the brain on a second computer (`add-second-computer`), and reached from the cloud by online agents (`add-cloud`).
 
 ## How it is built
 

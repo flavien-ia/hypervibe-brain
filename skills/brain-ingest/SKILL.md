@@ -38,8 +38,9 @@ printf '%s' "<the body>" | node "${CLAUDE_SKILL_DIR}/../../scripts/capture.mjs" 
 
 What a note holds, by kind of source:
 
-- **Their own writings** (articles, posts, notes): one `publication` per published text, with the text or its core; their notes become `idea` or `note`, rephrased faithfully.
-- **Other people's works** (books, articles read): one `source` per work, with what the person keeps from it, never the text copied.
+- **Their own writings** (articles, posts, notes): one note per published text, in the brain's type for publications, with the text or its core; their notes become ideas or notes, rephrased faithfully.
+- **Other people's works** (books, articles read): one note per work, in the brain's type for sources or readings, with what the person keeps from it, never the text copied.
+- **A kind of thing the brain has no type for** (the source brings talks, and there is no type for them): propose the new type to the person before the batch (`node "${CLAUDE_SKILL_DIR}/../../scripts/types.mjs" add <type> <folder>`), never squeeze a whole source into a wrong type.
 - **Emails or messages**: never the body, at most a rephrased summary, and only if the person wants it.
 - **Secrets**: never, even rephrased.
 

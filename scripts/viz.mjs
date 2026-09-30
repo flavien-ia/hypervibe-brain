@@ -84,7 +84,7 @@ function graph({ forApp = false } = {}) {
   });
   const edges = [];
   for (const f of fiches) for (const l of f.links) if (slugs.has(l) && l !== f.slug) edges.push({ source: f.slug, target: l });
-  return { name: cfg.name, lang: brainLang(ROOT), domains: cfg.domains, generated: new Date().toISOString(), nodes, edges };
+  return { name: cfg.name, lang: brainLang(ROOT), domains: cfg.domains, types: Object.keys(cfg.types), generated: new Date().toISOString(), nodes, edges };
 }
 
 if (command === "detect") {

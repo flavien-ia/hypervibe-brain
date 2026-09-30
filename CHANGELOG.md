@@ -7,7 +7,10 @@
 - **`add-backup`** gathers the GitHub copy and the cold copy (one, the other, or both); **`add-routines`** replaces `brain-routines`; **`add-meaning`** sets up search by meaning.
 - **Work with Claude**: the same event format as the sensors of the brain Hyperbrain grew from, and the week's commits read from each project's own history, without any global git hook.
 - **`adopt.mjs`**: makes an existing brain (restored, cloned, or built before the plugin) the active one.
-- Test bench: 107 checks.
+- **The format speaks the brain's language**: a French brain writes `titre`, `domaines`, `statut: graine`, `visibilite: prive`, `cree`, `touche`; everything it returns speaks those words. Read into one canonical shape inside the scripts.
+- **The types belong to the brain**: listed in `hyperbrain.json` (type and folder), proposed at the creation from what the computer shows (`discover.mjs`: folder names and kinds of files, never a content) and validated with the person; `types.mjs add` adds one later. The types never promoted by the machine are the brain's choice too. A brain may declare paths of its vault that are not notes (`exclude`).
+- Proof: the 3,048 notes of the brain Hyperbrain grew from pass the plugin's validation and indexing as they are, without a letter changed.
+- Test bench: 122 checks.
 
 ## 0.2.0 (2026-09-30)
 

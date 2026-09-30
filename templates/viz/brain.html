@@ -82,7 +82,7 @@ document.getElementById("count").textContent = W.count(DATA.nodes.length, DATA.e
 const dSel = document.getElementById("domain");
 dSel.innerHTML = `<option value="">${esc(W.allDomains)}</option>` + DATA.domains.map((d) => `<option>${esc(d)}</option>`).join("");
 const tSel = document.getElementById("type");
-tSel.innerHTML = `<option value="">${esc(W.allTypes)}</option>` + Object.entries(W.types).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
+tSel.innerHTML = `<option value="">${esc(W.allTypes)}</option>` + (DATA.types || Object.keys(W.types)).map((k) => [k, W.types[k] || k]).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
 const panel = document.getElementById("panel");
 const legend = `<div class="legend"><p>${esc(W.legend)}</p>${DATA.domains.map((d) => `<span><i class="dot" style="background:${colour[d]}"></i>${esc(d)}</span>`).join("")}</div>`;
 panel.innerHTML = `<p class="meta">${esc(W.pick)}</p>${legend}`;

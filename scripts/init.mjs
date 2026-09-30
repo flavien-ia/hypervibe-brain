@@ -8,7 +8,10 @@
 // brain already set up on this computer unless --switch is given: a brain is
 // never created on top of something.
 //
-//   node scripts/init.mjs --dir <folder> --name "<Name>" --domains work,writing,family [--lang fr|en] [--auto-push] [--no-git] [--switch]
+//   node scripts/init.mjs --dir <folder> --name "<Name>" --domains work,writing,family [--types note:notes,idee:idees,...] [--lang fr|en] [--auto-push] [--no-git] [--switch]
+//
+// --types: the types validated with the person (type:folder, or type alone
+// for type + "s"). Without it, the default types of the brain's language.
 //
 // --lang: the language of the documents the person will read (their brain's
 // documents, the weekly report, the names of the saves). By default, the
@@ -21,7 +24,7 @@ import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { HOME, PLUGIN_ROOT, setUserConfig, today as localToday, userConfig } from "./lib.mjs";
+import { DEFAULT_TYPES, HOME, PLUGIN_ROOT, setUserConfig, today as localToday, userConfig } from "./lib.mjs";
 import { LANGS, osLang, t } from "./i18n.mjs";
 const args = process.argv.slice(2);
 const opt = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : undefined);
@@ -43,6 +46,18 @@ if (domains.length < 2 || domains.length > 10) fail("choose between 2 and 10 dom
 
 const lang = LANGS.includes(opt("--lang")) ? opt("--lang") : osLang();
 const TEMPLATE = join(PLUGIN_ROOT, "templates", "brain", lang);
+// The format speaks the brain's language: a French brain writes titre, statut: graine...
+const format = lang;
+const SLUG = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+const types = opt("--types")
+  ? Object.fromEntries(String(opt("--types")).split(",").map((x) => x.trim()).filter(Boolean).map((x) => {
+    const [t, f] = x.split(":").map((y) => y.trim().toLowerCase());
+    return [t, f || `${t}s`];
+  }))
+  : DEFAULT_TYPES[format];
+for (const [t, f] of Object.entries(types)) if (!SLUG.test(t) || !SLUG.test(f)) fail(`type "${t}" or folder "${f}": lowercase words without accents, joined by dashes`);
+if (new Set(Object.values(types)).size !== Object.keys(types).length) fail("two types cannot share a folder");
+if (Object.keys(types).length < 3) fail("choose at least three types");
 // "~/hyperbrain" in quotes reaches us unexpanded: expand it ourselves.
 const dir = resolve(dirArg.replace(/^~(?=[\\/]|$)/, HOME));
 const current = userConfig().brain;
@@ -81,14 +96,23 @@ cpSync(TEMPLATE, dir, { recursive: true });
 renameSync(join(dir, "gitignore"), join(dir, ".gitignore"));
 renameSync(join(dir, "gitattributes"), join(dir, ".gitattributes"));
 const today = localToday();
+// The table of this brain's own types, written into its format document.
+const HELP = {
+  fr: { note: "un fait, une observation, une décision et sa raison", idee: "une intuition, une hypothèse, quelque chose à creuser", concept: "une notion qu'on définit et qu'on réutilise", projet: "un projet, en cours ou fini", personne: "quelqu'un qui compte", organisation: "une entreprise, une institution, un collectif", publication: "ce qui a été publié", evenement: "un moment daté", source: "une œuvre ou une lecture qui nourrit la pensée" },
+  en: { note: "a fact, an observation, a decision and its reason", idea: "an intuition, a hypothesis, something to dig into", concept: "a notion one defines and reuses", project: "a project, ongoing or finished", person: "someone who matters", organization: "a company, an institution, a group", publication: "something published", event: "a dated moment", source: "a work or a reading that feeds the thinking" },
+};
+const head = lang === "fr" ? "| type | dossier | pour |\n|---|---|---|" : "| type | folder | for |\n|---|---|---|";
+const table = `${head}\n${Object.entries(types).map(([t, f]) => `| \`${t}\` | \`${f}/\` | ${HELP[lang]?.[t] ?? ""} |`).join("\n")}`;
 for (const f of ["CLAUDE.md", "BRAIN.md", "SOURCES.md", "vault/CLAUDE.md"]) {
   const p = join(dir, f);
-  writeFileSync(p, readFileSync(p, "utf8").replaceAll("{{NAME}}", name).replaceAll("{{DATE}}", today).replaceAll("{{DIR}}", dir.replace(/\\/g, "/")), "utf8");
+  writeFileSync(p, readFileSync(p, "utf8").replaceAll("{{NAME}}", name).replaceAll("{{DATE}}", today).replaceAll("{{DIR}}", dir.replace(/\\/g, "/")).replaceAll("{{TYPES}}", table), "utf8");
 }
 writeFileSync(join(dir, "hyperbrain.json"), `${JSON.stringify({
   name,
   lang,
+  format,
   domains,
+  types,
   components: {},
   autoPush: args.includes("--auto-push"),
   stage: 2,
@@ -97,7 +121,7 @@ writeFileSync(join(dir, "hyperbrain.json"), `${JSON.stringify({
 }, null, 2)}\n`, "utf8");
 setUserConfig({ brain: dir.replace(/\\/g, "/") });
 
-const result = { ok: true, dir: dir.replace(/\\/g, "/"), lang, domains, git: false, commit: false, identity: null };
+const result = { ok: true, dir: dir.replace(/\\/g, "/"), lang, format, domains, types, git: false, commit: false, identity: null };
 if (!args.includes("--no-git")) {
   const git = (a) => execFileSync("git", a, { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], windowsHide: true }).trim();
   try {

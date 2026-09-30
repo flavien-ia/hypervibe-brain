@@ -350,13 +350,58 @@ try {
   r = node("init.mjs", ["--dir", join(BASE, "cerveau-c"), "--name", "T", "--domains", "a,b", "--switch", "--no-git"], { env: { LANG: "C.UTF-8", LC_ALL: "", LC_MESSAGES: "" } });
   check("LANG=C is ignored, not taken for a language", r.ok, r.out);
   const FR = join(BASE, "cerveau");
-  r = node("init.mjs", ["--dir", FR, "--name", "Léa", "--domains", "travail,famille", "--lang", "fr", "--switch"]);
-  check("a French brain is created (and becomes the active one on --switch)", r.ok && json(r.out).lang === "fr", r.out);
+  // What the discovery shows before the types are chosen: folders and kinds of files, never a content.
+  mkdirSync(join(HOME, "Documents", "Conférences", "2026"), { recursive: true });
+  for (const n of ["lyon.pptx", "paris.pptx", "nantes.key"]) writeFileSync(join(HOME, "Documents", "Conférences", "2026", n), "x", "utf8");
+  mkdirSync(join(HOME, "Documents", "Manuscrits"), { recursive: true });
+  writeFileSync(join(HOME, "Documents", "Manuscrits", "roman.docx"), "x", "utf8");
+  r = node("discover.mjs", ["--json"]);
+  const disc = json(r.out);
+  const docs = disc.places?.find((pl) => pl.root.endsWith("/Documents"));
+  const confs = docs?.folders.find((f) => f.name === "Conférences");
+  check("the discovery sees the person's folders and their kinds of files", r.ok && confs?.kinds.slides === 3 && confs.children.includes("2026") && docs.folders.some((f) => f.name === "Manuscrits"), r.out.slice(0, 600));
+
+  // A French brain, with the types validated with the person.
+  r = node("init.mjs", ["--dir", FR, "--name", "Léa", "--domains", "travail,famille", "--lang", "fr", "--types", "note:notes,idee:idees,personne:personnes,conference:conferences,livre", "--switch"]);
+  const frInit = json(r.out);
+  check("a French brain is created with its own types (and becomes the active one on --switch)", r.ok && frInit.lang === "fr" && frInit.format === "fr" && frInit.types.livre === "livres" && frInit.types.conference === "conferences", r.out);
+  check("its format document lists its own types", readFileSync(join(FR, "vault", "CLAUDE.md"), "utf8").includes("| `conference` | `conferences/` |"));
+  r = node("init.mjs", ["--dir", join(BASE, "mauvais"), "--name", "X", "--domains", "a,b", "--types", "Conférence:conf,note", "--switch", "--no-git"]);
+  check("a type with capitals or accents is refused", !r.ok, r.out);
   check("its documents are in French", readFileSync(join(FR, "BRAIN.md"), "utf8").startsWith("# Le brain de Léa") && readFileSync(join(FR, "SOURCES.md"), "utf8").includes("Une source à la fois"));
   check("its history speaks French", run("git", ["log", "-1", "--format=%s"], { cwd: FR }).out.trim() === "Création du brain de Léa");
   r = cap("Une pensée.", ["--title", "Première pensée", "--type", "idea", "--domains", "travail"]);
+  check("a type the brain does not have is refused, with the brain's own list", !r.ok && r.out.includes("idee, personne, conference, livre"), r.out);
+  r = cap("Une pensée.", ["--title", "Première pensée", "--type", "idee", "--domains", "travail", "--status", "graine"]);
   check("its captures speak French", r.ok && run("git", ["log", "-1", "--format=%s"], { cwd: FR }).out.trim() === "capture : Première pensée", r.out);
-  node("review.mjs");
+  const frNote = readFileSync(join(FR, "vault", "idees", "premiere-pensee.md"), "utf8");
+  check("and are written in the French format", /^titre: "Première pensée"$/m.test(frNote) && /^statut: graine$/m.test(frNote) && /^visibilite: interne$/m.test(frNote) && /^cree: /m.test(frNote) && /^touche: /m.test(frNote) && !/^title:/m.test(frNote), frNote);
+  r = cap("Une conférence à Lyon sur le travail.", ["--title", "Conférence de Lyon", "--type", "conference", "--domains", "travail", "--visibility", "prive"]);
+  check("a custom type and a visibility in French are understood", r.ok && existsSync(join(FR, "vault", "conferences", "conference-de-lyon.md")) && readFileSync(join(FR, "vault", "conferences", "conference-de-lyon.md"), "utf8").includes("visibilite: prive"), r.out);
+  const frGet = json(node("query.mjs", ["get", "premiere-pensee", "--json"]).out);
+  check("the brain answers in its own words (graine, interne)", frGet.status === "graine" && frGet.visibility === "interne", JSON.stringify(frGet));
+  check("its private note stays masked, in French too", json(node("query.mjs", ["get", "conference-de-lyon", "--json"]).out).body.includes("never shown"));
+  const frStats = json(node("query.mjs", ["stats"]).out);
+  check("its stats give its types and format, and speak its words", frStats.format === "fr" && frStats.types.livre === "livres" && frStats.byStatus.graine === 2, JSON.stringify(frStats));
+  r = node("types.mjs", ["add", "oeuvre", "oeuvres"]);
+  check("a type is added later", r.ok && json(r.out).types.oeuvre === "oeuvres" && existsSync(join(FR, "vault", "oeuvres")), r.out);
+  r = node("types.mjs", ["add", "oeuvre"]);
+  check("but never twice", !r.ok, r.out);
+  r = cap("Une toile.", ["--title", "La Ville qui rêve", "--type", "oeuvre", "--domains", "famille", "--status", "fiable"]);
+  check("and used right away", r.ok, r.out);
+  // The promotion in French: an old graine, linked from another day, becomes fiable; an idee never.
+  const oldFr = join(FR, "vault", "notes", "vieille.md");
+  mkdirSync(join(FR, "vault", "notes"), { recursive: true });
+  writeFileSync(oldFr, "---\ntype: note\ntitre: \"Vieille\"\ndomaines: [travail]\nstatut: graine\nvisibilite: interne\ncree: 2026-01-01\ntouche: 2026-01-01\nsource: \"banc\"\n---\n\nAncienne.\n", "utf8");
+  const ideeFr = join(FR, "vault", "idees", "vieille-idee.md");
+  writeFileSync(ideeFr, "---\ntype: idee\ntitre: \"Vieille idée\"\ndomaines: [travail]\nstatut: graine\nvisibilite: interne\ncree: 2026-01-01\ntouche: 2026-01-01\nsource: \"banc\"\n---\n\nAncienne.\n", "utf8");
+  const pp = join(FR, "vault", "idees", "premiere-pensee.md");
+  writeFileSync(pp, `${readFileSync(pp, "utf8")}\n[[vieille]] [[vieille-idee]]\n`, "utf8");
+  r = node("lint.mjs");
+  check("the French brain passes its own validation", r.ok, r.out);
+  node("review.mjs", ["--apply"]);
+  check("its promotion speaks French: statut: fiable, touche today", /^statut: fiable$/m.test(readFileSync(oldFr, "utf8")) && new RegExp(`^touche: ${localDay()}$`, "m").test(readFileSync(oldFr, "utf8")), readFileSync(oldFr, "utf8"));
+  check("and an idee is never promoted by the machine", /^statut: graine$/m.test(readFileSync(ideeFr, "utf8")));
   check("its weekly report is in French", readFileSync(join(FR, "reviews", `${localDay()}.md`), "utf8").startsWith("# Revue du brain de Léa"));
 
   // ---- an existing brain made active again (restored, cloned, or built before the plugin)
