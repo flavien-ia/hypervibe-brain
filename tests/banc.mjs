@@ -496,6 +496,10 @@ try {
     upsert(d, [{ ...quiet, tier: 0 }], { tiers: true, counts: "set" }, rulesCfg);
     const cleared = d.contacts[0].tierFloor === undefined && d.contacts[0].tier === 0;
     check("a source's tier counts only when it declares setsTier, as a floor, and 0 removes it", ignored && floored && kept && cleared, JSON.stringify(d.contacts));
+    const own = { format: "en", contacts: { core: 30, matters: 3, tiersFrom: "sources" } };
+    const harvested = { contacts: [{ address: "a@b.fr", sent: 500, received: 90, note: "someone", tier: 1 }] };
+    upsert(harvested, [{ kind: "contact", address: "a@b.fr", sent: 3 }], {}, own);
+    check("tiers left to the sources are never recomputed by the plugin", harvested.contacts[0].tier === 1, JSON.stringify(harvested.contacts));
   }
   {
     // A brain's own ownership rules (hyperbrain.json, `ownership`).

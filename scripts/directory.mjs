@@ -19,6 +19,8 @@
 // rules the plugin cannot know (the first people of each client in a CRM...):
 // it is kept as a FLOOR (`tierFloor`, `etage_min` in French), so the counts can
 // still raise the contact, never drop them below it. A floor of 0 removes it.
+// A brain may also leave the tiers entirely to its sources: `"tiersFrom":
+// "sources"` in `contacts`, and the plugin never recomputes one.
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -37,7 +39,7 @@ export const directoryPath = (cfg = config()) => join(INDEX, fieldsOf(cfg).file)
 /** The brain's thresholds, with defaults for a directory fed week by week. */
 export function rules(cfg = config()) {
   const c = cfg.contacts ?? {};
-  return { core: c.core ?? 30, matters: c.matters ?? 3, exclude: (c.exclude ?? []).map((x) => String(x).toLowerCase()) };
+  return { core: c.core ?? 30, matters: c.matters ?? 3, exclude: (c.exclude ?? []).map((x) => String(x).toLowerCase()), fromSources: c.tiersFrom === "sources" };
 }
 
 
@@ -82,6 +84,9 @@ export function writeDirectory(dir, cfg = config()) {
 export function tierOf(c, r) {
   if (r.exclude.includes(String(c.address).toLowerCase()) || r.exclude.includes(String(c.domain ?? "").toLowerCase())) return 0;
   const floor = Math.min(2, Math.max(0, Number(c.tierFloor ?? 0) || 0));
+  // A brain whose tiers are set by its own harvest ("tiersFrom": "sources"):
+  // the plugin keeps what the harvest wrote and computes nothing.
+  if (r.fromSources) return c.tierFloor !== undefined ? floor : Math.min(2, Math.max(0, Number(c.tier ?? 0) || 0));
   if (c.note) return 2;
   const sent = Number(c.sent ?? 0);
   const received = Number(c.received ?? 0);

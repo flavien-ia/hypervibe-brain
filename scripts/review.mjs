@@ -82,7 +82,9 @@ try {
 }
 const why = new Map();
 const promotable = fiches.filter((f) => {
-  if (f.fm.status !== "seed" || cfg.neverPromoted.includes(f.fm.type) || String(f.fm.created) > rootLimit) return false;
+  // neverPromoted holds types, or folders (ending with /): a directory of people is data, not knowledge.
+  const kept = cfg.neverPromoted.some((x) => (String(x).endsWith("/") ? f.rel.startsWith(x) || f.rel.startsWith(`vault/${x}`) : f.fm.type === x));
+  if (f.fm.status !== "seed" || kept || String(f.fm.created) > rootLimit) return false;
   const links = (incoming.get(f.slug) ?? []).filter((src) => String(src.fm.created) !== String(f.fm.created) && !plumbing(src) && byHand(src.body, f.slug)).map((src) => src.slug);
   const n = reads.get(f.slug) ?? 0;
   if (!links.length && !n) return false;
