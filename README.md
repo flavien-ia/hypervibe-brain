@@ -48,13 +48,13 @@ Then, in a new session: **`/hyperbrain:start-hyperbrain`**.
 | Family | Skill | What it does |
 |---|---|---|
 | Protect | `/hyperbrain:add-backup` | A private copy on GitHub, a weekly cold copy in a place you choose, or both. |
-| Make it live | `/hyperbrain:add-routines` | A save every evening (no AI, no cost) and a review every week by Claude. |
+| Make it live | `/hyperbrain:add-routines` | A save every evening (no AI, no cost), a review every week by Claude, and a letter by email that sums it up. |
 | Use | `/hyperbrain:add-meaning` | Search by meaning. |
 | | `/hyperbrain:brain-viz` | See the brain as a map: a page on your computer, or a private web app if Hypervibe is installed. |
 
 ## Coming next
 
-The weekly letter by email, the brain on a second computer (`add-second-computer`), and reached from the cloud by online agents (`add-cloud`).
+The brain on a second computer (`add-second-computer`), and reached from the cloud by online agents (`add-cloud`).
 
 ## How it is built
 

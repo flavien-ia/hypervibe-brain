@@ -125,7 +125,7 @@ Present them by family, each in one sentence of what it brings, and let the pers
 > - `/hyperbrain:add-backup`: a private copy online, a weekly copy in a place you choose, or both. If the computer is lost, nothing is.
 >
 > **Make it live on its own**
-> - `/hyperbrain:add-routines`: every evening your computer records the day's changes, every week Claude rereads your brain and leaves you a report.
+> - `/hyperbrain:add-routines`: every evening your computer records the day's changes, every week Claude rereads your brain and leaves you a report, and, if you want, sends it to you by email.
 >
 > **Use it better**
 > - `/hyperbrain:add-meaning`: find a note even when you search with other words than its own.

@@ -477,6 +477,51 @@ try {
   node("save.mjs", ["--now"]);
   check("the directory is saved with the brain", git("ls-files", "index").includes("index/directory.json"));
 
+  // ---- the weekly letter (never really sent: a fake mail service answers)
+  const LETTER = [
+    "# The review of September 30",
+    "A calm week. Three notes came in.",
+    "---",
+    "## The new seeds",
+    "1. `les-villes-invisibles`: Calvino, each city a state of mind.",
+    "2. `especes-d-espaces`: Perec, living and naming.",
+    "> These notes are already in your brain, as seeds.",
+    "## The proposals",
+    "1. Link **Perec** to [[projet-de-roman]].",
+    ">> **Oh, by the way...!**",
+    ">> A year ago, the idea of the dreaming city.",
+    "^ 🟢 All is well.",
+  ].join("\n");
+  const letter = (a, extraEnv = {}) => node("letter.mjs", ["send", ...a], { input: LETTER, env: extraEnv });
+  r = node("letter.mjs", ["setup", "--channel", "connector"]);
+  check("a letter needs the person's own address", !r.ok, r.out);
+  r = node("letter.mjs", ["setup", "--channel", "connector", "--to", "camille@exemple.fr"]);
+  check("the letter is set up with the person's channel and address", r.ok && json(r.out).letter.channel === "connector", r.out);
+  r = letter(["--dry"]);
+  const dry = json(r.out);
+  check("a dry run renders it, without sending", r.ok && dry.dry === true && /Camille's brain review, week \d+/.test(dry.subject), r.out);
+  const letterHtml = readFileSync(dry.html, "utf8");
+  check("it renders for mail and phones: header, numbered badges, light and dark boxes, health at the foot", letterHtml.includes("The review of September 30") && letterHtml.includes("border-radius:12px;background:#2f7d5b") && letterHtml.includes("background:#1f2430;border-radius:12px") && letterHtml.includes("🟢 All is well.") && !letterHtml.includes("<style"), letterHtml.slice(0, 300));
+  check("and escapes what could be HTML", !letterHtml.includes("<Perec>") && letterHtml.includes("<strong"));
+  check("it is always kept in the brain, for the answers to find its numbers", readFileSync(join(BRAIN, "reviews", `${localDay()}-letter.md`), "utf8") === LETTER);
+  r = letter([]);
+  check("through the connector, Claude sends it: the script says so and gives the file", r.ok && json(r.out).sendWithConnector === true && json(r.out).to === "camille@exemple.fr", r.out);
+  r = node("letter.mjs", ["setup", "--channel", "brevo", "--to", "camille@exemple.fr"]);
+  check("Brevo needs a verified sender", !r.ok, r.out);
+  node("letter.mjs", ["setup", "--channel", "brevo", "--to", "camille@exemple.fr", "--from", "brain@exemple.fr"]);
+  r = letter([]);
+  check("without its key in the brain's .env, nothing leaves", !r.ok && r.out.includes("BREVO_API_KEY"), r.out);
+  r = letter([], { BREVO_API_KEY: "test-brevo", HYPERBRAIN_BREVO_URL: `http://127.0.0.1:${port}/v3` });
+  const brevoMail = await (await fetch(`http://127.0.0.1:${port}/mail`)).json();
+  check("with it, the letter goes to the person, from the verified sender", r.ok && json(r.out).sent === true && brevoMail?.headers["api-key"] === "test-brevo" && brevoMail.body.to[0].email === "camille@exemple.fr" && brevoMail.body.sender.email === "brain@exemple.fr" && brevoMail.body.htmlContent.includes("Oh, by the way") && brevoMail.body.textContent === LETTER, JSON.stringify(brevoMail).slice(0, 400));
+  node("letter.mjs", ["setup", "--channel", "resend", "--to", "camille@exemple.fr", "--from", "brain@exemple.fr"]);
+  r = letter([], { RESEND_API_KEY: "test-resend", HYPERBRAIN_RESEND_URL: `http://127.0.0.1:${port}` });
+  const resendMail = await (await fetch(`http://127.0.0.1:${port}/mail`)).json();
+  check("Resend works the same way", r.ok && json(r.out).sent === true && resendMail?.headers.authorization === "Bearer test-resend" && resendMail.body.to[0] === "camille@exemple.fr", JSON.stringify(resendMail).slice(0, 300));
+  node("letter.mjs", ["setup", "--channel", "none"]);
+  r = letter([]);
+  check("with no channel, the letter stays in the brain", r.ok && json(r.out).sent === false, r.out);
+
   // ---- a brain in French: what the person reads is in their language
   r = node("init.mjs", ["--dir", "~/cerveau-tilde", "--name", "T", "--domains", "a,b", "--switch", "--no-git"], { env: { LANG: "fr_FR.UTF-8", LC_ALL: "", LC_MESSAGES: "" } });
   check("a quoted ~ is the home folder, not a folder named ~", r.ok && json(r.out).dir === join(HOME, "cerveau-tilde").replace(/\\/g, "/"), r.out);
@@ -540,6 +585,8 @@ try {
   node("contacts.mjs", ["upsert"], { input: JSON.stringify({ address: "tom@exemple.fr", name: "Tom", sent: 5, received: 5 }) });
   const annu = JSON.parse(readFileSync(join(FR, "index", "annuaire.json"), "utf8"));
   check("a French brain keeps its directory in annuaire.json, in French", Array.isArray(annu.contacts) && annu.contacts[0].adresse === "tom@exemple.fr" && annu.contacts[0].envoyes === 5 && "etage" in annu.contacts[0] && "genere" in annu, JSON.stringify(annu).slice(0, 300));
+  r = node("letter.mjs", ["send", "--dry"], { input: "# La revue du 30 septembre\n\n## Les nouvelles graines\n1. Une." });
+  check("its letter speaks French too", r.ok && /Revue du brain de Léa, semaine \d+/.test(json(r.out).subject) && readFileSync(json(r.out).html, "utf8").includes("Le brain &#183; semaine"), r.out);
   check("its weekly report is in French", readFileSync(join(FR, "reviews", `${localDay()}.md`), "utf8").startsWith("# Revue du brain de Léa"));
 
   // ---- an existing brain made active again (restored, cloned, or built before the plugin)

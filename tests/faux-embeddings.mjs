@@ -8,14 +8,22 @@
 import { createServer } from "node:http";
 
 let calls = 0;
+const mails = [];
 const server = createServer((req, res) => {
   if (req.method === "GET") {
-    res.end(String(calls));
+    res.end(req.url === "/mail" ? JSON.stringify(mails.at(-1) ?? null) : String(calls));
     return;
   }
   let body = "";
   req.on("data", (c) => (body += c));
   req.on("end", () => {
+    // A fake mail service too (Brevo and Resend): it keeps what it was asked to send.
+    if (/smtp\/email|\/emails/.test(req.url)) {
+      mails.push({ url: req.url, headers: req.headers, body: JSON.parse(body) });
+      res.writeHead(201, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ messageId: "fake-1" }));
+      return;
+    }
     calls++;
     const { input, dimensions } = JSON.parse(body);
     const data = input.map((t, index) => {

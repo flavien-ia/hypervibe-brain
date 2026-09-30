@@ -48,13 +48,13 @@ Puis, dans une nouvelle session : **`/hyperbrain:start-hyperbrain`**.
 | Famille | Skill | Ce qu'elle fait |
 |---|---|---|
 | Protéger | `/hyperbrain:add-backup` | Une copie privée sur GitHub, une copie froide chaque semaine là où vous voulez, ou les deux. |
-| Faire vivre | `/hyperbrain:add-routines` | Une sauvegarde chaque soir (sans IA, sans coût) et une revue chaque semaine par Claude. |
+| Faire vivre | `/hyperbrain:add-routines` | Une sauvegarde chaque soir (sans IA, sans coût), une revue chaque semaine par Claude, et une lettre par email qui la résume. |
 | Utiliser | `/hyperbrain:add-meaning` | La recherche par le sens. |
 | | `/hyperbrain:brain-viz` | Voir le brain comme une carte : une page sur votre ordinateur, ou une application web privée si Hypervibe est installé. |
 
 ## À venir
 
-La lettre de la semaine par email, le brain sur un second ordinateur (`add-second-computer`), et atteint depuis le cloud par des agents en ligne (`add-cloud`).
+Le brain sur un second ordinateur (`add-second-computer`), et atteint depuis le cloud par des agents en ligne (`add-cloud`).
 
 ## Comment il est construit
 

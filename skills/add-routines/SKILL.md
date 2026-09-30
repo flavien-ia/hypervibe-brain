@@ -1,6 +1,6 @@
 ---
 name: add-routines
-description: Set up, check or stop the two things that happen without you asking - the evening save of your second brain (no AI, no cost) and its weekly review by Claude.
+description: Set up, check or stop what happens without you asking - the evening save of your second brain (no AI, no cost), its weekly review by Claude, and the review sent to you by email.
 ---
 
 # /add-routines - What happens without the person asking
@@ -62,6 +62,27 @@ node "${CLAUDE_SKILL_DIR}/../../scripts/components.mjs" set review on
 ```
 
 **If no such tool is available** (terminal only, or another app): say it plainly, and offer the manual habit instead: once a week, the person says "review my brain". Record that choice with `note-review --when "manual, <day>" --id manual`.
+
+## The weekly letter
+
+Once the weekly review is set up, propose the letter, in these words (translated):
+
+> Every week, the review can also be **sent to you by email**: a short letter with what came into your brain, the notes the machine wrote, what it proposes, and how to answer in one sentence ("remove seeds 3 and 8"). You read it on your phone, without opening anything.
+
+On a yes, **the channel**, in this order of preference:
+
+1. **Their own mail, through their Claude's connector** (Gmail or Outlook): nothing to set up if the connector is there. The letter is sent from their address to their own address. Check the connector is in this session.
+2. **A Brevo or Resend account** they already have (with a sender address verified there): the letter leaves even if their Claude has no mail connector. The key goes in the brain's `.env` (`BREVO_API_KEY` or `RESEND_API_KEY`), pasted by them into the file you open for them, never in the conversation.
+
+**Their explicit agreement**, in their words: "the review will send an email every week to <their address>". Then:
+
+```bash
+node "${CLAUDE_SKILL_DIR}/../../scripts/letter.mjs" setup --channel <connector|brevo|resend> --to <their address> [--from <verified sender>]
+```
+
+**A first letter, right now**, so that they see it and say whether it suits them: write a short one from the brain's current state (the structure is in `/hyperbrain:brain-review`, Step 6), send it with `letter.mjs send`, and ask them to check their inbox (and the spam folder, the first time). Their taste (shorter, another tone) is noted in `BRAIN.md`, and the review follows it.
+
+To stop it: `node "${CLAUDE_SKILL_DIR}/../../scripts/letter.mjs" setup --channel none`.
 
 ## Stop a task
 

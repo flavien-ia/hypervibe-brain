@@ -14,7 +14,8 @@
 - One path to write a note (`notes.mjs`), for a capture and for a source.
 - **The contacts directory** (`brain-contacts`, proposed at the creation): the people the person exchanges with, as data (`index/annuaire.json` in a French brain, `index/directory.json` in English, in git), filled from the mail through the person's own Claude connector and every week by the review, or by a source of their own. Three tiers by the brain's own thresholds; nobody rises without exchanges in both directions. A contact becomes a note only by the person's decision, its address kept in the source. A sixth MCP tool, `brain_contact`.
 - Proof: the 4,649-contact directory of the brain Hyperbrain grew from is read, searched and rewritten by the plugin as it is.
-- Test bench: 160 checks.
+- **The weekly letter** (in `add-routines`): the review, sent by email where the person reads, in the brain's language, with the structure of the letter of the brain Hyperbrain grew from (the week, the new seeds, the proposals, promotions and collisions, "Oh, by the way", the health), each item numbered so that the person answers in one sentence ("brain-review: remove seeds 3 and 8"). Sent by the person's own mail connector, to themselves, or by a Brevo or Resend key of theirs; always kept in `reviews/` for the answers to find its numbers. Rendered for Gmail and phones (inline styles, layout tables).
+- Test bench: 173 checks.
 
 ## 0.2.0 (2026-09-30)
 
