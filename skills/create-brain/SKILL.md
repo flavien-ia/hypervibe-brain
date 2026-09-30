@@ -107,7 +107,9 @@ Then ask the brain, through the `brain_search` tool of the hyperbrain MCP server
 
 What builds and enriches the brain. Invoke `/hyperbrain:brain-sources`: it presents the living sources (mail and calendar, watched folders, work with Claude) with what each implies, records the person's choices, lists their existing writings in `SOURCES.md`, and offers to bring in the first one (`/hyperbrain:brain-ingest`).
 
-**Gate 3: the sources are chosen**, and either a first writing has been brought in and checked, or the person knowingly keeps it for later.
+Then propose **the contacts directory**, in one sentence of what it brings (who they exchange with, who is who, searchable in every conversation) and one of what it implies (read from their mail through their Claude's connector, never the text of an email, only those who matter become notes, with their agreement). On a yes, invoke `/hyperbrain:brain-contacts`.
+
+**Gate 3: the sources are chosen, the directory is set up or knowingly declined**, and either a first writing has been brought in and checked, or the person knowingly keeps it for later.
 
 ## Step 4 - Claude reads it everywhere
 

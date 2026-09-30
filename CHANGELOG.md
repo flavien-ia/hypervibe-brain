@@ -12,7 +12,9 @@
 - Proof: the 3,048 notes of the brain Hyperbrain grew from pass the plugin's validation and indexing as they are, without a letter changed.
 - **Your own sources**: each person defines, with Claude, the sources only they have (posts in a database, a reading list, an export...), kept in the brain under `sources/<name>/`. Read automatically by a small program (it only prints the notes; the plugin writes them, with every check, never twice the same) or done by Claude during the weekly review. A program runs only once approved on this computer, and again after any change. A failed run writes nothing and the next one starts from the last success. A source may refresh its own seeds, never a validated note. The evening save runs the ones that are due; the weekly report tells what each brought.
 - One path to write a note (`notes.mjs`), for a capture and for a source.
-- Test bench: 143 checks.
+- **The contacts directory** (`brain-contacts`, proposed at the creation): the people the person exchanges with, as data (`index/annuaire.json` in a French brain, `index/directory.json` in English, in git), filled from the mail through the person's own Claude connector and every week by the review, or by a source of their own. Three tiers by the brain's own thresholds; nobody rises without exchanges in both directions. A contact becomes a note only by the person's decision, its address kept in the source. A sixth MCP tool, `brain_contact`.
+- Proof: the 4,649-contact directory of the brain Hyperbrain grew from is read, searched and rewritten by the plugin as it is.
+- Test bench: 160 checks.
 
 ## 0.2.0 (2026-09-30)
 

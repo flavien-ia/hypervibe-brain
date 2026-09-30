@@ -24,6 +24,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { basename, join } from "node:path";
 import { HOME, ROOT, config, readVault, requireBrain, today, validate, vocab } from "./lib.mjs";
 import { brainLang, t } from "./i18n.mjs";
+import { readDirectory } from "./directory.mjs";
 
 requireBrain();
 const args = process.argv.slice(2);
@@ -119,6 +120,13 @@ if (existsSync(SRC)) {
   }
 }
 
+// The contacts directory: its size, and the core without a note.
+let people = null;
+if (cfg.contacts?.enabled) {
+  const dir = readDirectory(cfg);
+  people = { total: dir.contacts.length, core: dir.contacts.filter((c) => c.tier === 2).length, coreWithoutNote: dir.contacts.filter((c) => c.tier === 2 && !c.note).slice(0, 15) };
+}
+
 // The watched folders: what moved this week, newest first.
 let moved = [];
 if (Array.isArray(sources.watch) && sources.watch.length) {
@@ -189,6 +197,13 @@ if (sources.journal) {
     out.push(L.journalLine(j.project, j.sessions, j.last.slice(0, 10)) + (j.commits.length ? L.journalCommits(j.commits.length) : ""));
     for (const c of j.commits.slice(0, 5)) out.push(`  - ${c}`);
   }
+}
+if (people) {
+  out.push("", L.people(people.total, people.core), "");
+  if (people.coreWithoutNote.length) {
+    out.push(L.peopleNoNote);
+    for (const c of people.coreWithoutNote) out.push(`- ${c.name ?? "?"} (${c.sent ?? 0} / ${c.received ?? 0})${c.summary ? `: ${c.summary}` : ""}`);
+  } else out.push(L.none);
 }
 if (own.length) {
   out.push("", L.own(own.length), "");

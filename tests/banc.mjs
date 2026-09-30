@@ -211,7 +211,7 @@ try {
   init = await m.ask("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "banc", version: "1" } });
   check("the MCP instructions name the person and the capture skill", init?.result?.instructions?.includes("Camille has a second brain") && init.result.instructions.includes("/hyperbrain:brain"), init?.result?.instructions);
   const list = await m.ask("tools/list", {});
-  check("MCP lists five tools", list?.result?.tools?.length === 5, JSON.stringify(list));
+  check("MCP lists six tools", list?.result?.tools?.length === 6, JSON.stringify(list));
   call = await m.ask("tools/call", { name: "brain_search", arguments: { query: "roman" } });
   check("MCP search", m.text(call).includes("projet-de-roman"), m.text(call));
   call = await m.ask("tools/call", { name: "brain_search", arguments: { query: "automatise travail", meaning: true } });
@@ -426,6 +426,57 @@ try {
   r = node("save.mjs", ["--now"]);
   check("the sources are saved with the brain (definitions, programs, what they saw)", git("ls-files", "sources").includes("sources/lectures/run.mjs") && git("ls-files", "sources").includes("sources/lectures/seen.json"), git("ls-files", "sources"));
 
+  // ---- the contacts directory
+  const upsertC = (lines, extra = []) => node("contacts.mjs", ["upsert", ...extra], { input: lines.map((l) => JSON.stringify(l)).join("\n") });
+  r = node("contacts.mjs", ["enable", "--core", "20", "--matters", "4"]);
+  check("the directory is switched on, with the brain's own thresholds", r.ok && json(r.out).contacts.core === 20, r.out);
+  r = upsertC([
+    { address: "Marie.Durand@Horizon.fr", name: "Marie Durand", sent: 12, received: 9, first: "2026-07-01", last: "2026-09-20", subjects: ["Atelier du jeudi"], summary: "Directrice de l'innovation, Studio Horizon" },
+    { address: "news@shop.example", name: "Shop", sent: 0, received: 40, subjects: ["Promo"] },
+    { address: "paul@editions.fr", name: "Paul Éditeur", sent: 2, received: 1, last: "2026-09-01" },
+    { address: "pas-une-adresse", name: "?" },
+  ]);
+  check("contacts go in; an invalid address is ignored", r.ok && json(r.out).added === 3 && json(r.out).total === 3, r.out);
+  r = upsertC([{ address: "marie.durand@horizon.fr", sent: 10, received: 4, last: "2026-09-29", subjects: ["Budget 2027"] }]);
+  const dirFile = JSON.parse(readFileSync(join(BRAIN, "index", "directory.json"), "utf8"));
+  const marie = dirFile.contacts.find((c) => c.address === "marie.durand@horizon.fr");
+  check("a week observed adds to the counts, widens the dates, joins the subjects", marie.sent === 22 && marie.received === 13 && marie.first === "2026-07-01" && marie.last === "2026-09-29" && marie.subjects.includes("Budget 2027") && marie.subjects.includes("Atelier du jeudi"), JSON.stringify(marie));
+  check("tiers: the core by the brain's threshold, a one-way sender never rises", marie.tier === 2 && dirFile.contacts.find((c) => c.address === "news@shop.example").tier === 0 && dirFile.contacts.find((c) => c.address === "paul@editions.fr").tier === 0, JSON.stringify(dirFile.contacts.map((c) => [c.address, c.tier])));
+  check("an English brain writes directory.json with English fields", "address" in marie && "tier" in marie && !existsSync(join(BRAIN, "index", "annuaire.json")));
+  r = upsertC([{ address: "paul@editions.fr", sent: 3, received: 2 }], ["--set-counts"]);
+  const paul = JSON.parse(readFileSync(join(BRAIN, "index", "directory.json"), "utf8")).contacts.find((c) => c.address === "paul@editions.fr");
+  check("a full recount replaces the counts", paul.sent === 3 && paul.received === 2 && paul.tier === 1, JSON.stringify(paul));
+  r = node("contacts.mjs", ["search", "innovation horizon", "--json"]);
+  check("search: every word, anywhere in what is known", r.ok && json(r.out).found[0]?.name === "Marie Durand", r.out);
+  r = node("contacts.mjs", ["search", "editeur", "--json"]);
+  check("search: accents ignored", r.ok && json(r.out).found[0]?.name === "Paul Éditeur", r.out);
+  r = node("contacts.mjs", ["promote", "marie.durand@horizon.fr", "--domains", "travail"]);
+  const marieNote = existsSync(join(BRAIN, "vault", "people", "marie-durand.md")) ? readFileSync(join(BRAIN, "vault", "people", "marie-durand.md"), "utf8") : "";
+  check("a contact becomes a note, in the brain's type for people", r.ok && marieNote.includes("type: person") && marieNote.includes("Directrice de l'innovation"), r.out);
+  check("its address stays in the source, never in the text", marieNote.includes('source: "contact:marie.durand@horizon.fr"') && marieNote.split("---").slice(2).join("---").indexOf("@") === -1, marieNote);
+  check("and the directory points to it", JSON.parse(readFileSync(join(BRAIN, "index", "directory.json"), "utf8")).contacts.find((c) => c.address === "marie.durand@horizon.fr").note === "marie-durand");
+  r = node("contacts.mjs", ["promote", "marie.durand@horizon.fr", "--domains", "travail"]);
+  check("never two notes for the same person", !r.ok, r.out);
+  // A source of one's own may feed the directory.
+  node("sources.mjs", ["add", "carnet", "--kind", "script", "--every", "week", "--type", "person", "--domains", "travail"]);
+  const carnet = join(BRAIN, "sources", "carnet");
+  writeFileSync(join(carnet, "run.mjs"), SOURCE_PROGRAM, "utf8");
+  writeFileSync(join(carnet, "data.json"), JSON.stringify([{ kind: "contact", address: "lea@atelier.fr", name: "Léa Atelier", sent: 30, received: 25 }, { kind: "contact", name: "sans adresse" }]), "utf8");
+  node("sources.mjs", ["trust", "carnet"]);
+  r = node("sources.mjs", ["run", "carnet"]);
+  check("a source feeds the directory; a contact without address is refused", r.ok && json(r.out).runs[0].contacts === 1 && json(r.out).runs[0].refused.length === 1 && JSON.parse(readFileSync(join(BRAIN, "index", "directory.json"), "utf8")).contacts.some((c) => c.address === "lea@atelier.fr" && c.tier === 2), r.out);
+  const mc = await mcpSession();
+  await mc.ask("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "banc", version: "1" } });
+  const toolsNow = await mc.ask("tools/list", {});
+  call = await mc.ask("tools/call", { name: "brain_contact", arguments: { query: "atelier" } });
+  check("Claude searches the directory through brain_contact", toolsNow?.result?.tools?.length === 6 && mc.text(call).includes("Léa Atelier"), mc.text(call));
+  mc.close();
+  node("review.mjs");
+  const peopleReport = readFileSync(join(BRAIN, "reviews", `${localDay()}.md`), "utf8");
+  check("the weekly report tells the directory, and who in the core has no note", peopleReport.includes("## Contacts (4 in the directory, 2 in the core)") && peopleReport.includes("- Léa Atelier (30 / 25)"), peopleReport);
+  node("save.mjs", ["--now"]);
+  check("the directory is saved with the brain", git("ls-files", "index").includes("index/directory.json"));
+
   // ---- a brain in French: what the person reads is in their language
   r = node("init.mjs", ["--dir", "~/cerveau-tilde", "--name", "T", "--domains", "a,b", "--switch", "--no-git"], { env: { LANG: "fr_FR.UTF-8", LC_ALL: "", LC_MESSAGES: "" } });
   check("a quoted ~ is the home folder, not a folder named ~", r.ok && json(r.out).dir === join(HOME, "cerveau-tilde").replace(/\\/g, "/"), r.out);
@@ -485,6 +536,10 @@ try {
   node("review.mjs", ["--apply"]);
   check("its promotion speaks French: statut: fiable, touche today", /^statut: fiable$/m.test(readFileSync(oldFr, "utf8")) && new RegExp(`^touche: ${localDay()}$`, "m").test(readFileSync(oldFr, "utf8")), readFileSync(oldFr, "utf8"));
   check("and an idee is never promoted by the machine", /^statut: graine$/m.test(readFileSync(ideeFr, "utf8")));
+  node("contacts.mjs", ["enable"]);
+  node("contacts.mjs", ["upsert"], { input: JSON.stringify({ address: "tom@exemple.fr", name: "Tom", sent: 5, received: 5 }) });
+  const annu = JSON.parse(readFileSync(join(FR, "index", "annuaire.json"), "utf8"));
+  check("a French brain keeps its directory in annuaire.json, in French", Array.isArray(annu.contacts) && annu.contacts[0].adresse === "tom@exemple.fr" && annu.contacts[0].envoyes === 5 && "etage" in annu.contacts[0] && "genere" in annu, JSON.stringify(annu).slice(0, 300));
   check("its weekly report is in French", readFileSync(join(FR, "reviews", `${localDay()}.md`), "utf8").startsWith("# Revue du brain de Léa"));
 
   // ---- an existing brain made active again (restored, cloned, or built before the plugin)

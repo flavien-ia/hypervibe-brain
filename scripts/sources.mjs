@@ -36,6 +36,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join } from "node:path";
 import { ROOT, config, requireBrain, setUserConfig, sha256, today, userConfig } from "./lib.mjs";
 import { checkNote, createNote, refreshSeed, slugIndex } from "./notes.mjs";
+import { readDirectory, upsert, writeDirectory } from "./directory.mjs";
 
 requireBrain();
 const args = process.argv.slice(2);
@@ -96,7 +97,9 @@ function execute(n) {
     if (!line.trim()) continue;
     try {
       const o = JSON.parse(line);
-      if (!o.id || !o.title) throw new Error("each note needs an id and a title");
+      if (o.kind === "contact") {
+        if (!o.address) throw new Error("a contact needs an address");
+      } else if (!o.id || !o.title) throw new Error("each note needs an id and a title");
       items.push(o);
     } catch (e) {
       bad.push(`line ${i + 1}: ${e.message}`);
@@ -141,8 +144,18 @@ function runOne(n) {
   }
   const seen = readJson(join(DIR, n, "seen.json"), {});
   const slugs = slugIndex();
-  const res = { name: n, ok: true, created: 0, updated: 0, unchanged: 0, refused: [...x.bad] };
-  for (const item of x.items) {
+  const res = { name: n, ok: true, created: 0, updated: 0, unchanged: 0, contacts: 0, refused: [...x.bad] };
+  // A source may also feed the contacts directory: lines { "kind": "contact", "address", ... }.
+  // Its counts are added (a period observed) or, with "contactCounts": "set" in its
+  // definition, replace the old ones (a harvest that recounts everything).
+  const contactItems = x.items.filter((i) => i.kind === "contact");
+  if (contactItems.length) {
+    const dir = readDirectory(cfg);
+    upsert(dir, contactItems, { counts: d.contactCounts === "set" ? "set" : "add" }, cfg);
+    writeDirectory(dir, cfg);
+    res.contacts = contactItems.length;
+  }
+  for (const item of x.items.filter((i) => i.kind !== "contact")) {
     const id = String(item.id);
     try {
       if (seen[id]) {
@@ -188,6 +201,10 @@ const TEMPLATE_SCRIPT = (n, d) => `// ${n}: ${d.description ?? "a source of this
 //     "source": "(optional: where to check it, default source:${n}:<id>)",
 //     "links": ["(optional) slugs of existing notes"],
 //     "fields": { "(optional) extra fields": "kept in the note" } }
+//
+// It may also feed the contacts directory, one line per person:
+//   { "kind": "contact", "address": "...", "name": "...", "sent": 3, "received": 2,
+//     "first": "YYYY-MM-DD", "last": "YYYY-MM-DD", "subjects": ["..."] }
 //
 // What it receives: HYPERBRAIN_SOURCE_SINCE (the date of its last success, empty
 // the first time: read only what is newer), HYPERBRAIN_BRAIN_DIR, and it runs
@@ -245,7 +262,7 @@ if (command === "list") {
   if (!x.ok) fail(x.error);
   const seen = readJson(join(DIR, name, "seen.json"), {});
   const slugs = slugIndex();
-  const checked = x.items.map((item) => {
+  const checked = x.items.filter((i) => i.kind !== "contact").map((item) => {
     try {
       const c = checkNote(noteOf(name, item), cfg, slugs);
       return { id: item.id, title: item.title, ...c, already: Boolean(seen[String(item.id)]) };
@@ -256,6 +273,7 @@ if (command === "list") {
   out({
     ok: true,
     items: x.items.length,
+    contacts: x.items.filter((i) => i.kind === "contact").length,
     new: checked.filter((c) => !c.refused && !c.already).length,
     refused: [...x.bad, ...checked.filter((c) => c.refused).map((c) => `${c.id}: ${c.refused}`)],
     sample: x.items.slice(0, 3).map((i) => ({ id: i.id, title: i.title, type: i.type ?? def(name).type, body: String(i.body ?? "").slice(0, 300) })),

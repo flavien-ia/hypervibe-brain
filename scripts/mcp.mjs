@@ -84,6 +84,11 @@ const TOOLS = [
     inputSchema: { type: "object", properties: { since: { type: "string" }, until: { type: "string" }, type: { type: "string" }, limit: { type: "number" } } },
   },
   {
+    name: "brain_contact",
+    description: "Search the person's contacts directory: the people they exchange with by email, with how much, since when, about what, and what is known of them. Every word must appear, anywhere (name, address, organisation, subjects, what is known), accents ignored: \"accountant\", \"Dupont Acme\". Tier 2 = the core, 1 = matters, 0 = the rest. A contact with a `note` has a note in the brain (brain_get).",
+    inputSchema: { type: "object", properties: { query: { type: "string" }, limit: { type: "number" } }, required: ["query"] },
+  },
+  {
     name: "brain_stats",
     description: "The state of the second brain: how many notes, by type, domain and status, its own types (with their folders) and the language of its format, and whether search by meaning is available. Read it before capturing a note.",
     inputSchema: { type: "object", properties: {} },
