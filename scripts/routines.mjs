@@ -185,7 +185,8 @@ const steps = [
 ];
 for (const [script, extra] of steps) {
   // The command first (viz.mjs reads it as its first argument), the brain after.
-  const r = spawnSync(process.execPath, [join(root, "scripts", script), ...extra, "--brain", cfg.brain], { encoding: "utf8", windowsHide: true, timeout: 15 * 60_000 });
+  // The scripts read the same settings as this launcher (approvals of sources included).
+  const r = spawnSync(process.execPath, [join(root, "scripts", script), ...extra, "--brain", cfg.brain], { encoding: "utf8", windowsHide: true, timeout: 15 * 60_000, env: { ...process.env, HYPERBRAIN_HOME: HOME } });
   const text = ((r.stdout ?? "") + (r.stderr ?? "")).split("\\n").filter((l) => l.trim() && !/ExperimentalWarning|trace-warnings/.test(l)).join(" | ");
   log(script + " exit " + r.status + (text ? ": " + text.slice(0, 600) : ""));
 }
