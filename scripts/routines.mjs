@@ -165,7 +165,8 @@ if (!cfg.brain || !existsSync(join(cfg.brain, "hyperbrain.json"))) {
 // cold copy if the person chose one (it does nothing on the other days).
 // Then the viewer, refreshed if it was built once, and the data of the
 // persistent app, if there is one (both do nothing otherwise).
-for (const [script, extra] of [["build.mjs", ["--quiet"]], ["save.mjs", []], ["cold-copy.mjs", []], ["viz.mjs", ["build", "--if-exists"]], ["viz.mjs", ["publish-app"]]]) {
+// First the person's own sources that are due (they create notes), then the rest.
+for (const [script, extra] of [["sources.mjs", ["run", "--due"]], ["build.mjs", ["--quiet"]], ["save.mjs", []], ["cold-copy.mjs", []], ["viz.mjs", ["build", "--if-exists"]], ["viz.mjs", ["publish-app"]]]) {
   // The command first (viz.mjs reads it as its first argument), the brain after.
   const r = spawnSync(process.execPath, [join(root, "scripts", script), ...extra, "--brain", cfg.brain], { encoding: "utf8", windowsHide: true, timeout: 15 * 60_000 });
   const text = ((r.stdout ?? "") + (r.stderr ?? "")).split("\\n").filter((l) => l.trim() && !/ExperimentalWarning|trace-warnings/.test(l)).join(" | ");
@@ -265,7 +266,7 @@ function disarm() {
 function state() {
   const logs = join(DIR, "logs");
   const last = existsSync(logs) ? readdirSync(logs).filter((n) => n.startsWith("nightly-")).sort().at(-1) : null;
-  const lastLines = last ? readFileSync(join(logs, last), "utf8").trim().split("\n").slice(-5) : [];
+  const lastLines = last ? readFileSync(join(logs, last), "utf8").trim().split("\n").slice(-7) : [];
   const s = { os: OS, task: TASK, armed: false, time: userConfig().routines?.save?.time ?? null, lastLog: last, lastRun: lastLines, review: userConfig().routines?.review ?? null };
   if (OS === "windows") {
     const r = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",

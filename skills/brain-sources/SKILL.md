@@ -45,6 +45,47 @@ node "${CLAUDE_SKILL_DIR}/../../scripts/components.mjs" watch add "<folder>"
 
 **These sources are read by the weekly review.** If it is not set up, say so and offer `/hyperbrain:add-routines`; until then, they are read when the person says "review my brain".
 
+## Their own sources
+
+Beyond what every brain has, each person has sources of their own: their posts kept in some database or export, the talks in their agenda, a reading app, a CRM, a feed... Ask: **"is there something else, somewhere, that you would like your brain to follow by itself?"**, and suggest from what you know of them.
+
+`node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" list` shows the ones already defined.
+
+For each one they want, define it **with them**, in plain words first:
+
+1. **What it reads**, and where (a folder of exports, a web address, a database, an app...).
+2. **What becomes a note**, and what does not (a post yes, a comment no), in which of the brain's types and domains.
+3. **How often**: every day or every week.
+4. **Whether a note may be refreshed later** (the likes of a post, the date of an event): only while it is still a seed, and only by this source. Never a validated note.
+5. **Which kind**:
+   - **read automatically** (`script`): when the source can be read without judgment (a file, an API, a database). You write a small program with them: it reads and prints the notes to create, and the plugin writes them, with every check. A key it needs goes in the brain's `.env`, pasted by the person, never in the conversation.
+   - **done by Claude** (`claude`): when it needs judgment or a browser (a website without an API, a feed to sort). You write, with them, the instructions Claude will follow during the weekly review.
+
+Then:
+
+```bash
+node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" add <name> --kind <script|claude> --every <day|week> --type <type> --domains <d1,d2> --description "<one sentence>" [--updates]
+```
+
+It creates `sources/<name>/` in the brain, with a `run.mjs` whose contract is written at its top, or an `instructions.md`. Write it with them.
+
+**For a script, test before anything is written**:
+
+```bash
+node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" test <name>
+```
+
+It runs the program, checks every note it would create, and writes nothing. Show the person the count and the three first notes; adjust until they say "that's it". Then **their approval, on this computer**: a program that comes with the brain (a clone on another computer, a restored copy) never runs by itself, and a program that changed must be approved again. Explain it in one sentence, and on their yes:
+
+```bash
+node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" trust <name>
+node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" run <name>
+```
+
+The first run brings everything the source holds: say how many notes before running it if there are many, and check five of them together afterwards (same care as `/hyperbrain:brain-ingest`). Afterwards, the evening save runs it at its rhythm, from its last success.
+
+**For a source done by Claude**, do it once together now, following its instructions, then record it: `node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" mark <name> --ok --created <n>`. The weekly review does it afterwards.
+
 ## The writings
 
 Ask what they have already written and where, order it by interest with them, and write it in `SOURCES.md` as a checklist (`- [ ] <source>: <where>`), in the brain's language. Then propose to bring in the first one now: invoke `/hyperbrain:brain-ingest`.

@@ -89,6 +89,8 @@ const T = {
       journalCommits: (n) => `, ${n} commit(s)`,
       watch: (n) => `## Files that moved in the watched folders (${n})`,
       watchMore: (n) => `- ... and ${n} more.`,
+      own: (n) => `## Your own sources (${n})`,
+      ownLine: (name, kind, on, last, created, error) => `- ${name} (${kind === "script" ? "read automatically" : "done by Claude"}${on ? "" : ", off"}): ${last ? `last success ${last}, ${created} new note(s)` : "never succeeded yet"}${error ? `. **Problem**: ${error}` : ""}`,
     },
   },
   fr: {
@@ -122,6 +124,8 @@ const T = {
       journalCommits: (n) => `, ${n} commit(s)`,
       watch: (n) => `## Fichiers qui ont bougé dans les dossiers suivis (${n})`,
       watchMore: (n) => `- ... et ${n} de plus.`,
+      own: (n) => `## Vos propres sources (${n})`,
+      ownLine: (name, kind, on, last, created, error) => `- ${name} (${kind === "script" ? "lue automatiquement" : "faite par Claude"}${on ? "" : ", arrêtée"}) : ${last ? `dernier succès le ${last}, ${created} fiche(s) nouvelle(s)` : "jamais réussie pour l'instant"}${error ? `. **Problème** : ${error}` : ""}`,
     },
   },
 };

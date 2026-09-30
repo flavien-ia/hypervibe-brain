@@ -10,7 +10,9 @@
 - **The format speaks the brain's language**: a French brain writes `titre`, `domaines`, `statut: graine`, `visibilite: prive`, `cree`, `touche`; everything it returns speaks those words. Read into one canonical shape inside the scripts.
 - **The types belong to the brain**: listed in `hyperbrain.json` (type and folder), proposed at the creation from what the computer shows (`discover.mjs`: folder names and kinds of files, never a content) and validated with the person; `types.mjs add` adds one later. The types never promoted by the machine are the brain's choice too. A brain may declare paths of its vault that are not notes (`exclude`).
 - Proof: the 3,048 notes of the brain Hyperbrain grew from pass the plugin's validation and indexing as they are, without a letter changed.
-- Test bench: 122 checks.
+- **Your own sources**: each person defines, with Claude, the sources only they have (posts in a database, a reading list, an export...), kept in the brain under `sources/<name>/`. Read automatically by a small program (it only prints the notes; the plugin writes them, with every check, never twice the same) or done by Claude during the weekly review. A program runs only once approved on this computer, and again after any change. A failed run writes nothing and the next one starts from the last success. A source may refresh its own seeds, never a validated note. The evening save runs the ones that are due; the weekly report tells what each brought.
+- One path to write a note (`notes.mjs`), for a capture and for a source.
+- Test bench: 143 checks.
 
 ## 0.2.0 (2026-09-30)
 

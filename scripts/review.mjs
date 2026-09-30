@@ -99,6 +99,26 @@ if (sources.journal) {
   }
 }
 
+// The person's own sources: what each brought, and the ones in trouble.
+const own = [];
+const SRC = join(ROOT, "sources");
+if (existsSync(SRC)) {
+  for (const n of readdirSync(SRC)) {
+    try {
+      const d = JSON.parse(readFileSync(join(SRC, n, "source.json"), "utf8"));
+      let st = {};
+      try {
+        st = JSON.parse(readFileSync(join(SRC, n, "state.json"), "utf8"));
+      } catch {
+        st = {};
+      }
+      own.push({ name: n, kind: d.kind, enabled: d.enabled !== false, lastSuccess: st.lastSuccess ?? null, lastError: st.lastError ?? null, created: st.lastCreated ?? 0 });
+    } catch {
+      // not a source
+    }
+  }
+}
+
 // The watched folders: what moved this week, newest first.
 let moved = [];
 if (Array.isArray(sources.watch) && sources.watch.length) {
@@ -169,6 +189,10 @@ if (sources.journal) {
     out.push(L.journalLine(j.project, j.sessions, j.last.slice(0, 10)) + (j.commits.length ? L.journalCommits(j.commits.length) : ""));
     for (const c of j.commits.slice(0, 5)) out.push(`  - ${c}`);
   }
+}
+if (own.length) {
+  out.push("", L.own(own.length), "");
+  for (const o of own) out.push(L.ownLine(o.name, o.kind, o.enabled, o.lastSuccess?.slice(0, 10) ?? null, o.created, o.lastError));
 }
 if (moved.length) out.push("", L.watch(moved.length), "", ...moved.slice(0, 50).map((m) => `- ${m.path}`), ...(moved.length > 50 ? [L.watchMore(moved.length - 50)] : []));
 out.push("");

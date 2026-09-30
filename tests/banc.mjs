@@ -343,6 +343,89 @@ try {
   r = node("routines.mjs", ["state", "--json"]);
   check("state reports the review and the last run", r.ok && json(r.out).review?.when === "dimanche 18:00" && json(r.out).lastLog, r.out);
 
+  // ---- the person's own sources
+  // A source program for the bench: it prints the items of data.json, and
+  // fails when a file named "fail" is next to it.
+  const SOURCE_PROGRAM = [
+    'import { existsSync, readFileSync } from "node:fs";',
+    'if (existsSync("fail")) { console.log(JSON.stringify({ id: "x", title: "partial" })); console.error("the feed is down"); process.exit(1); }',
+    'for (const x of JSON.parse(readFileSync("data.json", "utf8"))) console.log(JSON.stringify(x));',
+    "",
+  ].join("\n");
+  const notesCount = () => json(node("query.mjs", ["stats"]).out).notes;
+  r = node("sources.mjs", ["add", "lectures", "--kind", "script", "--every", "day", "--type", "source", "--domains", "ecriture", "--description", "My reading list"]);
+  const lectures = join(BRAIN, "sources", "lectures");
+  check("a source of one's own is created, with its program and its contract", r.ok && existsSync(join(lectures, "run.mjs")) && readFileSync(join(lectures, "run.mjs"), "utf8").includes("ONE JSON OBJECT PER LINE"), r.out);
+  r = node("sources.mjs", ["add", "lectures", "--kind", "script", "--type", "source", "--domains", "ecriture"]);
+  check("never twice the same source", !r.ok, r.out);
+  r = node("sources.mjs", ["add", "autre", "--kind", "script", "--type", "pensee", "--domains", "ecriture"]);
+  check("a source must produce one of the brain's types", !r.ok, r.out);
+  writeFileSync(join(lectures, "run.mjs"), SOURCE_PROGRAM, "utf8");
+  writeFileSync(join(lectures, "data.json"), JSON.stringify([
+    { id: "calvino", title: "Les Villes invisibles", body: "Calvino : chaque ville comme un état d'âme.", fields: { url: "https://example.org/calvino", auteur: "Italo Calvino" }, created: "2025-03-02" },
+    { id: "perec", title: "Espèces d'espaces", body: "Perec : habiter, nommer, décrire." },
+    { id: "bad", title: "Mal rangé", body: "x", type: "pensee" },
+  ]), "utf8");
+  const beforeSources = notesCount();
+  r = node("sources.mjs", ["test", "lectures"]);
+  const tested = json(r.out);
+  check("its test runs it, checks every note, and says what it would do", r.ok && tested.items === 3 && tested.new === 2 && tested.refused.length === 1 && tested.sample[0].title === "Les Villes invisibles", r.out);
+  check("and writes nothing", notesCount() === beforeSources);
+  r = node("sources.mjs", ["run", "lectures"]);
+  check("a program never approved on this computer does not run", r.ok && json(r.out).runs[0].skipped?.includes("not approved"), r.out);
+  check("and nothing is written", notesCount() === beforeSources);
+  node("sources.mjs", ["trust", "lectures"]);
+  r = node("sources.mjs", ["run", "lectures"]);
+  const run1 = json(r.out).runs[0];
+  check("approved, it runs: two notes created, the wrong one refused and named", r.ok && run1.created === 2 && run1.refused.length === 1 && run1.refused[0].startsWith("bad:"), r.out);
+  const calvino = readFileSync(join(BRAIN, "vault", "sources", "les-villes-invisibles.md"), "utf8");
+  check("its notes carry their origin, their own date and their extra fields", calvino.includes('source: "source:lectures:calvino"') && calvino.includes("created: 2025-03-02") && calvino.includes('url: "https://example.org/calvino"') && calvino.includes("status: seed"), calvino);
+  r = node("sources.mjs", ["run", "lectures"]);
+  check("run again, nothing is created twice", r.ok && json(r.out).runs[0].created === 0 && json(r.out).runs[0].unchanged === 2, r.out);
+  r = node("sources.mjs", ["run", "--due"]);
+  check("a daily source that succeeded today is not due again", r.ok && !json(r.out).runs.some((x) => x.name === "lectures"), r.out);
+  writeFileSync(join(lectures, "run.mjs"), `${SOURCE_PROGRAM}// changed\n`, "utf8");
+  r = node("sources.mjs", ["run", "lectures"]);
+  check("a program that changed must be approved again", r.ok && json(r.out).runs[0].skipped?.includes("not approved"), r.out);
+  node("sources.mjs", ["trust", "lectures"]);
+  writeFileSync(join(lectures, "fail"), "", "utf8");
+  const beforeFail = notesCount();
+  r = node("sources.mjs", ["run", "lectures"]);
+  check("a source that fails writes nothing, even what it printed before failing", r.ok && json(r.out).runs[0].ok === false && json(r.out).runs[0].error.includes("the feed is down") && notesCount() === beforeFail, r.out);
+  check("and keeps the date of its last success", JSON.parse(readFileSync(join(lectures, "state.json"), "utf8")).lastSuccess && JSON.parse(readFileSync(join(lectures, "state.json"), "utf8")).lastError.includes("the feed is down"));
+  unlinkSync(join(lectures, "fail"));
+
+  // A source allowed to refresh its own seeds, never a validated note.
+  node("sources.mjs", ["add", "posts", "--kind", "script", "--every", "week", "--type", "publication", "--domains", "travail", "--updates"]);
+  const posts = join(BRAIN, "sources", "posts");
+  writeFileSync(join(posts, "run.mjs"), SOURCE_PROGRAM, "utf8");
+  const postData = (likes) => writeFileSync(join(posts, "data.json"), JSON.stringify([{ id: "p1", title: "Mon post sur le travail", body: `Le post. ${likes} likes.`, fields: { likes } }]), "utf8");
+  postData(10);
+  node("sources.mjs", ["trust", "posts"]);
+  node("sources.mjs", ["run", "posts"]);
+  const postPath = join(BRAIN, "vault", "publications", "mon-post-sur-le-travail.md");
+  postData(25);
+  r = node("sources.mjs", ["run", "posts"]);
+  check("a source refreshes its own seed", r.ok && json(r.out).runs[0].updated === 1 && readFileSync(postPath, "utf8").includes("25 likes") && readFileSync(postPath, "utf8").includes("likes: 25"), r.out);
+  writeFileSync(postPath, readFileSync(postPath, "utf8").replace("status: seed", "status: trusted"), "utf8");
+  postData(99);
+  r = node("sources.mjs", ["run", "posts"]);
+  check("but never a note the person validated", r.ok && json(r.out).runs[0].updated === 0 && readFileSync(postPath, "utf8").includes("25 likes"), r.out);
+
+  // A source done by Claude.
+  r = node("sources.mjs", ["add", "linkedin", "--kind", "claude", "--every", "week", "--type", "publication", "--domains", "travail"]);
+  check("a source done by Claude gets its instructions", r.ok && existsSync(join(BRAIN, "sources", "linkedin", "instructions.md")), r.out);
+  r = node("sources.mjs", ["run", "linkedin"]);
+  check("it is never run as a program", r.ok && json(r.out).runs[0].skipped?.includes("Claude"), r.out);
+  node("sources.mjs", ["mark", "linkedin", "--ok", "--created", "3"]);
+  const listed = json(node("sources.mjs", ["list", "--json"]).out).sources;
+  check("the list tells each source's kind, approval and state", listed.find((x) => x.name === "linkedin")?.lastSuccess && listed.find((x) => x.name === "lectures")?.trusted === true && listed.find((x) => x.name === "lectures")?.notes === 2, JSON.stringify(listed));
+  node("review.mjs");
+  const ownReport = readFileSync(join(BRAIN, "reviews", `${localDay()}.md`), "utf8");
+  check("the weekly report tells what each source brought", ownReport.includes("## Your own sources (3)") && ownReport.includes("- linkedin (done by Claude): last success") && ownReport.includes("- posts (read automatically)"), ownReport);
+  r = node("save.mjs", ["--now"]);
+  check("the sources are saved with the brain (definitions, programs, what they saw)", git("ls-files", "sources").includes("sources/lectures/run.mjs") && git("ls-files", "sources").includes("sources/lectures/seen.json"), git("ls-files", "sources"));
+
   // ---- a brain in French: what the person reads is in their language
   r = node("init.mjs", ["--dir", "~/cerveau-tilde", "--name", "T", "--domains", "a,b", "--switch", "--no-git"], { env: { LANG: "fr_FR.UTF-8", LC_ALL: "", LC_MESSAGES: "" } });
   check("a quoted ~ is the home folder, not a folder named ~", r.ok && json(r.out).dir === join(HOME, "cerveau-tilde").replace(/\\/g, "/"), r.out);

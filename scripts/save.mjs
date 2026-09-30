@@ -17,7 +17,7 @@ import { commitPaths, isRepo, pushIfAgreed, tryGit } from "./git.mjs";
 import { brainLang, t } from "./i18n.mjs";
 
 const REST_MS = process.argv.includes("--now") ? 0 : 30 * 60_000;
-const OWNED = [/^vault\//, /^index\/embeddings\//, /^reviews\//, /^(BRAIN|SOURCES)\.md$/, /^hyperbrain\.json$/];
+const OWNED = [/^vault\//, /^index\/embeddings\//, /^reviews\//, /^sources\//, /^(BRAIN|SOURCES)\.md$/, /^hyperbrain\.json$/];
 
 if (!isRepo()) {
   console.log("not a git repository: nothing to save");

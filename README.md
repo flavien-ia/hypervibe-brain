@@ -36,7 +36,7 @@ Then, in a new session: **`/hyperbrain:start-hyperbrain`**.
 |---|---|
 | `/hyperbrain:start-hyperbrain` | Checks this computer (Node, git, your git identity), installs what is missing, offers to create the brain. |
 | `/hyperbrain:create-brain` | The guided construction, like Hypervibe's `/bootstrap`: the decisions, the creation and first notes, the sources, then the modules you want. Resumes where you left off. |
-| `/hyperbrain:brain-sources` | What feeds the brain: your mail and calendar, the folders you work in, your work with Claude, your existing writings. |
+| `/hyperbrain:brain-sources` | What feeds the brain: your mail and calendar, the folders you work in, your work with Claude, your existing writings, and sources of your own, defined with you. |
 | `/hyperbrain:brain-ingest` | Bring one of your writings in (notes, articles, documents), three trial notes first. |
 | `/hyperbrain:brain` | Capture a thought, classified right away (searches first, never duplicates). |
 | `/hyperbrain:brain-review` | The weekly review: what is new, what the sources brought, promotions, orphans, proposed links. |
@@ -53,7 +53,7 @@ Then, in a new session: **`/hyperbrain:start-hyperbrain`**.
 
 ## Coming next
 
-Your own custom sources, a contacts directory, the weekly letter by email, the brain on a second computer (`add-second-computer`), and reached from the cloud by online agents (`add-cloud`).
+A contacts directory, the weekly letter by email, the brain on a second computer (`add-second-computer`), and reached from the cloud by online agents (`add-cloud`).
 
 ## How it is built
 

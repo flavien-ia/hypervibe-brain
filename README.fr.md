@@ -36,7 +36,7 @@ Puis, dans une nouvelle session : **`/hyperbrain:start-hyperbrain`**.
 |---|---|
 | `/hyperbrain:start-hyperbrain` | Vérifie l'ordinateur (Node, git, votre identité git), installe ce qui manque, propose de créer le brain. |
 | `/hyperbrain:create-brain` | La construction guidée, comme le `/bootstrap` d'Hypervibe : les décisions, la création et les premières fiches, les sources, puis les modules que vous voulez. Reprend là où on s'était arrêté. |
-| `/hyperbrain:brain-sources` | Ce qui nourrit le brain : vos mails et votre agenda, les dossiers où vous travaillez, votre travail avec Claude, vos écrits existants. |
+| `/hyperbrain:brain-sources` | Ce qui nourrit le brain : vos mails et votre agenda, les dossiers où vous travaillez, votre travail avec Claude, vos écrits existants, et des sources bien à vous, définies avec vous. |
 | `/hyperbrain:brain-ingest` | Faire entrer un de vos écrits (notes, articles, documents), trois fiches d'essai d'abord. |
 | `/hyperbrain:brain` | Capturer une pensée, classée tout de suite (cherche d'abord, ne duplique jamais). |
 | `/hyperbrain:brain-review` | La revue de la semaine : les nouveautés, ce que les sources ont apporté, les promotions, les orphelines, des liens proposés. |
@@ -53,7 +53,7 @@ Puis, dans une nouvelle session : **`/hyperbrain:start-hyperbrain`**.
 
 ## À venir
 
-Vos propres sources personnalisées, un annuaire des contacts, la lettre de la semaine par email, le brain sur un second ordinateur (`add-second-computer`), et atteint depuis le cloud par des agents en ligne (`add-cloud`).
+Un annuaire des contacts, la lettre de la semaine par email, le brain sur un second ordinateur (`add-second-computer`), et atteint depuis le cloud par des agents en ligne (`add-cloud`).
 
 ## Comment il est construit
 
