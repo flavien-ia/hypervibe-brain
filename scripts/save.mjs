@@ -14,6 +14,7 @@ import { ROOT, config, readVault, requireBrain, validate } from "./lib.mjs";
 
 requireBrain();
 import { commitPaths, isRepo, pushIfAgreed, tryGit } from "./git.mjs";
+import { brainLang, t } from "./i18n.mjs";
 
 const REST_MS = process.argv.includes("--now") ? 0 : 30 * 60_000;
 const OWNED = [/^vault\//, /^index\/embeddings\//, /^reviews\//, /^(BRAIN|SOURCES)\.md$/, /^hyperbrain\.json$/];
@@ -58,7 +59,7 @@ if (refused.length) process.exitCode = 1;
 if (!paths.length) console.log(`nothing to save${waiting.length ? ` (${waiting.length} note(s) still being edited, they wait)` : ""}`);
 else {
   const notes = paths.filter((p) => p.startsWith("vault/")).length;
-  const c = commitPaths(paths, `save: ${notes} note(s), ${paths.length - notes} other file(s)`);
+  const c = commitPaths(paths, t(brainLang(ROOT)).commitSave(notes, paths.length - notes));
   if (!c.ok) {
     console.log(`NOT saved: ${c.err.split("\n").slice(0, 3).join(" | ").slice(0, 400)}`);
     process.exitCode = 1;

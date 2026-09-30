@@ -8,7 +8,12 @@
 // brain already set up on this computer unless --switch is given: a brain is
 // never created on top of something.
 //
-//   node scripts/init.mjs --dir <folder> --name "<Name>" --domains work,writing,family [--auto-push] [--no-git] [--switch]
+//   node scripts/init.mjs --dir <folder> --name "<Name>" --domains work,writing,family [--lang fr|en] [--auto-push] [--no-git] [--switch]
+//
+// --lang: the language of the documents the person will read (their brain's
+// documents, the weekly report, the names of the saves). By default, the
+// computer's. French and English exist; any other falls back to English and
+// Claude translates the documents when it fills them.
 //
 // Prints one JSON line: { ok, dir, domains, git, commit, identity }.
 
@@ -16,8 +21,7 @@ import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { PLUGIN_ROOT, setUserConfig, userConfig } from "./lib.mjs";
-
-const TEMPLATE = join(PLUGIN_ROOT, "templates", "brain");
+import { LANGS, osLang, t } from "./i18n.mjs";
 const args = process.argv.slice(2);
 const opt = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : undefined);
 const out = (o) => console.log(JSON.stringify(o));
@@ -36,6 +40,8 @@ const domains = [...new Set(String(opt("--domains") ?? "").split(",").map((d) =>
   d.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")).filter(Boolean))];
 if (domains.length < 2 || domains.length > 10) fail("choose between 2 and 10 domains (--domains a,b,c)");
 
+const lang = LANGS.includes(opt("--lang")) ? opt("--lang") : osLang();
+const TEMPLATE = join(PLUGIN_ROOT, "templates", "brain", lang);
 const dir = resolve(dirArg);
 const current = userConfig().brain;
 if (current && resolve(current) !== dir && existsSync(join(current, "hyperbrain.json")) && !args.includes("--switch")) {
@@ -62,7 +68,9 @@ for (const f of ["CLAUDE.md", "BRAIN.md", "SOURCES.md", "vault/CLAUDE.md"]) {
 }
 writeFileSync(join(dir, "hyperbrain.json"), `${JSON.stringify({
   name,
+  lang,
   domains,
+  components: {},
   autoPush: args.includes("--auto-push"),
   stage: 2,
   created: today,
@@ -70,7 +78,7 @@ writeFileSync(join(dir, "hyperbrain.json"), `${JSON.stringify({
 }, null, 2)}\n`, "utf8");
 setUserConfig({ brain: dir.replace(/\\/g, "/") });
 
-const result = { ok: true, dir: dir.replace(/\\/g, "/"), domains, git: false, commit: false, identity: null };
+const result = { ok: true, dir: dir.replace(/\\/g, "/"), lang, domains, git: false, commit: false, identity: null };
 if (!args.includes("--no-git")) {
   const git = (a) => execFileSync("git", a, { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], windowsHide: true }).trim();
   try {
@@ -83,7 +91,7 @@ if (!args.includes("--no-git")) {
     }
     git(["add", "--", ".gitignore", ".gitattributes", "CLAUDE.md", "BRAIN.md", "SOURCES.md", "hyperbrain.json", "vault/CLAUDE.md"]);
     if (result.identity) {
-      git(["commit", "-q", "-m", `Création du brain de ${name}`]);
+      git(["commit", "-q", "-m", t(lang).commitCreate(name)]);
       result.commit = true;
     }
   } catch (e) {

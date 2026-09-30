@@ -29,6 +29,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { HOME, PLUGIN_ROOT, setUserConfig, userConfig } from "./lib.mjs";
+import { brainLang, osLang, t } from "./i18n.mjs";
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -38,7 +39,11 @@ const SUFFIX = process.env.HYPERBRAIN_TASK_SUFFIX ?? "";
 const DIR = join(HOME, ".hyperbrain");
 const LAUNCHER = join(DIR, "nightly.mjs");
 const VBS = join(DIR, "nightly.vbs");
-const TASK = `Hyperbrain sauvegarde du soir${SUFFIX}`;
+// The task's name is in the brain's language: the person sees it in their
+// scheduler. Once armed, the name is kept in the settings: a later change of
+// language must still find the task to stop it.
+const WORDS = t(userConfig().brain ? brainLang(userConfig().brain) : osLang());
+const TASK = userConfig().routines?.save?.task ?? `${WORDS.taskName}${SUFFIX}`;
 const LABEL = `fr.hyperbrain.nightly${SUFFIX.replace(/[^a-z0-9]/gi, "").toLowerCase()}`;
 const PLIST = join(HOME, "Library", "LaunchAgents", `${LABEL}.plist`);
 const CRON_MARK = `# hyperbrain-nightly${SUFFIX}`;
@@ -103,8 +108,13 @@ if (!cfg.brain || !existsSync(join(cfg.brain, "hyperbrain.json"))) {
   log("ERROR: no brain set up (~/.hyperbrain/config.json). Nothing done.");
   process.exit(1);
 }
-for (const [script, extra] of [["build.mjs", ["--quiet"]], ["save.mjs", []]]) {
-  const r = spawnSync(process.execPath, [join(root, "scripts", script), "--brain", cfg.brain, ...extra], { encoding: "utf8", windowsHide: true, timeout: 15 * 60_000 });
+// Rebuild (the vectors of new notes), save what is at rest, then the weekly
+// cold copy if the person chose one (it does nothing on the other days).
+// Then the viewer, refreshed if it was built once, and the data of the
+// persistent app, if there is one (both do nothing otherwise).
+for (const [script, extra] of [["build.mjs", ["--quiet"]], ["save.mjs", []], ["cold-copy.mjs", []], ["viz.mjs", ["build", "--if-exists"]], ["viz.mjs", ["publish-app"]]]) {
+  // The command first (viz.mjs reads it as its first argument), the brain after.
+  const r = spawnSync(process.execPath, [join(root, "scripts", script), ...extra, "--brain", cfg.brain], { encoding: "utf8", windowsHide: true, timeout: 15 * 60_000 });
   const text = ((r.stdout ?? "") + (r.stderr ?? "")).split("\\n").filter((l) => l.trim() && !/ExperimentalWarning|trace-warnings/.test(l)).join(" | ");
   log(script + " exit " + r.status + (text ? ": " + text.slice(0, 600) : ""));
 }
@@ -133,7 +143,7 @@ function arm() {
       `$t = New-ScheduledTaskTrigger -Daily -At ${psq(time)}`,
       // Missed because the computer was asleep or off: runs at the next wake-up.
       "$s = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 30) -MultipleInstances IgnoreNew",
-      `Register-ScheduledTask -TaskName ${psq(TASK)} -Action $a -Trigger $t -Settings $s -Description 'Hyperbrain: rebuilds the index of the second brain and saves it (git). No AI, no cost.' -Force | Out-Null`,
+      `Register-ScheduledTask -TaskName ${psq(TASK)} -Action $a -Trigger $t -Settings $s -Description ${psq(WORDS.taskDescription)} -Force | Out-Null`,
       "'ok'",
     ].join("; "));
   } else if (OS === "mac") {
@@ -161,7 +171,7 @@ function arm() {
     r = sh("crontab", ["-"], `${[...current, `${m} ${h} * * * PATH="${UNIX_PATH}" "${process.execPath}" "${LAUNCHER}" ${CRON_MARK}`].join("\n")}\n`);
   }
   if (r.status !== 0) return { ok: false, error: r.out.slice(0, 400) };
-  if (!DRY) setUserConfig({ routines: { ...(userConfig().routines ?? {}), save: { time, armed: new Date().toISOString() } } });
+  if (!DRY) setUserConfig({ routines: { ...(userConfig().routines ?? {}), save: { time, task: TASK, armed: new Date().toISOString() } } });
   return { ok: true, armed: TASK, time, os: OS, dryRun: DRY || undefined, detail: DRY ? r.out : undefined };
 }
 
@@ -188,7 +198,7 @@ function disarm() {
 function state() {
   const logs = join(DIR, "logs");
   const last = existsSync(logs) ? readdirSync(logs).filter((n) => n.startsWith("nightly-")).sort().at(-1) : null;
-  const lastLines = last ? readFileSync(join(logs, last), "utf8").trim().split("\n").slice(-2) : [];
+  const lastLines = last ? readFileSync(join(logs, last), "utf8").trim().split("\n").slice(-5) : [];
   const s = { os: OS, task: TASK, armed: false, time: userConfig().routines?.save?.time ?? null, lastLog: last, lastRun: lastLines, review: userConfig().routines?.review ?? null };
   if (OS === "windows") {
     const r = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",

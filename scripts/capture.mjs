@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { ROOT, STATUSES, TYPES, VISIBILITIES, VAULT, config, listFiches, parseFiche, requireBrain, slugify, toPosix, today, validate } from "./lib.mjs";
 import { commitPaths, isRepo, pushIfAgreed } from "./git.mjs";
+import { brainLang, t } from "./i18n.mjs";
 
 const args = process.argv.slice(2);
 const opt = (n, d) => (args.includes(n) ? args[args.indexOf(n) + 1] : d);
@@ -87,7 +88,7 @@ if (errors.length) {
 const rel = toPosix(relative(ROOT, abs));
 console.log(`created: ${rel}`);
 if (!args.includes("--no-commit") && isRepo()) {
-  const c = commitPaths([rel], `capture: ${title}`);
+  const c = commitPaths([rel], t(brainLang(ROOT)).commitCapture(title));
   if (!c.ok) console.log(`not committed (${c.err.split("\n")[0].slice(0, 160)}): the note is safe on disk, the next save will commit it`);
   else {
     const p = pushIfAgreed();

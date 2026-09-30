@@ -11,6 +11,10 @@
 - **Search by words and by meaning**: every word, anywhere, accents ignored; and, with an OpenAI key (a few cents for thousands of notes), by meaning.
 - **A trust model**: what the machine writes enters as a `seed`, never overwrites what you validated, and becomes `trusted` once it has taken root. Private notes are never shown to an AI.
 - **It lives on its own**: a save every evening (no AI, no cost) and a weekly review by Claude.
+- **You choose what it does**: search by meaning, online backup, evening save, weekly review, work journal, mail and calendar, watched folders, cold copy. Each one is explained with what it implies before you choose.
+- **You see it**: a map of your notes, as a page on your computer, or as a private web app if you use Hypervibe.
+- **In your language**: Claude speaks yours, and everything the plugin writes for you (your brain's documents, the weekly report, the history) is in French or English, from your computer's settings.
+- **Windows, macOS and Linux**.
 
 ## Install
 
@@ -33,7 +37,12 @@ Then, in a new session: **`/hyperbrain:start-hyperbrain`**.
 | `/hyperbrain:brain-ingest` | Bring one existing source in (notes, articles, documents), three trial notes first. |
 | `/hyperbrain:brain-review` | The weekly review: what is new, promotions, orphans, broken links, proposed links. |
 | `/hyperbrain:brain-status` | Where the brain stands, and the next useful step. |
-| `/hyperbrain:brain-routines` | Arm, check or stop the evening save and the weekly review. |
+| `/hyperbrain:brain-routines` | Set up, check or stop the evening save and the weekly review. |
+| `/hyperbrain:brain-viz` | See the brain as a map: a page on your computer, or a private web app if Hypervibe is installed. |
+
+## Coming next
+
+Using the brain from a second computer, reaching it from the cloud for online agents, and receiving the weekly review by email.
 
 ## How it is built
 

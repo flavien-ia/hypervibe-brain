@@ -109,7 +109,7 @@ try {
     r = node("init.mjs", ["--dir", join(HOME, ...synced, "brain"), "--name", "X", "--domains", "a,b"]);
     check(`init refuses ${synced.join("/")}`, !r.ok && r.out.includes("synchronised"), r.out);
   }
-  r = node("init.mjs", ["--dir", BRAIN, "--name", "Camille", "--domains", "Travail,Écriture,famille"]);
+  r = node("init.mjs", ["--dir", BRAIN, "--name", "Camille", "--domains", "Travail,Écriture,famille", "--lang", "en"]);
   const created = json(r.out);
   check("init creates the brain", r.ok && created.ok, r.out);
   check("domains are normalised (accents, case)", JSON.stringify(created.domains) === JSON.stringify(["travail", "ecriture", "famille"]), created.domains);
@@ -218,6 +218,39 @@ try {
   check("MCP prints nothing but protocol on stdout", m.lines.every((l) => l.startsWith("{")), m.lines.find((l) => !l.startsWith("{")));
   m.close();
 
+  // ---- the components
+  const WATCHED = join(BASE, "ecrits");
+  mkdirSync(WATCHED, { recursive: true });
+  writeFileSync(join(WATCHED, "chapitre-1.md"), "Il était une fois.\n", "utf8");
+  const COLD = join(BASE, "disque-externe");
+  mkdirSync(COLD, { recursive: true });
+  r = node("components.mjs", ["set", "journal", "on"]);
+  check("a component is switched on", r.ok && json(r.out).journal === true, r.out);
+  r = node("components.mjs", ["set", "telepathy", "on"]);
+  check("an unknown component is refused", !r.ok, r.out);
+  r = node("components.mjs", ["watch", "add", WATCHED]);
+  check("a folder is watched", r.ok && json(r.out).watch.length === 1, r.out);
+  r = node("components.mjs", ["cold-copy", join(BRAIN, "vault")]);
+  check("the cold copy cannot live inside the brain", !r.ok, r.out);
+  r = node("components.mjs", ["cold-copy", COLD]);
+  check("the cold copy folder is recorded", r.ok && json(r.out).coldCopy === COLD.replace(/\\/g, "/"), r.out);
+
+  // ---- the work journal, the hook of the plugin
+  const hook = (payload, extra = {}) => run("node", [join(SCRIPTS, "hook-journal.mjs")], { input: JSON.stringify(payload), env: extra });
+  const JOURNAL = join(HOME, ".hyperbrain", "journal.jsonl");
+  r = hook({ session_id: "s1", cwd: join(BASE, "projet-roman") });
+  check("the hook is silent", r.ok && r.out.trim() === "", r.out);
+  hook({ session_id: "s1", cwd: join(BASE, "projet-roman") });
+  hook({ session_id: "s2", cwd: join(BASE, "site-web") });
+  const jl = readFileSync(JOURNAL, "utf8").trim().split("\n");
+  check("one line per session, no duplicate", jl.length === 2 && jl[0].includes("projet-roman"), jl.join(" | "));
+  r = hook("not json at all");
+  check("the hook never fails, even on nonsense", r.ok);
+
+  // A source that points to a file that is gone.
+  r = cap("Tiré d'un brouillon disparu.", ["--title", "Brouillon perdu", "--type", "note", "--domains", "ecriture", "--source", join(BASE, "n-existe-plus.docx")]);
+  check("capture with a local source", r.ok, r.out);
+
   // ---- the weekly review
   const idPath = join(BRAIN, "vault", "ideas", "le-travail-se-deplace.md");
   const notePath = join(BRAIN, "vault", "notes", "vieille-note.md");
@@ -227,9 +260,54 @@ try {
   check("the review writes its report", r.ok && existsSync(join(BRAIN, "reviews", `${new Date().toISOString().slice(0, 10)}.md`)), r.out);
   check("an old seed linked from another day is promoted", readFileSync(notePath, "utf8").includes("status: trusted"), readFileSync(notePath, "utf8"));
   check("an idea is never promoted by the machine", readFileSync(idPath, "utf8").includes("status: seed"));
+  const report = readFileSync(join(BRAIN, "reviews", `${new Date().toISOString().slice(0, 10)}.md`), "utf8");
+  check("the report is in the brain's language", report.startsWith("# Review of Camille's brain"), report.slice(0, 80));
+  check("the report lists the dead source", report.includes("[[brouillon-perdu]]") && report.includes("1 source(s) pointing to a file"), report);
+  check("the report tells what was worked on", report.includes("projet-roman: 1 session(s)") && report.includes("site-web"), report);
+  check("the report lists what moved in the watched folders", report.includes("chapitre-1.md"), report);
   r = node("status.mjs", ["--json"]);
   const st = json(r.out);
-  check("status reads the brain", r.ok && st.notes === 4 && st.git === true && st.remote === false && st.dir === BRAIN.replace(/\\/g, "/"), r.out);
+  check("status reads the brain and its components", r.ok && st.notes === 5 && st.git === true && st.remote === false && st.dir === BRAIN.replace(/\\/g, "/") && st.components.journal === true, r.out);
+
+  // ---- the cold copy
+  node("save.mjs", ["--now"]);
+  r = node("cold-copy.mjs");
+  const cold = json(r.out);
+  check("the cold copy writes a verified archive", r.ok && cold.ok && existsSync(cold.archive ?? "") && cold.commits > 3, r.out);
+  r = node("cold-copy.mjs");
+  check("a second one the same week is skipped", r.ok && json(r.out).skipped?.includes("recent"), r.out);
+  const RESTORED = join(BASE, "restaure");
+  r = run("git", ["clone", "-q", cold.archive, RESTORED]);
+  check("the archive restores the whole brain", r.ok && existsSync(join(RESTORED, "vault", "ideas", "le-travail-se-deplace.md")), r.out);
+
+  // ---- seeing the brain
+  r = node("viz.mjs", ["detect"]);
+  check("no Hypervibe in the fake home", r.ok && json(r.out).hypervibe === false, r.out);
+  const HV = join(HOME, ".claude", "plugins", "marketplaces", "x", "hypervibe", ".claude-plugin");
+  mkdirSync(HV, { recursive: true });
+  writeFileSync(join(HV, "plugin.json"), JSON.stringify({ name: "hypervibe", version: "9.9.9" }), "utf8");
+  r = node("viz.mjs", ["detect"]);
+  check("Hypervibe is detected where Claude installs plugins", r.ok && json(r.out).hypervibe === true, r.out);
+  r = node("viz.mjs", ["build"]);
+  const page = existsSync(join(BRAIN, "viz", "brain.html")) ? readFileSync(join(BRAIN, "viz", "brain.html"), "utf8") : "";
+  check("the simple viewer is written", r.ok && page.includes("Projet de roman") && !page.includes("HYPERBRAIN_DATA*/null"), r.out);
+  check("the viewer never holds a private note's content", page.includes("Dossier santé") && !page.includes("Mes notes de santé"));
+  check("the viewer stays out of git", git("check-ignore", "viz/brain.html") === "viz/brain.html");
+  const exported = json(node("viz.mjs", ["export"]).out);
+  const privNode = exported.nodes.find((n) => n.id === "dossier-sante");
+  check("the app's data: private notes without content, no local path", privNode?.excerpt === "" && privNode.private === true && exported.nodes.every((n) => !("file" in n)) && exported.nodes.find((n) => n.id === "brouillon-perdu")?.source === "", JSON.stringify(privNode));
+  const APP = join(BASE, "app");
+  mkdirSync(APP, { recursive: true });
+  run("git", ["init", "-q", "-b", "main"], { cwd: APP });
+  writeFileSync(join(APP, "README.md"), "app\n", "utf8");
+  run("git", ["add", "README.md"], { cwd: APP });
+  run("git", ["commit", "-q", "-m", "app"], { cwd: APP });
+  r = node("components.mjs", ["viz-app", APP]);
+  check("the app is recorded, without automatic push unless asked", r.ok && json(r.out).vizApp.autoPush === false, r.out);
+  r = node("viz.mjs", ["publish-app"]);
+  check("the app's data is committed in the app, not pushed", r.ok && json(r.out).committed === true && json(r.out).pushed === false && existsSync(join(APP, "data", "brain-graph.json")), r.out);
+  r = node("viz.mjs", ["publish-app"]);
+  check("unchanged data is not committed again", r.ok && json(r.out).unchanged === true, r.out);
 
   // ---- the routines, never armed for real here
   r = node("routines.mjs", ["arm", "--time", "21:30", "--dry-run"]);
@@ -241,11 +319,22 @@ try {
   check("the weekly review is recorded", r.ok && json(r.out).review.when === "dimanche 18:00", r.out);
   r = node("routines.mjs", ["run-now"]);
   const now = json(r.out);
-  check("the evening save runs through its launcher", r.ok && now.lastRun.some((l) => l.includes("build.mjs exit 0")) && now.lastRun.some((l) => l.includes("save.mjs exit 0")), r.out);
-  // The idea was edited a minute ago: it waits for its rest, the rest is saved.
-  check("and it saved the review and the promotion, not the note edited a minute ago", git("status", "--porcelain") === "M vault/ideas/le-travail-se-deplace.md", git("status", "--porcelain"));
+  check("the evening save runs through its launcher, all its steps", r.ok && ["save.mjs exit 0", "cold-copy.mjs exit 0", "viz.mjs exit 0"].every((s) => now.lastRun.some((l) => l.includes(s))), r.out);
+  // Everything was saved just before the cold copy: nothing is left behind.
+  check("and nothing is left unsaved in the brain", git("status", "--porcelain") === "", git("status", "--porcelain"));
   r = node("routines.mjs", ["state", "--json"]);
   check("state reports the review and the last run", r.ok && json(r.out).review?.when === "dimanche 18:00" && json(r.out).lastLog, r.out);
+
+  // ---- a brain in French: what the person reads is in their language
+  const FR = join(BASE, "cerveau");
+  r = node("init.mjs", ["--dir", FR, "--name", "Léa", "--domains", "travail,famille", "--lang", "fr", "--switch"]);
+  check("a French brain is created (and becomes the active one on --switch)", r.ok && json(r.out).lang === "fr", r.out);
+  check("its documents are in French", readFileSync(join(FR, "BRAIN.md"), "utf8").startsWith("# Le brain de Léa") && readFileSync(join(FR, "SOURCES.md"), "utf8").includes("Une source à la fois"));
+  check("its history speaks French", run("git", ["log", "-1", "--format=%s"], { cwd: FR }).out.trim() === "Création du brain de Léa");
+  r = cap("Une pensée.", ["--title", "Première pensée", "--type", "idea", "--domains", "travail"]);
+  check("its captures speak French", r.ok && run("git", ["log", "-1", "--format=%s"], { cwd: FR }).out.trim() === "capture : Première pensée", r.out);
+  node("review.mjs");
+  check("its weekly report is in French", readFileSync(join(FR, "reviews", `${new Date().toISOString().slice(0, 10)}.md`), "utf8").startsWith("# Revue du brain de Léa"));
 } finally {
   fake.kill();
   if (process.argv.includes("--keep")) console.log(`\n  (--keep: ${BASE} left in place)`);

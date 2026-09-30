@@ -30,6 +30,8 @@ const s = {
   dir: ROOT.replace(/\\/g, "/"),
   domains: cfg.domains,
   stage: cfg.stage ?? null,
+  lang: cfg.lang ?? null,
+  components: cfg.components ?? {},
   notes: fiches.length,
   byStatus,
   byDomain,

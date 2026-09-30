@@ -24,8 +24,9 @@ A compact picture, in this order:
 1. **The brain**: how many notes, how many `seed` / `trusted`, the domains with their counts (a domain at zero is worth saying).
 2. **Its health**: errors (must be zero: an error blocks the index), warnings, search by meaning on or off.
 3. **Its safety**: saved online or local only, last save, files not yet saved.
-4. **Its life**: the evening save (armed? last run and its result), the weekly review (armed? last report).
-5. **The construction**: `stage` below 6 means `/hyperbrain:create-brain` has not been completed; say which step comes next.
+4. **Its life**: the evening save (set up? last run and its result), the weekly review (set up? last report).
+5. **Its components**: which ones are on (`components`), in plain words ("search by meaning, online backup, work journal"), and the watched folders and cold copy folder if any.
+6. **The construction**: `stage` below 6 means `/hyperbrain:create-brain` has not been completed; say which step comes next.
 
 ## Recommend one thing
 

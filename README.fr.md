@@ -11,6 +11,10 @@
 - **Recherche par les mots et par le sens** : chaque mot, n'importe où, accents ignorés ; et, avec une clé OpenAI (quelques centimes pour des milliers de fiches), par le sens.
 - **Un modèle de confiance** : ce que la machine écrit entre en `seed`, n'écrase jamais ce que vous avez validé, et passe `trusted` quand il a pris racine. Une fiche privée n'est jamais montrée à une IA.
 - **Il vit tout seul** : une sauvegarde chaque soir (sans IA, sans coût) et une revue chaque semaine par Claude.
+- **Vous choisissez ce qu'il fait** : recherche par le sens, sauvegarde en ligne, sauvegarde du soir, revue de la semaine, journal de travail, mails et agenda, dossiers suivis, copie froide. Chacune est expliquée, avec ce qu'elle implique, avant que vous choisissiez.
+- **Vous le voyez** : une carte de vos fiches, en page sur votre ordinateur, ou en application web privée si vous utilisez Hypervibe.
+- **Dans votre langue** : Claude parle la vôtre, et tout ce que le plugin écrit pour vous (les documents de votre brain, le rapport de la semaine, l'historique) est en français ou en anglais, selon les réglages de votre ordinateur.
+- **Windows, macOS et Linux**.
 
 ## Installer
 
@@ -33,7 +37,12 @@ Puis, dans une nouvelle session : **`/hyperbrain:start-hyperbrain`**.
 | `/hyperbrain:brain-ingest` | Faire entrer une source existante (notes, articles, documents), trois fiches d'essai d'abord. |
 | `/hyperbrain:brain-review` | La revue de la semaine : les nouveautés, les promotions, les orphelines, les liens cassés, des liens proposés. |
 | `/hyperbrain:brain-status` | Où en est le brain, et la prochaine étape utile. |
-| `/hyperbrain:brain-routines` | Armer, vérifier ou arrêter la sauvegarde du soir et la revue de la semaine. |
+| `/hyperbrain:brain-routines` | Mettre en place, vérifier ou arrêter la sauvegarde du soir et la revue de la semaine. |
+| `/hyperbrain:brain-viz` | Voir le brain comme une carte : une page sur votre ordinateur, ou une application web privée si Hypervibe est installé. |
+
+## À venir
+
+Utiliser le brain depuis un second ordinateur, l'atteindre depuis le cloud pour des agents en ligne, et recevoir la revue de la semaine par email.
 
 ## Comment il est construit
 

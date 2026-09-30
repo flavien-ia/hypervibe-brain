@@ -1,17 +1,18 @@
 ---
 name: brain-routines
-description: Arm, check or stop the routines that keep your second brain alive - a save every evening (no AI, no cost) and a review every week by Claude.
+description: Set up, check or stop the two things that happen without you asking - the evening save of your second brain (no AI, no cost) and its weekly review by Claude.
 ---
 
-# /brain-routines - The brain lives on its own
+# /brain-routines - What happens without the person asking
 
-Two routines, of two different natures. Explain them in two sentences before arming anything:
+Two automatic tasks, of two different natures. Present them in these words (translated), before setting anything up:
 
-1. **The evening save** (every day, 21:00 by default): rebuilds the index and saves what is at rest in git, pushing it online if the person allowed it. **No AI, no cost**: it runs in this computer's own scheduler (Windows Task Scheduler, macOS launchd, Linux cron), invisible, and catches up at the next wake-up if the computer was asleep.
-2. **The weekly review** (once a week, the day and time the person chooses): Claude runs `/hyperbrain:brain-review` in automatic mode and leaves the report in `reviews/`. It **runs on the person's Claude account** (it uses a little of their subscription) and on **this computer** (the brain is local, a cloud routine could not see it): the Claude app must be open at that time, or the run waits for the next opening.
+> Two things can happen without you asking:
+> - **every evening** (at 9 pm unless you prefer another time), your computer records the day's changes to your brain, rebuilds its search, and sends everything to your online backup if you have one. It uses no AI, costs nothing, stays invisible, and if the computer was off or asleep, it catches up when it wakes up;
+> - **every week**, on the day and at the time you choose, Claude rereads your brain and leaves you a report: new notes, notes that have proven themselves, forgotten notes, links to add. It uses a little of your Claude subscription, and it runs on this computer (your brain is here, not on the internet): the Claude app must be open at that moment, or the review waits until it is.
 
 ## Communication
-- Reply in the person's language. Plain words: "a save every evening", never "a cron job".
+- Reply in the person's language. Plain words: "your computer records the day's changes", never "a cron job" or "a git commit".
 
 ## Where things stand
 
@@ -19,9 +20,9 @@ Two routines, of two different natures. Explain them in two sentences before arm
 node "${CLAUDE_SKILL_DIR}/../../scripts/routines.mjs" state --json
 ```
 
-It says whether the evening save is armed (with its next run and last result) and what is known of the weekly review. Say it in two lines, then ask what the person wants: arm both (recommended), change a time, stop one, or nothing.
+It says whether the evening save is set up (next run, how the last one went) and what is known of the weekly review. Say it in two lines, then ask what the person wants: set both up (recommended), change a time, stop one, or nothing.
 
-## Arm the evening save
+## Set up the evening save
 
 Ask the time if they want another one than 21:00, then:
 
@@ -29,35 +30,38 @@ Ask the time if they want another one than 21:00, then:
 node "${CLAUDE_SKILL_DIR}/../../scripts/routines.mjs" arm --time 21:00
 ```
 
-Then run it once right away, so that the person sees it work and the first trace exists:
+Then run it once right away, so that the person sees it work:
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/../../scripts/routines.mjs" run-now
 ```
 
-`lastRun` must show `build.mjs exit 0` and `save.mjs exit 0`. Otherwise read the trace (`~/.hyperbrain/logs/`), explain, fix.
+`lastRun` must show `build.mjs exit 0` and `save.mjs exit 0` (and `cold-copy.mjs`, `viz.mjs` lines, which do nothing when not chosen). Otherwise read the trace (`~/.hyperbrain/logs/`), explain in plain words, fix. On a Mac, the first run may make macOS ask whether `node` may access a folder: tell the person to accept.
 
-## Arm the weekly review
+Record the component: `node "${CLAUDE_SKILL_DIR}/../../scripts/components.mjs" set save on`.
 
-Ask the day and time (for instance Sunday 18:00).
+## Set up the weekly review
 
-**If this session offers a tool to create scheduled tasks** (the Claude desktop app has one), create a weekly task with exactly this prompt:
+Ask the day and time (for instance Sunday 6 pm).
 
-> Run the skill /hyperbrain:brain-review in automatic mode: nobody is at the screen, ask no question, modify no trusted note, create no note. End with the five-line summary.
+**If this session offers a tool to create scheduled tasks** (the Claude desktop app has one, on Windows and on Mac), create a weekly task with exactly this prompt:
+
+> Run the skill /hyperbrain:brain-review in automatic mode: nobody is at the screen, ask no question, modify no trusted note. End with the five-line summary.
 
 Name it `hyperbrain-weekly-review`. Then record it, so that `/hyperbrain:brain-status` can report it:
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/../../scripts/routines.mjs" note-review --when "<day and time, in plain words>" --id "<the task's id or name>"
+node "${CLAUDE_SKILL_DIR}/../../scripts/components.mjs" set review on
 ```
 
 **If no such tool is available** (terminal only, or another app): say it plainly, and offer the manual habit instead: once a week, the person says "review my brain". Record that choice with `note-review --when "manual, <day>" --id manual`.
 
-## Stop a routine
+## Stop a task
 
-- Evening save: `node "${CLAUDE_SKILL_DIR}/../../scripts/routines.mjs" disarm`.
-- Weekly review: delete the scheduled task with the same tool (or tell the person where it is in their app), then `node "${CLAUDE_SKILL_DIR}/../../scripts/routines.mjs" note-review --off`.
+- Evening save: `node "${CLAUDE_SKILL_DIR}/../../scripts/routines.mjs" disarm`, then `components.mjs set save off`.
+- Weekly review: delete the scheduled task with the same tool (or tell the person where it is in their app), then `routines.mjs note-review --off` and `components.mjs set review off`.
 
 ## End
 
-Two lines: what is armed, when the next run is.
+Two lines: what is set up, when the next run is.
