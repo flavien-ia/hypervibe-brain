@@ -18,9 +18,10 @@
 // Prints one JSON line: { ok, dir, domains, git, commit, identity }.
 
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { PLUGIN_ROOT, setUserConfig, userConfig } from "./lib.mjs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { HOME, PLUGIN_ROOT, setUserConfig, today as localToday, userConfig } from "./lib.mjs";
 import { LANGS, osLang, t } from "./i18n.mjs";
 const args = process.argv.slice(2);
 const opt = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : undefined);
@@ -42,7 +43,8 @@ if (domains.length < 2 || domains.length > 10) fail("choose between 2 and 10 dom
 
 const lang = LANGS.includes(opt("--lang")) ? opt("--lang") : osLang();
 const TEMPLATE = join(PLUGIN_ROOT, "templates", "brain", lang);
-const dir = resolve(dirArg);
+// "~/hyperbrain" in quotes reaches us unexpanded: expand it ourselves.
+const dir = resolve(dirArg.replace(/^~(?=[\\/]|$)/, HOME));
 const current = userConfig().brain;
 if (current && resolve(current) !== dir && existsSync(join(current, "hyperbrain.json")) && !args.includes("--switch")) {
   fail(`a brain is already set up on this computer (${current}). Creating another one would make it the active brain: repeat with --switch if that is what the person wants`);
@@ -52,7 +54,24 @@ if (current && resolve(current) !== dir && existsSync(join(current, "hyperbrain.
 // ~/Library/CloudStorage (Dropbox, OneDrive, Google Drive since 2022) and
 // iCloud's "Mobile Documents" (Desktop and Documents when iCloud syncs them).
 const SYNCED = /[\\/](Dropbox|OneDrive[^\\/]*|iCloud ?Drive|Google ?Drive|My Drive|CloudStorage|Mobile Documents)([\\/]|$)/i;
-if (SYNCED.test(dir)) {
+// The check runs on the REAL path of the nearest existing folder: a symlink
+// into a synced folder must not slip through.
+let real = dir;
+for (let p = dir; ; p = dirname(p)) {
+  if (existsSync(p)) {
+    real = join(realpathSync(p), dir.slice(p.length));
+    break;
+  }
+  if (dirname(p) === p) break;
+}
+// macOS: with "Desktop and Documents Folders" ticked in iCloud, ~/Desktop and
+// ~/Documents keep their usual path but live in iCloud.
+const icloudDocs = process.platform === "darwin" && ["Desktop", "Documents"].some((f) => {
+  const home = process.env.HYPERBRAIN_HOME || homedir();
+  const inside = (p) => real === p || real.startsWith(`${p}/`);
+  return existsSync(join(home, "Library", "Mobile Documents", "com~apple~CloudDocs", f)) && inside(join(home, f));
+});
+if (SYNCED.test(dir) || SYNCED.test(real) || icloudDocs) {
   fail(`${dir} is inside a synchronised folder: these tools damage git repositories and databases. Choose a folder outside it`);
 }
 if (existsSync(dir) && readdirSync(dir).length) fail(`${dir} exists and is not empty: choose another folder, a brain is never created on top of something`);
@@ -61,7 +80,7 @@ mkdirSync(dir, { recursive: true });
 cpSync(TEMPLATE, dir, { recursive: true });
 renameSync(join(dir, "gitignore"), join(dir, ".gitignore"));
 renameSync(join(dir, "gitattributes"), join(dir, ".gitattributes"));
-const today = new Date().toISOString().slice(0, 10);
+const today = localToday();
 for (const f of ["CLAUDE.md", "BRAIN.md", "SOURCES.md", "vault/CLAUDE.md"]) {
   const p = join(dir, f);
   writeFileSync(p, readFileSync(p, "utf8").replaceAll("{{NAME}}", name).replaceAll("{{DATE}}", today).replaceAll("{{DIR}}", dir.replace(/\\/g, "/")), "utf8");

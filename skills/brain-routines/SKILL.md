@@ -8,7 +8,7 @@ description: Set up, check or stop the two things that happen without you asking
 Two automatic tasks, of two different natures. Present them in these words (translated), before setting anything up:
 
 > Two things can happen without you asking:
-> - **every evening** (at 9 pm unless you prefer another time), your computer records the day's changes to your brain, rebuilds its search, and sends everything to your online backup if you have one. It uses no AI, costs nothing, stays invisible, and if the computer was off or asleep, it catches up when it wakes up;
+> - **every evening** (at 9 pm unless you prefer another time), your computer records the day's changes to your brain, rebuilds its search, and sends everything to your online backup if you have one. It uses no AI, costs nothing, stays invisible, and if the computer was off or asleep at that time, it catches up at the next wake-up or start (and does nothing if the evening was already saved);
 > - **every week**, on the day and at the time you choose, Claude rereads your brain and leaves you a report: new notes, notes that have proven themselves, forgotten notes, links to add. It uses a little of your Claude subscription, and it runs on this computer (your brain is here, not on the internet): the Claude app must be open at that moment, or the review waits until it is.
 
 ## Communication
@@ -36,7 +36,13 @@ Then run it once right away, so that the person sees it work:
 node "${CLAUDE_SKILL_DIR}/../../scripts/routines.mjs" run-now
 ```
 
-`lastRun` must show `build.mjs exit 0` and `save.mjs exit 0` (and `cold-copy.mjs`, `viz.mjs` lines, which do nothing when not chosen). Otherwise read the trace (`~/.hyperbrain/logs/`), explain in plain words, fix. On a Mac, the first run may make macOS ask whether `node` may access a folder: tell the person to accept.
+`lastRun` must show `build.mjs exit 0` and `save.mjs exit 0` (and `cold-copy.mjs`, `viz.mjs` lines, which do nothing when not chosen). Otherwise read the trace (`~/.hyperbrain/logs/`, and on a Mac `launchd.err.log` there too), explain in plain words, fix.
+
+**On a Mac, say two things before the first evening**:
+- macOS shows a notification "Background Items Added: node". It is this save; if it is switched off in System Settings, Login Items, the save stops without a word.
+- If the brain, a watched folder, the cold copy folder or the app sits in a protected place (Desktop, Documents, Downloads, iCloud, an external drive), macOS will ask, **the first evening at 9 pm**, whether `node` may access it. Nobody may be there to answer: suggest they keep the computer awake the first evening, or accept the question the next morning. Until it is accepted, that step is skipped (the cold copy then reports the drive as unreachable).
+
+`routines.mjs state` on a Mac also says whether launchd really has the task loaded (`armed`), how its last run ended (`lastResult`), and whether the node it starts still exists (`nodeFound`).
 
 Record the component: `node "${CLAUDE_SKILL_DIR}/../../scripts/components.mjs" set save on`.
 

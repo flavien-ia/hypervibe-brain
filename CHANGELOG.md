@@ -7,7 +7,8 @@
 - **The person's language**: the brain's documents, the weekly report, the history and the scheduled task are in French or English, from the computer's settings.
 - **macOS and Linux**: synced folders as they are really named, a full PATH for the evening save, a check that Claude reaches the brain's server.
 - The automatic tasks are proposed at the end of `create-brain`, in plain words.
-- Test bench: 96 checks, run on Windows, macOS and Linux by the CI.
+- macOS audit applied: a node path that survives `brew upgrade`, catch-up at login after a shutdown (and at boot on Linux), never two saves at once, launchd really checked, the Mac's language read from its settings, iCloud Desktop and Documents refused, Node and git installed by the person on a Mac, FTS5 checked.
+- Test bench: 101 checks, run on Windows, macOS and Linux by the CI.
 
 ## 0.1.0 (2026-09-30)
 

@@ -8,7 +8,7 @@ description: First step with Hyperbrain. Checks what this computer needs for a s
 You welcome someone who has just installed Hyperbrain. Your job: check that everything a second brain needs is in place, install what is missing, and hand over to the creation of the brain.
 
 ## Communication
-- Detect the user's language from the conversation (the user's own messages, anywhere in the session, not just this invocation: a bare slash command carries no language signal by itself). If nothing gives a signal, fall back to the OS locale (`node -e "console.log(Intl.DateTimeFormat().resolvedOptions().locale)"`, or English if Node is missing). ALWAYS reply in that language, including any example text quoted in this skill, which is illustrative and must be translated.
+- Detect the user's language from the conversation (the user's own messages, anywhere in the session, not just this invocation: a bare slash command carries no language signal by itself). If nothing gives a signal, fall back to the computer's language: on a Mac `defaults read -g AppleLocale` (Node does not see the Mac's language setting), elsewhere `node -e "console.log(Intl.DateTimeFormat().resolvedOptions().locale)"`; English if nothing answers. ALWAYS reply in that language, including any example text quoted in this skill, which is illustrative and must be translated.
 - Plain, non-technical language. The person may never have used a terminal: you run every command, they never type one. Never name a script; describe what you do.
 - Show progress as a short checklist.
 
@@ -57,13 +57,13 @@ After an install, the current session does not see the new PATH yet: prefix the 
 
 ### macOS
 
-Homebrew first if missing (`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`), then, in the same command block (brew is not on the PATH right after its install):
+On a Mac, **the person installs, you guide**: the installers ask for the Mac's password in a window of their own, which you cannot type (and must not).
 
-```bash
-BREW=$([ -x /opt/homebrew/bin/brew ] && echo /opt/homebrew/bin/brew || echo /usr/local/bin/brew)
-grep -q "brew shellenv" ~/.zprofile 2>/dev/null || echo 'eval "$('"$BREW"' shellenv)"' >> ~/.zprofile
-eval "$("$BREW" shellenv)" && brew install node git
-```
+- **git**: the audit's first `git --version` has already made macOS open a window "The git command requires the command line developer tools". Tell the person to click **Install** and wait for the end (a few minutes). If the window did not appear: `xcode-select --install` opens it.
+- **Node**: open the download page for them (`open https://nodejs.org/en/download`), and tell them to take the **macOS installer (.pkg)** of the LTS version, open it, and follow it to the end (it asks for their password). This installer puts `node` where the Claude app finds it, which Homebrew does not always do.
+- **Homebrew users**: if the person already uses Homebrew and prefers it, they can type `brew install node` themselves in the Terminal; say that the Claude app may then need the official installer anyway if it cannot find Node (see Step 5).
+
+When they say it is done, run the audit again.
 
 ### Linux
 
@@ -71,7 +71,11 @@ Node from the distribution is often too old for the brain (22.13+ needed). Recom
 
 ### Node too old
 
-If Node is present but older than 22.13, update it the same way (winget `upgrade`, `brew upgrade node`).
+If Node is present but older than 22.13, update it the same way (Windows: `winget upgrade OpenJS.NodeJS.LTS`; Mac: the person runs the official installer again, or `brew upgrade node` if they use Homebrew).
+
+### Search engine check
+
+The audit's `sqliteFts` must be true: it is the full-text search the brain relies on. The official Node builds always have it. If it is false, Node was built against another SQLite (some package managers do that): have the person install Node from nodejs.org instead.
 
 ### Git identity
 
@@ -89,7 +93,7 @@ Run the audit again. **Do not go further until `ready` is true.**
 Present both in two lines each, and let the person choose. Neither blocks anything.
 
 - **GitHub (recommended)**: a private, online, versioned copy of the brain. If `gh` is missing: `winget install GitHub.cli` / `brew install gh`. If it is not connected: `gh auth login --web --git-protocol https`, which prints a one-time code and opens the browser; give the person the code, they sign in, you check with `gh auth status`. If they prefer, this can wait until the brain is created.
-- **Cloudflare (later)**: only needed to reach the brain from the cloud (online agents, another computer without a copy). Not used by anything today. If they want it ready: `npm install -g wrangler`, then `wrangler login` (opens the browser). Otherwise, skip.
+- **Cloudflare (later)**: only needed to reach the brain from the cloud (online agents, another computer without a copy). Not used by anything today. If they want it ready: `npx wrangler login` (opens the browser; nothing to install globally, which fails on a Mac with the official Node installer). Otherwise, skip.
 
 ## Step 5 - Report and hand-over
 

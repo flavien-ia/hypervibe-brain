@@ -22,7 +22,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { ROOT, requireBrain } from "./lib.mjs";
+import { HOME, ROOT, requireBrain } from "./lib.mjs";
 
 requireBrain();
 const FILE = join(ROOT, "hyperbrain.json");
@@ -36,7 +36,8 @@ const fail = (error) => {
   console.log(JSON.stringify({ ok: false, error }));
   process.exit(1);
 };
-const fwd = (p) => resolve(p).replace(/\\/g, "/");
+// "~/folder" in quotes reaches us unexpanded: expand it ourselves.
+const fwd = (p) => resolve(String(p).replace(/^~(?=[\\/]|$)/, HOME)).replace(/\\/g, "/");
 
 const [command, a1, a2] = args;
 if (command === "set") {

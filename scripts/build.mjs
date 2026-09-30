@@ -13,7 +13,7 @@
 //   node scripts/build.mjs --quiet
 
 import { DatabaseSync } from "node:sqlite";
-import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DB_PATH, EMB_DIR, INDEX, config, loadEnv, readVault, requireBrain, sha256, validate, vaultFingerprint } from "./lib.mjs";
@@ -169,7 +169,16 @@ export async function buildIndex({ quiet = false, ifStale = false } = {}) {
   }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Compared on real paths: through a symlinked folder (a linked ~/.claude,
+// /tmp and /var on macOS) the two spellings differ and the build did nothing.
+const real = (p) => {
+  try {
+    return realpathSync(p);
+  } catch {
+    return resolve(p);
+  }
+};
+if (process.argv[1] && real(process.argv[1]) === real(fileURLToPath(import.meta.url))) {
   requireBrain();
   const args = process.argv.slice(2);
   const r = await buildIndex({ quiet: args.includes("--quiet"), ifStale: args.includes("--if-stale") });

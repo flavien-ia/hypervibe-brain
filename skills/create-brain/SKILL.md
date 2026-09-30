@@ -53,7 +53,7 @@ The most important step, and it produces no code. Ask the questions **one at a t
 5. **The components** (see below): what the brain does beyond holding notes.
 6. **Where it lives.** By default a `hyperbrain` folder in their home folder (find its real path with `node -e "console.log(require('os').homedir())"`), or next to their other projects if they have a place for them. **Never inside a synchronised folder**: these tools damage the history and the search index of the brain (the creation refuses such a folder). What to say depends on `os`:
    - **windows**: not in Dropbox, OneDrive or Google Drive. Careful: Windows often places the *Documents* and *Desktop* folders inside OneDrive without saying so.
-   - **mac**: not in Dropbox, OneDrive, Google Drive or iCloud Drive. Careful: when "Desktop and Documents Folders" is ticked in the iCloud settings, the *Desktop* and *Documents* folders live in iCloud. On a Mac, those services all live under `~/Library/CloudStorage`.
+   - **mac**: not in Dropbox, OneDrive, Google Drive or iCloud Drive. Careful: when "Desktop and Documents Folders" is ticked in the iCloud settings, the *Desktop* and *Documents* folders keep their usual place but are stored in iCloud (the creation detects it and refuses them). Dropbox, OneDrive and Google Drive live under `~/Library/CloudStorage`, iCloud Drive under `~/Library/Mobile Documents`.
    - **linux**: not in a folder synchronised by Dropbox, Nextcloud or similar.
 
 ### The components

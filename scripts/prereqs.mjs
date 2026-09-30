@@ -27,6 +27,21 @@ const os = process.platform === "win32" ? "windows" : process.platform === "darw
 const [maj, min] = process.versions.node.split(".").map(Number);
 const node = { version: process.versions.node, ok: maj > 22 || (maj === 22 && min >= 13), path: process.execPath };
 
+// The full-text search needs SQLite's FTS5 in this node. Official builds have
+// it; a node built against another SQLite (some package managers) may not.
+let sqliteFts = false;
+try {
+  const { DatabaseSync } = await import("node:sqlite");
+  const db = new DatabaseSync(":memory:");
+  db.exec("CREATE VIRTUAL TABLE t USING fts5(a, tokenize = 'unicode61 remove_diacritics 2')");
+  db.close();
+  sqliteFts = true;
+} catch {
+  sqliteFts = false;
+}
+
+// On a fresh Mac, this first git call opens the "install the developer tools"
+// window: that is expected, and it installs git.
 const gitV = run("git", ["--version"]);
 const git = { installed: gitV.status === "ok", version: firstLine(gitV.out).replace(/^git version /, "") || null };
 const identity = git.installed
@@ -54,13 +69,14 @@ const brain = cfg.brain && existsSync(join(cfg.brain, "hyperbrain.json")) ? cfg.
 const report = {
   os,
   node,
+  sqliteFts,
   git,
   gitIdentity: identity,
   gh,
   cloudflare,
   brain,
-  required: { node: node.ok, git: git.installed, gitIdentity: Boolean(identity.name && identity.email) },
-  ready: node.ok && git.installed && Boolean(identity.name && identity.email),
+  required: { node: node.ok, sqliteFts, git: git.installed, gitIdentity: Boolean(identity.name && identity.email) },
+  ready: node.ok && sqliteFts && git.installed && Boolean(identity.name && identity.email),
 };
 void userConfig;
 

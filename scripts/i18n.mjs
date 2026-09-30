@@ -10,19 +10,36 @@
 // The language is chosen once, at the brain's creation, from the computer's
 // locale (or --lang), and kept in hyperbrain.json.
 
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const LANGS = ["fr", "en"];
 
+/**
+ * The computer's language. On macOS, Node takes its locale from LANG and
+ * LC_* only, never from System Settings, and an app started from the Dock has
+ * neither: a French Mac would come out English. Hence, in order: the
+ * environment variables (ignoring C and POSIX), the Mac's own setting, then
+ * what Node reports (right on Windows).
+ */
 export function osLang() {
-  const locale = (() => {
+  const pick = (v) => (v && !/^(C|POSIX)([._]|$)/i.test(v) ? v : "");
+  let locale = pick(process.env.LC_ALL) || pick(process.env.LC_MESSAGES) || pick(process.env.LANG);
+  if (!locale && process.platform === "darwin") {
     try {
-      return Intl.DateTimeFormat().resolvedOptions().locale || "";
+      locale = execFileSync("/usr/bin/defaults", ["read", "-g", "AppleLocale"], { encoding: "utf8", timeout: 5000 }).trim();
     } catch {
-      return "";
+      locale = "";
     }
-  })() || process.env.LANG || process.env.LC_ALL || "";
+  }
+  if (!locale) {
+    try {
+      locale = Intl.DateTimeFormat().resolvedOptions().locale || "";
+    } catch {
+      locale = "";
+    }
+  }
   return String(locale).toLowerCase().startsWith("fr") ? "fr" : "en";
 }
 

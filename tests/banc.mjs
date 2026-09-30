@@ -51,6 +51,11 @@ const json = (s) => {
   return JSON.parse(i >= 0 ? s.slice(i) : s);
 };
 const git = (...a) => run("git", a, { cwd: BRAIN }).out.trim();
+// The local date, as the scripts write it (not UTC: between midnight and 2 am in Paris they differ).
+const localDay = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 const fake = spawn("node", [join(HERE, "faux-embeddings.mjs")], { windowsHide: true });
 const port = await new Promise((res) => fake.stdout.once("data", (d) => res(Number(String(d).trim()))));
@@ -257,10 +262,10 @@ try {
   writeFileSync(notePath, "---\ntype: note\ntitle: \"Vieille note\"\ndomains: [travail]\nstatus: seed\nvisibility: internal\ncreated: 2026-01-01\nupdated: 2026-01-01\nsource: \"banc\"\n---\n\nUne note ancienne.\n", "utf8");
   writeFileSync(idPath, `${readFileSync(idPath, "utf8")}\n[[vieille-note]]\n`, "utf8");
   r = node("review.mjs", ["--apply"]);
-  check("the review writes its report", r.ok && existsSync(join(BRAIN, "reviews", `${new Date().toISOString().slice(0, 10)}.md`)), r.out);
+  check("the review writes its report", r.ok && existsSync(join(BRAIN, "reviews", `${localDay()}.md`)), r.out);
   check("an old seed linked from another day is promoted", readFileSync(notePath, "utf8").includes("status: trusted"), readFileSync(notePath, "utf8"));
   check("an idea is never promoted by the machine", readFileSync(idPath, "utf8").includes("status: seed"));
-  const report = readFileSync(join(BRAIN, "reviews", `${new Date().toISOString().slice(0, 10)}.md`), "utf8");
+  const report = readFileSync(join(BRAIN, "reviews", `${localDay()}.md`), "utf8");
   check("the report is in the brain's language", report.startsWith("# Review of Camille's brain"), report.slice(0, 80));
   check("the report lists the dead source", report.includes("[[brouillon-perdu]]") && report.includes("1 source(s) pointing to a file"), report);
   check("the report tells what was worked on", report.includes("projet-roman: 1 session(s)") && report.includes("site-web"), report);
@@ -322,10 +327,23 @@ try {
   check("the evening save runs through its launcher, all its steps", r.ok && ["save.mjs exit 0", "cold-copy.mjs exit 0", "viz.mjs exit 0"].every((s) => now.lastRun.some((l) => l.includes(s))), r.out);
   // Everything was saved just before the cold copy: nothing is left behind.
   check("and nothing is left unsaved in the brain", git("status", "--porcelain") === "", git("status", "--porcelain"));
+  const logToday = join(HOME, ".hyperbrain", "logs", `nightly-${localDay()}.log`);
+  const linesBefore = readFileSync(logToday, "utf8").trim().split("\n").length;
+  r = run("node", [join(HOME, ".hyperbrain", "nightly.mjs")]);
+  check("started again by the scheduler the same evening, the save does nothing", r.ok && readFileSync(logToday, "utf8").trim().split("\n").length === linesBefore, readFileSync(logToday, "utf8"));
+  writeFileSync(join(HOME, ".hyperbrain", "nightly.lock"), String(process.pid), "utf8");
+  r = run("node", [join(HOME, ".hyperbrain", "nightly.mjs"), "--force"]);
+  check("two saves never run at once", r.ok && readFileSync(logToday, "utf8").includes("another save is running"), readFileSync(logToday, "utf8"));
+  unlinkSync(join(HOME, ".hyperbrain", "nightly.lock"));
   r = node("routines.mjs", ["state", "--json"]);
   check("state reports the review and the last run", r.ok && json(r.out).review?.when === "dimanche 18:00" && json(r.out).lastLog, r.out);
 
   // ---- a brain in French: what the person reads is in their language
+  r = node("init.mjs", ["--dir", "~/cerveau-tilde", "--name", "T", "--domains", "a,b", "--switch", "--no-git"], { env: { LANG: "fr_FR.UTF-8", LC_ALL: "", LC_MESSAGES: "" } });
+  check("a quoted ~ is the home folder, not a folder named ~", r.ok && json(r.out).dir === join(HOME, "cerveau-tilde").replace(/\\/g, "/"), r.out);
+  check("the language comes from LANG when it is set", json(r.out).lang === "fr", r.out);
+  r = node("init.mjs", ["--dir", join(BASE, "cerveau-c"), "--name", "T", "--domains", "a,b", "--switch", "--no-git"], { env: { LANG: "C.UTF-8", LC_ALL: "", LC_MESSAGES: "" } });
+  check("LANG=C is ignored, not taken for a language", r.ok, r.out);
   const FR = join(BASE, "cerveau");
   r = node("init.mjs", ["--dir", FR, "--name", "Léa", "--domains", "travail,famille", "--lang", "fr", "--switch"]);
   check("a French brain is created (and becomes the active one on --switch)", r.ok && json(r.out).lang === "fr", r.out);
@@ -334,7 +352,7 @@ try {
   r = cap("Une pensée.", ["--title", "Première pensée", "--type", "idea", "--domains", "travail"]);
   check("its captures speak French", r.ok && run("git", ["log", "-1", "--format=%s"], { cwd: FR }).out.trim() === "capture : Première pensée", r.out);
   node("review.mjs");
-  check("its weekly report is in French", readFileSync(join(FR, "reviews", `${new Date().toISOString().slice(0, 10)}.md`), "utf8").startsWith("# Revue du brain de Léa"));
+  check("its weekly report is in French", readFileSync(join(FR, "reviews", `${localDay()}.md`), "utf8").startsWith("# Revue du brain de Léa"));
 } finally {
   fake.kill();
   if (process.argv.includes("--keep")) console.log(`\n  (--keep: ${BASE} left in place)`);
