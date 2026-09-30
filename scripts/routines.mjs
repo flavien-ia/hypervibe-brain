@@ -27,7 +27,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { HOME, PLUGIN_ROOT, setUserConfig, userConfig } from "./lib.mjs";
 
 const args = process.argv.slice(2);
@@ -45,6 +45,9 @@ const CRON_MARK = `# hyperbrain-nightly${SUFFIX}`;
 const OS = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "mac" : "linux";
 const out = (o) => console.log(JSON.stringify(o, null, args.includes("--json") ? 2 : 0));
 const fwd = (p) => p.replace(/\\/g, "/");
+// The PATH given to the evening save on macOS and Linux: the folder of this
+// very node, Homebrew (Apple Silicon and Intel), then the system.
+const UNIX_PATH = [...new Set([dirname(process.execPath), "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"])].join(":");
 
 if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
   out({ ok: false, error: "--time must be HH:MM" });
@@ -140,6 +143,7 @@ function arm() {
   <key>Label</key><string>${LABEL}</string>
   <key>ProgramArguments</key><array><string>${process.execPath}</string><string>${LAUNCHER}</string></array>
   <key>StartCalendarInterval</key><dict><key>Hour</key><integer>${h}</integer><key>Minute</key><integer>${m}</integer></dict>
+  <key>EnvironmentVariables</key><dict><key>PATH</key><string>${UNIX_PATH}</string></dict>
 </dict></plist>
 `;
     if (!DRY) {
@@ -149,9 +153,12 @@ function arm() {
     const uid = process.getuid?.() ?? 501;
     sh("launchctl", ["bootout", `gui/${uid}`, PLIST]);
     r = sh("launchctl", ["bootstrap", `gui/${uid}`, PLIST]);
+    // Some macOS versions refuse bootstrap from a non-login context: the
+    // older load command does the same job.
+    if (r.status !== 0) r = sh("launchctl", ["load", "-w", PLIST]);
   } else {
     const current = sh("crontab", ["-l"]).out.split("\n").filter((l) => l && !l.includes(CRON_MARK) && !/no crontab/i.test(l));
-    r = sh("crontab", ["-"], `${[...current, `${m} ${h} * * * "${process.execPath}" "${LAUNCHER}" ${CRON_MARK}`].join("\n")}\n`);
+    r = sh("crontab", ["-"], `${[...current, `${m} ${h} * * * PATH="${UNIX_PATH}" "${process.execPath}" "${LAUNCHER}" ${CRON_MARK}`].join("\n")}\n`);
   }
   if (r.status !== 0) return { ok: false, error: r.out.slice(0, 400) };
   if (!DRY) setUserConfig({ routines: { ...(userConfig().routines ?? {}), save: { time, armed: new Date().toISOString() } } });
@@ -163,6 +170,7 @@ function disarm() {
   if (OS === "windows") r = ps(`Unregister-ScheduledTask -TaskName ${psq(TASK)} -Confirm:$false -ErrorAction SilentlyContinue; 'ok'`);
   else if (OS === "mac") {
     r = sh("launchctl", ["bootout", `gui/${process.getuid?.() ?? 501}`, PLIST]);
+    if (r.status !== 0) r = sh("launchctl", ["unload", "-w", PLIST]);
     if (!DRY) rmSync(PLIST, { force: true });
     r = { status: 0, out: r.out };
   } else {

@@ -20,6 +20,10 @@ const BASE = join(tmpdir(), `hyperbrain-banc-${process.pid}`);
 const BRAIN = join(BASE, "brain");
 const HOME = join(BASE, "home");
 mkdirSync(HOME, { recursive: true });
+// A git configuration of its own: the bench neither reads nor needs the
+// person's (a fresh machine, like the CI's, has no git identity at all).
+const GITCONFIG = join(BASE, "gitconfig");
+writeFileSync(GITCONFIG, "[user]\n\tname = banc\n\temail = banc@example.invalid\n[init]\n\tdefaultBranch = main\n", "utf8");
 
 let failures = 0;
 let total = 0;
@@ -32,7 +36,7 @@ const check = (name, cond, detail = "") => {
   }
 };
 const env = {
-  ...process.env, HYPERBRAIN_HOME: HOME, HYPERBRAIN_DIR: "", OPENAI_API_KEY: "", EMBEDDINGS_API_KEY: "", HYPERBRAIN_TASK_SUFFIX: " banc",
+  ...process.env, HYPERBRAIN_HOME: HOME, HYPERBRAIN_DIR: "", OPENAI_API_KEY: "", EMBEDDINGS_API_KEY: "", HYPERBRAIN_TASK_SUFFIX: " banc", GIT_CONFIG_GLOBAL: GITCONFIG, GIT_CONFIG_NOSYSTEM: "1",
   GIT_AUTHOR_NAME: "banc", GIT_AUTHOR_EMAIL: "banc@example.invalid", GIT_COMMITTER_NAME: "banc", GIT_COMMITTER_EMAIL: "banc@example.invalid",
 };
 const run = (cmd, a, o = {}) => {
@@ -100,6 +104,11 @@ try {
   // ---- creation
   r = node("init.mjs", ["--dir", join(HOME, "Dropbox", "brain"), "--name", "X", "--domains", "a,b"]);
   check("init refuses a synchronised folder", !r.ok && r.out.includes("synchronised"), r.out);
+  // As they are really named: OneDrive for business on Windows, CloudStorage and iCloud on macOS.
+  for (const synced of [["OneDrive - Acme", "Documents"], ["Library", "CloudStorage", "GoogleDrive-x@y.z", "My Drive"], ["Library", "Mobile Documents", "com~apple~CloudDocs"]]) {
+    r = node("init.mjs", ["--dir", join(HOME, ...synced, "brain"), "--name", "X", "--domains", "a,b"]);
+    check(`init refuses ${synced.join("/")}`, !r.ok && r.out.includes("synchronised"), r.out);
+  }
   r = node("init.mjs", ["--dir", BRAIN, "--name", "Camille", "--domains", "Travail,Écriture,famille"]);
   const created = json(r.out);
   check("init creates the brain", r.ok && created.ok, r.out);

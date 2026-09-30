@@ -41,7 +41,12 @@ const current = userConfig().brain;
 if (current && resolve(current) !== dir && existsSync(join(current, "hyperbrain.json")) && !args.includes("--switch")) {
   fail(`a brain is already set up on this computer (${current}). Creating another one would make it the active brain: repeat with --switch if that is what the person wants`);
 }
-if (/[\\/](Dropbox|OneDrive|iCloud Drive|iCloudDrive|Google Drive|GoogleDrive)([\\/]|$)/i.test(dir)) {
+// Windows: Dropbox, OneDrive (also "OneDrive - Company", where Documents and
+// Desktop are often redirected), Google Drive. macOS: everything under
+// ~/Library/CloudStorage (Dropbox, OneDrive, Google Drive since 2022) and
+// iCloud's "Mobile Documents" (Desktop and Documents when iCloud syncs them).
+const SYNCED = /[\\/](Dropbox|OneDrive[^\\/]*|iCloud ?Drive|Google ?Drive|My Drive|CloudStorage|Mobile Documents)([\\/]|$)/i;
+if (SYNCED.test(dir)) {
   fail(`${dir} is inside a synchronised folder: these tools damage git repositories and databases. Choose a folder outside it`);
 }
 if (existsSync(dir) && readdirSync(dir).length) fail(`${dir} exists and is not empty: choose another folder, a brain is never created on top of something`);

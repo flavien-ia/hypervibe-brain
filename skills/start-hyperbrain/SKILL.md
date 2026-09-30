@@ -95,6 +95,8 @@ Present both in two lines each, and let the person choose. Neither blocks anythi
 
 A short table: each item, ✅ ready / ⚠️ optional not set / ❌ missing (there should be no ❌ left).
 
+**Can Claude reach the brain's server?** Call the `brain_stats` tool of the hyperbrain MCP server. An answer, even "no brain yet", means yes. If the tool is missing or fails, the Claude app started before Node was installed, or cannot see it: desktop apps (on macOS especially) do not read the terminal's settings, and only look for Node when they start. Ask the person to **quit the Claude app completely and reopen it** (on macOS: Claude menu, Quit, not just closing the window), then to run `/hyperbrain:start-hyperbrain` again. Still failing on macOS after a restart: the app does not see Homebrew's folder; installing Node with the official installer from nodejs.org (it places `node` in `/usr/local/bin`) is the usual cure. Do not hand over to the creation before this answers: a brain Claude cannot read is only a folder.
+
 Then:
 
 > Everything is ready. **Shall we create your brain now?** It starts with about fifteen minutes of questions: what it is for, its main areas, what you have already written, what stays private.

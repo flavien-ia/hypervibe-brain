@@ -47,7 +47,7 @@ The most important step, and it produces no code. Ask the questions **one at a t
 4. **What never goes in**: health, family, money? Explain the two levels:
    - a `private` note exists in the brain, but its content is **never shown to an AI** (neither by search nor to Claude);
    - the `vault/danger-zone/` folder is not even read, nor backed up: the last resort.
-5. **Where it lives, and its backup.** The folder: next to their other projects (`C:\DEV\brain`, `~/dev/brain`...), **never inside a synchronised folder** (Dropbox, OneDrive, iCloud, Google Drive): these tools damage git repositories and databases (the creation refuses such a folder). The backup: a **private** GitHub repository is recommended (full history, going back note by note). If they want one, also ask whether they allow the brain to **push its saves by itself**: it is a permission, not a default.
+5. **Where it lives, and its backup.** The folder: by default a `hyperbrain` folder directly in their home folder (`C:\Users\<them>\hyperbrain` on Windows, `/Users/<them>/hyperbrain` on a Mac; find the real path with `node -e "console.log(require('os').homedir())"`), or next to their other projects if they have a place for them. **Never inside a synchronised folder** (Dropbox, OneDrive, iCloud, Google Drive), and beware: Windows often puts Documents and the Desktop inside OneDrive, and macOS puts them in iCloud when "Desktop and Documents" sync is on. These tools damage git repositories and databases; the creation refuses such a folder. The backup: a **private** GitHub repository is recommended (full history, going back note by note). If they want one, also ask whether they allow the brain to **push its saves by itself**: it is a permission, not a default.
 
 Summarise the answers in a short block and have it validated. **Gate 1: the summary is validated.**
 
@@ -124,13 +124,18 @@ Invoke `/hyperbrain:brain-ingest` for the first unticked source of `SOURCES.md`.
 
 ## Step 5 - Make it live
 
-A brain nobody feeds dies within three months. Three habits, set up now:
+A brain nobody feeds dies within three months. Three habits:
 
-1. **The routines**: invoke `/hyperbrain:brain-routines` (the evening save, the weekly review).
-2. **The first review**: invoke `/hyperbrain:brain-review` now, together, and read the report.
-3. **Capturing**: whenever they say "note this", "keep this idea", it is `/hyperbrain:brain`. Have them try it once, right now.
+1. **Capturing**: whenever they say "note this", "keep this idea", it is `/hyperbrain:brain`. Have them try it once, right now.
+2. **The first review**: invoke `/hyperbrain:brain-review` now, together, and read the report. It shows what the weekly review will bring.
+3. **The routines**, proposed last, once they have seen what a review is:
 
-**Gate 5: the routines are armed and a review has run.** Set `stage` to 6: the brain is built.
+> Your brain can now look after itself: **a save every evening** (on this computer, no AI, no cost) and **a review every week** by Claude, like the one we just read. **Shall I arm them?**
+
+- **Yes**: invoke the skill `/hyperbrain:brain-routines` right away; it asks the times and arms both.
+- **Not now**: tell them `/hyperbrain:brain-routines` arms them whenever they want, and that until then the brain is saved only when they ask for it.
+
+**Gate 5: a review has run, and the routines are armed or knowingly postponed.** Set `stage` to 6: the brain is built.
 
 ## And afterwards
 

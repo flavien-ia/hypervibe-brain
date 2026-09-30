@@ -1,0 +1,28 @@
+# The test bench on the three systems the plugin promises: Windows, macOS and
+# Linux, with the oldest Node it accepts and the current one. It is the only
+# real proof that the plugin works on a Mac when it is developed on a PC.
+name: banc
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  banc:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        node: ["22.13", "24"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Syntax of every script
+        shell: bash
+        run: for f in scripts/*.mjs tests/*.mjs; do node --check "$f"; done
+      - name: The whole journey of a brain
+        run: node tests/banc.mjs
