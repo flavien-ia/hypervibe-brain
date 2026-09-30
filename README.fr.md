@@ -52,17 +52,14 @@ Puis, dans une nouvelle session : **`/hyperbrain:start-hyperbrain`**.
 | Utiliser | `/hyperbrain:add-meaning` | La recherche par le sens. |
 | | `/hyperbrain:brain-viz` | Voir le brain comme une carte : une page sur votre ordinateur, ou une application web privée si Hypervibe est installé. |
 | Étendre | `/hyperbrain:add-second-computer` | Le même brain sur un second ordinateur, synchronisé par sa copie GitHub privée. |
-
-## À venir
-
-Le brain atteint depuis le cloud par des agents en ligne (`add-cloud`).
+| | `/hyperbrain:add-cloud` | Le brain lisible depuis le cloud, en lecture seule, par les agents en ligne à qui vous donnez une clé (votre propre compte Cloudflare, en Europe). |
 
 ## Comment il est construit
 
 - **Le code vit dans le plugin, le brain n'est que des données** : une mise à jour du plugin répare tous les brains d'un coup. Le brain est retrouvé par `~/.hyperbrain/config.json`.
 - **Aucune dépendance** : la base est le SQLite fourni avec Node, le serveur MCP parle son protocole à la main. Rien à installer, rien qui casse à l'installation.
 - **L'index se reconstruit tout seul** à partir des fiches, dès qu'une fiche a bougé. Les vecteurs de la recherche par le sens sont versionnés dans git, un petit fichier par fiche : un clone retrouve sa recherche par le sens sans un seul appel payant.
-- `tests/banc.mjs` joue le parcours complet dans un dossier jetable, avec un faux dossier utilisateur et une fausse API d'embeddings ; `tests/banc-sync.mjs` joue deux ordinateurs autour d'un GitHub local. À relancer tous les deux après toute modification.
+- `tests/banc.mjs` joue le parcours complet dans un dossier jetable, avec un faux dossier utilisateur et une fausse API d'embeddings ; `tests/banc-sync.mjs` joue deux ordinateurs autour d'un GitHub local ; `tests/banc-cloud.mjs` joue la copie Cloudflare avec un faux wrangler et le vrai Worker. À relancer tous les trois après toute modification.
 
 ## Voir aussi
 

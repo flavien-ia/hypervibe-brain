@@ -28,3 +28,5 @@ jobs:
         run: node tests/banc.mjs
       - name: Two computers, one brain
         run: node tests/banc-sync.mjs
+      - name: The cloud copy, without Cloudflare
+        run: node tests/banc-cloud.mjs

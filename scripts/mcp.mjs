@@ -21,6 +21,7 @@ import { createInterface } from "node:readline";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { userConfig } from "./lib.mjs";
+import { TOOLS, instructionsFor } from "./tools.mjs";
 
 const TOOL = join(dirname(fileURLToPath(import.meta.url)), "tool.mjs");
 
@@ -34,66 +35,6 @@ function brainInfo() {
     return null;
   }
 }
-
-/**
- * What every session is told about the brain, through the MCP handshake: the
- * plugin never edits the person's CLAUDE.md, the server says it itself.
- */
-function instructions() {
-  const b = brainInfo();
-  if (!b) {
-    return "Hyperbrain is installed but no second brain is set up on this computer yet. If the person talks about a second brain, notes to keep or ideas to remember, suggest /hyperbrain:start-hyperbrain (checks the prerequisites) then /hyperbrain:create-brain.";
-  }
-  return [
-    `${b.name} has a second brain: their ideas, projects, the people who matter to them, their publications and decisions, as linked notes.`,
-    `Query it WITHOUT BEING ASKED whenever an answer depends on what ${b.name} thinks, has already written or decided, or on who they know: before writing in their voice, summarising one of their positions, or talking about one of their projects. Search by words first, then by meaning (meaning: true) if nothing comes up.`,
-    "Read it by its rules: a `trusted` note (`fiable` in a French brain) can be quoted as it is; a `seed` (`graine`) was written by a machine and not validated yet, handle it with care and say so; follow the `source` before asserting anything important.",
-    "Write to it ONLY through the /hyperbrain:brain skill (capture), never by writing a file by hand.",
-  ].join(" ");
-}
-
-const TOOLS = [
-  {
-    name: "brain_search",
-    description: "Search the person's second brain (their notes, ideas, projects, people, publications). Full text by default: every word must appear, anywhere, accents ignored. Set meaning=true to search by meaning when the notes may use other words than the question. Returns slugs to open with brain_get.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        query: { type: "string", description: "What to look for" },
-        meaning: { type: "boolean", description: "Search by meaning instead of by words" },
-        limit: { type: "number", description: "How many results (default 10)" },
-        type: { type: "string", description: "Only this type (the brain's own types: brain_stats lists them)" },
-        domain: { type: "string", description: "Only this domain" },
-      },
-      required: ["query"],
-    },
-  },
-  {
-    name: "brain_get",
-    description: "Open one note of the second brain: its full text, where it comes from (source), how trustworthy it is (status: seed, or graine in a French brain = written by a machine and not yet validated; trusted, or fiable = validated), its links and the notes that link to it.",
-    inputSchema: { type: "object", properties: { slug: { type: "string" } }, required: ["slug"] },
-  },
-  {
-    name: "brain_neighbors",
-    description: "What surrounds a note: the notes it links to, the notes that link to it, and the closest notes by meaning. Use it to understand a context rather than a single fact.",
-    inputSchema: { type: "object", properties: { slug: { type: "string" }, limit: { type: "number" } }, required: ["slug"] },
-  },
-  {
-    name: "brain_timeline",
-    description: "The notes in the order of time (most recent first), optionally between two dates (YYYY, YYYY-MM or YYYY-MM-DD) or of one type.",
-    inputSchema: { type: "object", properties: { since: { type: "string" }, until: { type: "string" }, type: { type: "string" }, limit: { type: "number" } } },
-  },
-  {
-    name: "brain_contact",
-    description: "Search the person's contacts directory: the people they exchange with by email, with how much, since when, about what, and what is known of them. Every word must appear, anywhere (name, address, organisation, subjects, what is known), accents ignored: \"accountant\", \"Dupont Acme\". Tier 2 = the core, 1 = matters, 0 = the rest. A contact with a `note` has a note in the brain (brain_get).",
-    inputSchema: { type: "object", properties: { query: { type: "string" }, limit: { type: "number" } }, required: ["query"] },
-  },
-  {
-    name: "brain_stats",
-    description: "The state of the second brain: how many notes, by type, domain and status, its own types (with their folders) and the language of its format, and whether search by meaning is available. Read it before capturing a note.",
-    inputSchema: { type: "object", properties: {} },
-  },
-];
 
 function runTool(name, args) {
   return new Promise((res) => {
@@ -143,7 +84,7 @@ if (process.argv.includes("--self-test")) {
     const { id, method, params } = msg;
     if (id === undefined || id === null) return; // a notification: nothing to answer
     if (method === "initialize") {
-      send({ id, result: { protocolVersion: params?.protocolVersion ?? "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "hyperbrain", version: "1.0.0" }, instructions: instructions() } });
+      send({ id, result: { protocolVersion: params?.protocolVersion ?? "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "hyperbrain", version: "1.0.0" }, instructions: instructionsFor(brainInfo()?.name ?? null) } });
     } else if (method === "ping") send({ id, result: {} });
     else if (method === "tools/list") send({ id, result: { tools: TOOLS } });
     else if (method === "tools/call") {

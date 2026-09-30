@@ -178,6 +178,8 @@ const steps = [
   ["save.mjs", cfg.sync === true ? ["--no-push"] : []],
   ...(cfg.sync === true ? [["sync.mjs", ["--quiet", "--json"]]] : []),
   ...(runner ? [["cold-copy.mjs", []], ["viz.mjs", ["build", "--if-exists"]], ["viz.mjs", ["publish-app"]]] : []),
+  // The cloud copy, by difference, if the person set one up.
+  ...(runner && brainCfg.cloud?.database ? [["cloud.mjs", ["sync"]]] : []),
 ];
 for (const [script, extra] of steps) {
   // The command first (viz.mjs reads it as its first argument), the brain after.

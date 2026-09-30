@@ -70,18 +70,8 @@ export const EMB_DIR = join(INDEX, "embeddings");
 // shape (the English words below), so that no script cares which language a
 // brain speaks. The French vocabulary is exactly the format of the brain this
 // plugin grew from: such a brain passes as it is, not a letter changed.
-export const VOCAB = {
-  en: {
-    keys: { type: "type", title: "title", domains: "domains", status: "status", visibility: "visibility", created: "created", updated: "updated", source: "source" },
-    status: { seed: "seed", trusted: "trusted", archived: "archived" },
-    visibility: { public: "public", internal: "internal", private: "private" },
-  },
-  fr: {
-    keys: { type: "type", title: "titre", domains: "domaines", status: "statut", visibility: "visibilite", created: "cree", updated: "touche", source: "source" },
-    status: { seed: "graine", trusted: "fiable", archived: "archive" },
-    visibility: { public: "public", internal: "interne", private: "prive" },
-  },
-};
+export { VOCAB } from "./pure.mjs";
+import { VOCAB } from "./pure.mjs";
 export const STATUSES = ["seed", "trusted", "archived"];
 export const VISIBILITIES = ["public", "internal", "private"];
 

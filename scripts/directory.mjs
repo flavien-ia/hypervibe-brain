@@ -16,9 +16,10 @@
 //   0  everyone else: kept, searchable, no note
 // The thresholds are the brain's own (hyperbrain.json, `contacts`).
 
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { INDEX, config } from "./lib.mjs";
+import { flat, matchContacts } from "./pure.mjs";
 
 const FIELDS = {
   en: { file: "directory.json", generated: "generated", contacts: "contacts", rule: "rule", address: "address", name: "name", domain: "domain", sent: "sent", received: "received", first: "first", last: "last", subjects: "subjects", tier: "tier", note: "note", summary: "summary", context: "context", themes: "themes" },
@@ -35,7 +36,6 @@ export function rules(cfg = config()) {
   return { core: c.core ?? 30, matters: c.matters ?? 3, exclude: (c.exclude ?? []).map((x) => String(x).toLowerCase()) };
 }
 
-const flat = (s) => String(s ?? "").normalize("NFD").replace(/\p{Mn}/gu, "").toLowerCase();
 
 /** Reads the directory into the canonical shape (other fields kept as they are). */
 export function readDirectory(cfg = config()) {
@@ -68,6 +68,8 @@ export function writeDirectory(dir, cfg = config()) {
   });
   const out = { ...dir.extra, [F.generated]: new Date().toISOString().slice(0, 10), [F.rule]: dir.rule, [F.contacts]: contacts };
   const p = directoryPath(cfg);
+  // A brand new brain has no index/ folder until its first build.
+  mkdirSync(dirname(p), { recursive: true });
   writeFileSync(`${p}.tmp`, `${JSON.stringify(out, null, 1)}\n`, "utf8");
   renameSync(`${p}.tmp`, p);
 }
@@ -120,15 +122,5 @@ export function upsert(dir, items, { counts = "add" } = {}, cfg = config()) {
   return { added, changed };
 }
 
-/** Every word, anywhere in what is known of the contact, accents ignored. */
-export function searchDirectory(dir, terms, { limit = 20 } = {}) {
-  const words = flat(terms).split(/\s+/).filter(Boolean);
-  if (!words.length) return [];
-  return dir.contacts
-    .filter((c) => {
-      const text = flat(Object.values(c).flat().filter((v) => typeof v === "string" || typeof v === "number").join(" "));
-      return words.every((w) => text.includes(w));
-    })
-    .sort((a, b) => (b.tier ?? 0) - (a.tier ?? 0) || Number(b.sent ?? 0) - Number(a.sent ?? 0))
-    .slice(0, limit);
-}
+/** Every word, anywhere in what is known of the contact, accents ignored (pure.mjs: the cloud Worker runs the same). */
+export const searchDirectory = (dir, terms, o) => matchContacts(dir.contacts, terms, o);

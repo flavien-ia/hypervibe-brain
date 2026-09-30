@@ -133,6 +133,7 @@ Present them by family, each in one sentence of what it brings, and let the pers
 >
 > **Extend it**
 > - `/hyperbrain:add-second-computer`: the same brain on a second computer (a laptop), kept in sync.
+> - `/hyperbrain:add-cloud`: your brain readable from the cloud, by the online agents you give a key to.
 
 Before `/hyperbrain:add-routines`, run a first review together (`/hyperbrain:brain-review`) and read the report: it shows concretely what the weekly review brings, and the person decides with that in mind.
 

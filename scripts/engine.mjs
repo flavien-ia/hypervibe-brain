@@ -20,6 +20,7 @@ const say = (kind, v) => {
 };
 const sayKeys = (kind, o) => Object.fromEntries(Object.entries(o).map(([k, n]) => [say(kind, k), n]));
 import { embed, embeddingsAvailable } from "./embeddings.mjs";
+import { ftsQuery, nearest as nearestRows, snippet } from "./pure.mjs";
 
 /** Always answer from an up-to-date index: rebuilt on the fly when a note moved. */
 export async function freshDb() {
@@ -32,24 +33,7 @@ export async function freshDb() {
 const row = (r) => ({ ...r, domains: JSON.parse(r.domains || "[]") });
 const MASK = "(private note: its content is never shown to an AI)";
 
-function snippet(body, words, len = 220) {
-  if (!body) return "";
-  const flat = body.replace(/\s+/g, " ");
-  const low = flat.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-  let at = -1;
-  for (const w of words) {
-    at = low.indexOf(w);
-    if (at >= 0) break;
-  }
-  const start = Math.max(0, at - 60);
-  return (start > 0 ? "..." : "") + flat.slice(start, start + len) + (start + len < flat.length ? "..." : "");
-}
 
-/** Every word must appear, anywhere, accents ignored. Several words are NOT an exact phrase. */
-function ftsQuery(q) {
-  const words = q.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
-  return { words, match: words.map((w) => `"${w}"*`).join(" ") };
-}
 
 let vecCache = null;
 function allVectors(db) {
@@ -66,19 +50,8 @@ function allVectors(db) {
   return rows;
 }
 
-function nearest(db, query, limit, exclude = new Set()) {
-  let qn = 0;
-  for (const x of query) qn += x * x;
-  qn = Math.sqrt(qn) || 1;
-  const scored = [];
-  for (const r of allVectors(db)) {
-    if (exclude.has(r.slug)) continue;
-    let dot = 0;
-    for (let i = 0; i < r.v.length; i++) dot += r.v[i] * query[i];
-    scored.push({ slug: r.slug, score: dot / (qn * r.norm) });
-  }
-  return scored.sort((a, b) => b.score - a.score).slice(0, limit);
-}
+// Shared with the cloud Worker (pure.mjs): same ranking here and there.
+const nearest = (db, query, limit, exclude) => nearestRows(allVectors(db), query, limit, exclude);
 
 export async function search(db, q, { semantic = false, limit = 10, type, domain, includePrivate = false } = {}) {
   const filter = (r) => (!type || r.type === type) && (!domain || r.domains.includes(domain));
@@ -139,7 +112,7 @@ export function neighbors(db, slug, { limit = 8 } = {}) {
 }
 
 export function timeline(db, { since, until, limit = 30, type } = {}) {
-  const rows = db.prepare("SELECT slug, title, type, created, status FROM fiche WHERE created >= ? AND created <= ? ORDER BY created DESC LIMIT ?")
+  const rows = db.prepare("SELECT slug, title, type, created, status FROM fiche WHERE created >= ? AND created <= ? ORDER BY created DESC, slug LIMIT ?")
     // Dates compare as text: "2026-09" is before every day of September, "2026-09~" after them.
     .all(since ? String(since) : "0000", until ? `${until}~` : "9999", type ? 100000 : limit);
   return (type ? rows.filter((r) => r.type === type) : rows).slice(0, limit).map((r) => ({ ...r, status: say("status", r.status) }));

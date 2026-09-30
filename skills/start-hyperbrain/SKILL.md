@@ -93,7 +93,7 @@ Run the audit again. **Do not go further until `ready` is true.**
 Present both in two lines each, and let the person choose. Neither blocks anything.
 
 - **GitHub (recommended)**: a private, online, versioned copy of the brain. If `gh` is missing: `winget install GitHub.cli` / `brew install gh`. If it is not connected: `gh auth login --web --git-protocol https`, which prints a one-time code and opens the browser; give the person the code, they sign in, you check with `gh auth status`. If they prefer, this can wait until the brain is created.
-- **Cloudflare (later)**: only needed to reach the brain from the cloud (online agents, another computer without a copy). Not used by anything today. If they want it ready: `npx wrangler login` (opens the browser; nothing to install globally, which fails on a Mac with the official Node installer). Otherwise, skip.
+- **Cloudflare (optional)**: only needed to reach the brain from the cloud, for online agents (`/hyperbrain:add-cloud`). If they want it ready: `npx wrangler login` (opens the browser; nothing to install globally, which fails on a Mac with the official Node installer). Otherwise, skip.
 
 ## Step 5 - Report and hand-over
 
