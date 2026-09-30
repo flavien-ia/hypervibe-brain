@@ -12,10 +12,11 @@
 
 import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
-import { config, requireBrain, slugify, today } from "./lib.mjs";
+import { config, requireBrain, requireRunner, slugify, today } from "./lib.mjs";
 import { git, isRepo, tryGit } from "./git.mjs";
 
 requireBrain();
+requireRunner();
 const args = process.argv.slice(2);
 const out = (o) => console.log(JSON.stringify(o));
 const cfg = config();

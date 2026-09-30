@@ -22,7 +22,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { HOME, PLUGIN_ROOT, ROOT, config, readVault, requireBrain, today } from "./lib.mjs";
+import { HOME, PLUGIN_ROOT, ROOT, config, readVault, requireBrain, requireRunner, today } from "./lib.mjs";
 import { brainLang } from "./i18n.mjs";
 
 const args = process.argv.slice(2);
@@ -117,6 +117,7 @@ if (command === "detect") {
   } else console.log(JSON.stringify(data));
 } else if (command === "publish-app") {
   requireBrain();
+  requireRunner();
   const app = config().components?.viz?.app;
   if (!app?.dir || !existsSync(app.dir)) {
     out({ ok: true, skipped: "no persistent app" });

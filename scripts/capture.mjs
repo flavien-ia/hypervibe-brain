@@ -14,7 +14,9 @@
 // The body comes from stdin (or --body-file). Prints the created path.
 
 import { readFileSync } from "node:fs";
-import { ROOT, config, requireBrain, today } from "./lib.mjs";
+import { spawn } from "node:child_process";
+import { join } from "node:path";
+import { PLUGIN_ROOT, ROOT, config, requireBrain, today, userConfig } from "./lib.mjs";
 import { commitPaths, isRepo, pushIfAgreed } from "./git.mjs";
 import { brainLang, t } from "./i18n.mjs";
 import { createNote } from "./notes.mjs";
@@ -56,7 +58,12 @@ console.log(`created: ${created.rel}`);
 if (!args.includes("--no-commit") && isRepo()) {
   const c = commitPaths([created.rel], t(brainLang(ROOT)).commitCapture(title));
   if (!c.ok) console.log(`not committed (${c.err.split("\n")[0].slice(0, 160)}): the note is safe on disk, the next save will commit it`);
-  else {
+  else if (userConfig().sync === true) {
+    // Two computers: the synchronisation sends it (and first takes what the
+    // other one sent), in the background, without making the person wait.
+    spawn(process.execPath, [join(PLUGIN_ROOT, "scripts", "sync.mjs"), "--quiet"], { detached: true, stdio: "ignore", windowsHide: true, env: process.env }).unref();
+    console.log("committed; the synchronisation sends it to the other computer");
+  } else {
     const p = pushIfAgreed();
     console.log(p.pushed ? "committed and pushed" : `committed (${p.reason})`);
   }

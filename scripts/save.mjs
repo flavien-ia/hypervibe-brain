@@ -6,17 +6,22 @@
 // still at work: it waits for the next save. The vectors, the reviews and the
 // brain's own documents go with it. Code and anything else are never taken.
 //
-//   node scripts/save.mjs [--now]    (--now: ignore the 30-minute rest)
+//   node scripts/save.mjs [--now] [--no-push]    (--now: ignore the 30-minute rest)
+//
+// On a computer that is not the runner, what the runner computes (vectors,
+// directory, reviews, the state of the sources) is never committed here.
+// When the synchronisation of two computers is on, it is the one that pushes.
 
 import { statSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, config, readVault, requireBrain, validate } from "./lib.mjs";
+import { ROOT, config, isDerived, isRunner, readVault, requireBrain, userConfig, validate } from "./lib.mjs";
 
 requireBrain();
 import { commitPaths, isRepo, pushIfAgreed, tryGit } from "./git.mjs";
 import { brainLang, t } from "./i18n.mjs";
 
 const REST_MS = process.argv.includes("--now") ? 0 : 30 * 60_000;
+const runner = isRunner(config());
 const OWNED = [/^vault\//, /^index\/embeddings\//, /^reviews\//, /^sources\//, /^index\/(annuaire|directory)\.json$/, /^(BRAIN|SOURCES)\.md$/, /^hyperbrain\.json$/];
 
 if (!isRepo()) {
@@ -33,6 +38,7 @@ for (let i = 0; i < status.length; i++) {
   const path = entry.slice(3);
   if (code[0] === "R" || code[0] === "C") i++; // the old name follows a rename
   if (!OWNED.some((re) => re.test(path))) continue;
+  if (!runner && isDerived(path)) continue;
   if (code.includes("?") || code.includes("D") || code.includes("A") || !path.startsWith("vault/")) {
     paths.push(path);
     continue;
@@ -64,7 +70,7 @@ else {
     console.log(`NOT saved: ${c.err.split("\n").slice(0, 3).join(" | ").slice(0, 400)}`);
     process.exitCode = 1;
   } else {
-    const p = pushIfAgreed();
+    const p = process.argv.includes("--no-push") || userConfig().sync === true ? { pushed: false, reason: "the synchronisation sends it" } : pushIfAgreed();
     console.log(`saved: ${paths.length} file(s)${waiting.length ? `, ${waiting.length} still being edited` : ""}; ${p.pushed ? "pushed" : p.reason}`);
   }
 }

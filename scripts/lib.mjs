@@ -7,7 +7,7 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, hostname } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -126,6 +126,32 @@ function safeConfig() {
 
 /** The words of this brain's format. */
 export const vocab = (cfg = safeConfig()) => VOCAB[cfg?.format] ?? VOCAB.en;
+
+// ---------------------------------------------------------- two computers
+// ONE COMPUTER RUNS THE BRAIN, the others only read and write notes. The
+// "runner" (named in hyperbrain.json, so every computer knows it) runs what
+// computes: the person's sources, the vectors, the directory, the reviews,
+// the cold copy. What it computes is DERIVED, and only the runner commits
+// it: two computers computing the same vector write two files that are
+// equal in value but not in bytes, and git would see a conflict every night.
+// A brain on a single computer has no runner named: that computer is it.
+
+export const computerName = () => String(userConfig().computer ?? (process.env.HYPERBRAIN_COMPUTER || hostname())).trim().toLowerCase();
+
+export function isRunner(cfg = config()) {
+  return !cfg.runner || String(cfg.runner).toLowerCase() === computerName();
+}
+
+/** What only the runner writes and commits. Everything else in the brain is canon. */
+export const DERIVED = [/^index\/embeddings\//, /^index\/(annuaire|directory)\.json$/, /^reviews\//, /^sources\/[^/]+\/(seen|state)\.json$/];
+export const isDerived = (rel) => DERIVED.some((re) => re.test(String(rel).replace(/\\/g, "/")));
+
+/** For the scripts that compute: refuse clearly on a computer that is not the runner. */
+export function requireRunner(cfg = config()) {
+  if (isRunner(cfg)) return;
+  console.log(JSON.stringify({ ok: false, error: `this computer (${computerName()}) is not the one that runs this brain's routines (${cfg.runner}): it reads and writes notes, the other one computes` }));
+  process.exit(4);
+}
 
 /** Reads the brain's own .env into process.env (without overriding). */
 export function loadEnv() {

@@ -16,7 +16,7 @@ import { DatabaseSync } from "node:sqlite";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DB_PATH, EMB_DIR, INDEX, config, loadEnv, readVault, requireBrain, sha256, validate, vaultFingerprint } from "./lib.mjs";
+import { DB_PATH, EMB_DIR, INDEX, config, isRunner, loadEnv, readVault, requireBrain, sha256, validate, vaultFingerprint } from "./lib.mjs";
 import { embed, embeddingsAvailable } from "./embeddings.mjs";
 
 const SCHEMA = `
@@ -111,13 +111,16 @@ export async function buildIndex({ quiet = false, ifStale = false } = {}) {
     const known = new Map(db.prepare("SELECT slug, hash FROM vec").all().map((r) => [r.slug, r.hash]));
     const upsert = db.prepare("INSERT INTO vec VALUES (?,?,?,?) ON CONFLICT(slug) DO UPDATE SET hash = excluded.hash, dims = excluded.dims, vec = excluded.vec");
     const toCompute = [];
-    mkdirSync(EMB_DIR, { recursive: true });
+    // The vector files in git are the runner's: another computer reads them as a
+    // cache, keeps what it computes in its own index, and never writes them.
+    const writeGit = isRunner(cfg);
+    if (writeGit) mkdirSync(EMB_DIR, { recursive: true });
     for (const [slug, f] of wanted) {
       const h = embHash(f, cfg);
       const file = readVectorFile(slug);
       if (known.get(slug) === h) {
         // In the index already. Its file in git, if lost, is written back from it.
-        if (file?.hash !== h) {
+        if (writeGit && file?.hash !== h) {
           const row = db.prepare("SELECT dims, vec FROM vec WHERE slug = ?").get(slug);
           writeFileSync(join(EMB_DIR, `${slug}.json`), `${JSON.stringify({ hash: h, model: cfg.embeddings.model, dims: row.dims, vec: Buffer.from(row.vec).toString("base64") })}\n`);
         }
@@ -136,7 +139,7 @@ export async function buildIndex({ quiet = false, ifStale = false } = {}) {
         toCompute.forEach((x, i) => {
           const blob = toBlob(out[i]);
           upsert.run(x.slug, x.h, cfg.embeddings.dims, blob);
-          writeFileSync(join(EMB_DIR, `${x.slug}.json`), `${JSON.stringify({ hash: x.h, model: cfg.embeddings.model, dims: cfg.embeddings.dims, vec: blob.toString("base64") })}\n`);
+          if (writeGit) writeFileSync(join(EMB_DIR, `${x.slug}.json`), `${JSON.stringify({ hash: x.h, model: cfg.embeddings.model, dims: cfg.embeddings.dims, vec: blob.toString("base64") })}\n`);
         });
         vectors.computed = toCompute.length;
       } catch (e) {
@@ -146,7 +149,7 @@ export async function buildIndex({ quiet = false, ifStale = false } = {}) {
     } else vectors.missing = toCompute.length;
     // Notes gone, or turned private: their vector goes too, from the index and from git.
     for (const slug of known.keys()) if (!wanted.has(slug)) db.prepare("DELETE FROM vec WHERE slug = ?").run(slug);
-    for (const name of readdirSync(EMB_DIR)) {
+    for (const name of writeGit && existsSync(EMB_DIR) ? readdirSync(EMB_DIR) : []) {
       if (name.endsWith(".json") && !wanted.has(name.slice(0, -5))) {
         unlinkSync(join(EMB_DIR, name));
         vectors.removed++;

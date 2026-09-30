@@ -51,17 +51,18 @@ Then, in a new session: **`/hyperbrain:start-hyperbrain`**.
 | Make it live | `/hyperbrain:add-routines` | A save every evening (no AI, no cost), a review every week by Claude, and a letter by email that sums it up. |
 | Use | `/hyperbrain:add-meaning` | Search by meaning. |
 | | `/hyperbrain:brain-viz` | See the brain as a map: a page on your computer, or a private web app if Hypervibe is installed. |
+| Extend | `/hyperbrain:add-second-computer` | The same brain on a second computer, kept in sync through its private GitHub copy. |
 
 ## Coming next
 
-The brain on a second computer (`add-second-computer`), and reached from the cloud by online agents (`add-cloud`).
+The brain reached from the cloud by online agents (`add-cloud`).
 
 ## How it is built
 
 - **The code lives in the plugin, the brain is only data**: a plugin update repairs every brain at once. The brain is found through `~/.hyperbrain/config.json`.
 - **Zero dependency**: the database is the SQLite built into Node, the MCP server speaks its protocol by hand. Nothing to install, nothing that breaks on install.
 - **The index is rebuilt from the notes**, by itself, whenever a note moved. The vectors of the search by meaning are versioned in git, one small file per note: a clone gets its semantic search back without a single paid call.
-- `tests/banc.mjs` plays the whole journey in a throwaway folder, with a fake home and a fake embeddings API. Run it after any change: `node tests/banc.mjs`.
+- `tests/banc.mjs` plays the whole journey in a throwaway folder, with a fake home and a fake embeddings API; `tests/banc-sync.mjs` plays two computers around a local GitHub. Run both after any change.
 
 ## Related
 

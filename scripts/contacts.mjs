@@ -12,7 +12,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, config, requireBrain } from "./lib.mjs";
+import { ROOT, config, requireBrain, requireRunner } from "./lib.mjs";
 import { directoryPath, readDirectory, rules, searchDirectory, upsert, writeDirectory } from "./directory.mjs";
 import { createNote } from "./notes.mjs";
 
@@ -32,6 +32,8 @@ if (command === "search") {
   if (args.includes("--json")) out({ ok: true, found });
   else for (const c of found) console.log(`  [${c.tier}] ${c.name ?? "?"} <${c.address}>  ${c.sent ?? 0} sent / ${c.received ?? 0} received, ${c.first ?? "?"} to ${c.last ?? "?"}${c.note ? `  note: ${c.note}` : ""}${c.summary ? `\n      ${c.summary}` : ""}`);
 } else if (command === "upsert") {
+  // The directory is computed on the runner only.
+  requireRunner(cfg);
   const items = [];
   for (const line of readFileSync(0, "utf8").split("\n")) {
     if (!line.trim()) continue;

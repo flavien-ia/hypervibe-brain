@@ -130,6 +130,9 @@ Present them by family, each in one sentence of what it brings, and let the pers
 > **Use it better**
 > - `/hyperbrain:add-meaning`: find a note even when you search with other words than its own.
 > - `/hyperbrain:brain-viz`: see your brain as a map.
+>
+> **Extend it**
+> - `/hyperbrain:add-second-computer`: the same brain on a second computer (a laptop), kept in sync.
 
 Before `/hyperbrain:add-routines`, run a first review together (`/hyperbrain:brain-review`) and read the report: it shows concretely what the weekly review brings, and the person decides with that in mind.
 

@@ -34,7 +34,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, config, requireBrain, setUserConfig, sha256, today, userConfig } from "./lib.mjs";
+import { ROOT, config, requireBrain, requireRunner, setUserConfig, sha256, today, userConfig } from "./lib.mjs";
 import { checkNote, createNote, refreshSeed, slugIndex } from "./notes.mjs";
 import { readDirectory, upsert, writeDirectory } from "./directory.mjs";
 
@@ -283,6 +283,8 @@ if (command === "list") {
   setUserConfig({ trustedSources: { ...(userConfig().trustedSources ?? {}), [trustKey(name)]: scriptHash(name) } });
   out({ ok: true, name, trusted: true });
 } else if (command === "run") {
+  // Running a source writes notes and state: the runner's work.
+  requireRunner(cfg);
   const names = name && !name.startsWith("--") ? [name] : all().filter((n) => def(n).enabled !== false && def(n).kind === "script" && (!args.includes("--due") || due(n)));
   if (name && !name.startsWith("--") && !def(name)) fail(`no source named "${name}"`);
   out({ ok: true, runs: names.map(runOne) });

@@ -88,6 +88,7 @@ const LAUNCHER_CODE = `// Written by Hyperbrain (scripts/routines.mjs). The even
 // It looks up the plugin at run time: an update of the plugin can move it.
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { hostname } from "node:os";
 import { join } from "node:path";
 
 const HOME = ${JSON.stringify(fwd(HOME))};
@@ -165,8 +166,20 @@ if (!cfg.brain || !existsSync(join(cfg.brain, "hyperbrain.json"))) {
 // cold copy if the person chose one (it does nothing on the other days).
 // Then the viewer, refreshed if it was built once, and the data of the
 // persistent app, if there is one (both do nothing otherwise).
-// First the person's own sources that are due (they create notes), then the rest.
-for (const [script, extra] of [["sources.mjs", ["run", "--due"]], ["build.mjs", ["--quiet"]], ["save.mjs", []], ["cold-copy.mjs", []], ["viz.mjs", ["build", "--if-exists"]], ["viz.mjs", ["publish-app"]]]) {
+// Two computers: only the runner computes (the sources, the cold copy, the
+// app); every computer saves its notes, then synchronises if allowed there.
+const brainCfg = JSON.parse(readFileSync(join(cfg.brain, "hyperbrain.json"), "utf8"));
+const me = String(cfg.computer ?? process.env.HYPERBRAIN_COMPUTER ?? hostname()).trim().toLowerCase();
+const runner = !brainCfg.runner || String(brainCfg.runner).toLowerCase() === me;
+if (!runner) log("not the runner (" + brainCfg.runner + "): its sources, cold copy and app are left to it");
+const steps = [
+  ...(runner ? [["sources.mjs", ["run", "--due"]]] : []),
+  ["build.mjs", ["--quiet"]],
+  ["save.mjs", cfg.sync === true ? ["--no-push"] : []],
+  ...(cfg.sync === true ? [["sync.mjs", ["--quiet", "--json"]]] : []),
+  ...(runner ? [["cold-copy.mjs", []], ["viz.mjs", ["build", "--if-exists"]], ["viz.mjs", ["publish-app"]]] : []),
+];
+for (const [script, extra] of steps) {
   // The command first (viz.mjs reads it as its first argument), the brain after.
   const r = spawnSync(process.execPath, [join(root, "scripts", script), ...extra, "--brain", cfg.brain], { encoding: "utf8", windowsHide: true, timeout: 15 * 60_000 });
   const text = ((r.stdout ?? "") + (r.stderr ?? "")).split("\\n").filter((l) => l.trim() && !/ExperimentalWarning|trace-warnings/.test(l)).join(" | ");

@@ -30,6 +30,6 @@ A compact picture, in this order:
 
 ## Recommend one thing
 
-Also `node "${CLAUDE_SKILL_DIR}/../../scripts/contacts.mjs" stats` (the directory: how many people, how many in the core, how many with a note) and `node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" list --json`: a source of their own in trouble (an error, or not approved on this computer) is said first, with what to do.
+If the brain lives on two computers (`runner` in `hyperbrain.json`), also `node "${CLAUDE_SKILL_DIR}/../../scripts/sync.mjs" --state`: which computer runs it, how far behind or ahead this one is, and above all a conflict or a stash waiting, said first. Also `node "${CLAUDE_SKILL_DIR}/../../scripts/contacts.mjs" stats` (the directory: how many people, how many in the core, how many with a note) and `node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" list --json`: a source of their own in trouble (an error, or not approved on this computer) is said first, with what to do.
 
 The single most useful next step, by priority: fix errors > repair a source in trouble > finish the construction (`/hyperbrain:create-brain`) > protect it (`/hyperbrain:add-backup`) > set up the automatic tasks (`/hyperbrain:add-routines`) > add a source (`/hyperbrain:brain-sources`) or bring in the next writing (`/hyperbrain:brain-ingest`) > search by meaning (`/hyperbrain:add-meaning`). One sentence, and offer to do it now.

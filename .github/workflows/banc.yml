@@ -26,3 +26,5 @@ jobs:
         run: for f in scripts/*.mjs tests/*.mjs; do node --check "$f"; done
       - name: The whole journey of a brain
         run: node tests/banc.mjs
+      - name: Two computers, one brain
+        run: node tests/banc-sync.mjs

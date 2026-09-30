@@ -22,11 +22,13 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { HOME, ROOT, config, readVault, requireBrain, today, validate, vocab } from "./lib.mjs";
+import { HOME, ROOT, config, readVault, requireBrain, requireRunner, today, validate, vocab } from "./lib.mjs";
 import { brainLang, t } from "./i18n.mjs";
 import { readDirectory } from "./directory.mjs";
 
 requireBrain();
+// The weekly review computes and promotes: the runner's work.
+requireRunner();
 const args = process.argv.slice(2);
 const APPLY = args.includes("--apply");
 const DAYS = Number(args.includes("--days") ? args[args.indexOf("--days") + 1] : 7);
