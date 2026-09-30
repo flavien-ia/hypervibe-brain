@@ -37,7 +37,7 @@ For the people they exchange the most with, add what the mail tells of them in o
 
 ## Step 3 - Who deserves a note
 
-The directory sorts people in three tiers: the core, those who matter (exchanges in both directions), and the rest (data only). The thresholds are the brain's own: `contacts.mjs enable --core <n> --matters <n>` changes them.
+The directory sorts people in three tiers: the core, those who matter (exchanges in both directions), and the rest (data only). The thresholds are the brain's own: `contacts.mjs enable --core <n> --matters <n>` changes them. A source of the person's own (a CRM, a harvest with rules of its own) may also place people: its definition says `"setsTier": true`, it gives a `tier` per contact, and that tier is a floor the counts can raise but never lower (0 removes it).
 
 Show the person the core and the first of those who matter (`contacts.mjs search` by name, or the list from `stats`), and ask which ones deserve a note. For each yes:
 

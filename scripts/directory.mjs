@@ -15,6 +15,10 @@
 //      someone who never answered, never rises)
 //   0  everyone else: kept, searchable, no note
 // The thresholds are the brain's own (hyperbrain.json, `contacts`).
+// A source that declares `"setsTier": true` may give a tier per contact, from
+// rules the plugin cannot know (the first people of each client in a CRM...):
+// it is kept as a FLOOR (`tierFloor`, `etage_min` in French), so the counts can
+// still raise the contact, never drop them below it. A floor of 0 removes it.
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -22,8 +26,8 @@ import { INDEX, config } from "./lib.mjs";
 import { flat, matchContacts } from "./pure.mjs";
 
 const FIELDS = {
-  en: { file: "directory.json", generated: "generated", contacts: "contacts", rule: "rule", address: "address", name: "name", domain: "domain", sent: "sent", received: "received", first: "first", last: "last", subjects: "subjects", tier: "tier", note: "note", summary: "summary", context: "context", themes: "themes" },
-  fr: { file: "annuaire.json", generated: "genere", contacts: "contacts", rule: "regle", address: "adresse", name: "nom", domain: "domaine", sent: "envoyes", received: "recus", first: "premiere", last: "derniere", subjects: "sujets", tier: "etage", note: "fiche", summary: "resume", context: "contexte", themes: "themes" },
+  en: { file: "directory.json", generated: "generated", contacts: "contacts", rule: "rule", address: "address", name: "name", domain: "domain", sent: "sent", received: "received", first: "first", last: "last", subjects: "subjects", tier: "tier", tierFloor: "tierFloor", note: "note", summary: "summary", context: "context", themes: "themes" },
+  fr: { file: "annuaire.json", generated: "genere", contacts: "contacts", rule: "regle", address: "adresse", name: "nom", domain: "domaine", sent: "envoyes", received: "recus", first: "premiere", last: "derniere", subjects: "sujets", tier: "etage", tierFloor: "etage_min", note: "fiche", summary: "resume", context: "contexte", themes: "themes" },
 };
 const CANON = Object.keys(FIELDS.en).filter((k) => !["file", "generated", "contacts", "rule"].includes(k));
 
@@ -77,12 +81,13 @@ export function writeDirectory(dir, cfg = config()) {
 /** The tier of a contact, by the brain's rules. */
 export function tierOf(c, r) {
   if (r.exclude.includes(String(c.address).toLowerCase()) || r.exclude.includes(String(c.domain ?? "").toLowerCase())) return 0;
+  const floor = Math.min(2, Math.max(0, Number(c.tierFloor ?? 0) || 0));
   if (c.note) return 2;
   const sent = Number(c.sent ?? 0);
   const received = Number(c.received ?? 0);
   if (sent >= r.core && received > 0) return 2;
-  if (sent + received >= r.matters && sent > 0 && received > 0) return 1;
-  return 0;
+  if (sent + received >= r.matters && sent > 0 && received > 0) return Math.max(1, floor);
+  return floor;
 }
 
 /**
@@ -91,7 +96,7 @@ export function tierOf(c, r) {
  * (a harvest that recounts everything). The dates widen, the subjects and
  * themes join, a summary or context replaces the old one only if given.
  */
-export function upsert(dir, items, { counts = "add" } = {}, cfg = config()) {
+export function upsert(dir, items, { counts = "add", tiers = false } = {}, cfg = config()) {
   const r = rules(cfg);
   const byAddress = new Map(dir.contacts.map((c) => [String(c.address).toLowerCase(), c]));
   let added = 0;
@@ -108,8 +113,14 @@ export function upsert(dir, items, { counts = "add" } = {}, cfg = config()) {
       added++;
     } else changed++;
     for (const [k, v] of Object.entries(it)) {
-      if (["address", "sent", "received", "first", "last", "subjects", "themes", "tier"].includes(k) || v === undefined || v === null || v === "") continue;
+      if (["address", "sent", "received", "first", "last", "subjects", "themes", "tier", "tierFloor"].includes(k) || v === undefined || v === null || v === "") continue;
       c[k] = v;
+    }
+    // A tier only from a source allowed to set one, and kept as a floor.
+    if (tiers && it.tier !== undefined) {
+      const t = Math.min(2, Math.max(0, Number(it.tier) || 0));
+      if (t) c.tierFloor = t;
+      else delete c.tierFloor;
     }
     for (const k of ["sent", "received"]) if (it[k] !== undefined) c[k] = counts === "set" ? Number(it[k]) : Number(c[k] ?? 0) + Number(it[k]);
     if (it.first && (!c.first || it.first < c.first)) c.first = it.first;

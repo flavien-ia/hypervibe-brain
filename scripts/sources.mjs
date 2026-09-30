@@ -151,7 +151,7 @@ function runOne(n) {
   const contactItems = x.items.filter((i) => i.kind === "contact");
   if (contactItems.length) {
     const dir = readDirectory(cfg);
-    upsert(dir, contactItems, { counts: d.contactCounts === "set" ? "set" : "add" }, cfg);
+    upsert(dir, contactItems, { counts: d.contactCounts === "set" ? "set" : "add", tiers: d.setsTier === true }, cfg);
     writeDirectory(dir, cfg);
     res.contacts = contactItems.length;
   }
@@ -205,6 +205,8 @@ const TEMPLATE_SCRIPT = (n, d) => `// ${n}: ${d.description ?? "a source of this
 // It may also feed the contacts directory, one line per person:
 //   { "kind": "contact", "address": "...", "name": "...", "sent": 3, "received": 2,
 //     "first": "YYYY-MM-DD", "last": "YYYY-MM-DD", "subjects": ["..."] }
+// and, only if source.json says "setsTier": true, "tier": 0, 1 or 2 (kept as a
+// floor under the brain's own rules; 0 removes it).
 //
 // What it receives: HYPERBRAIN_SOURCE_SINCE (the date of its last success, empty
 // the first time: read only what is newer), HYPERBRAIN_BRAIN_DIR, and it runs

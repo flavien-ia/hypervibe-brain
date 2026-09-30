@@ -11,7 +11,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLUGIN = join(HERE, "..");
@@ -465,6 +465,22 @@ try {
   node("sources.mjs", ["trust", "carnet"]);
   r = node("sources.mjs", ["run", "carnet"]);
   check("a source feeds the directory; a contact without address is refused", r.ok && json(r.out).runs[0].contacts === 1 && json(r.out).runs[0].refused.length === 1 && JSON.parse(readFileSync(join(BRAIN, "index", "directory.json"), "utf8")).contacts.some((c) => c.address === "lea@atelier.fr" && c.tier === 2), r.out);
+  {
+    // A tier from a source: only if it declares setsTier, and as a floor.
+    const { upsert } = await import(pathToFileURL(join(SCRIPTS, "directory.mjs")).href);
+    const rulesCfg = { format: "en", contacts: { core: 30, matters: 3 } };
+    const d = { contacts: [] };
+    const quiet = { kind: "contact", address: "client@crm.fr", sent: 1, received: 0, tier: 2 };
+    upsert(d, [quiet], {}, rulesCfg);
+    const ignored = d.contacts[0].tier === 0 && d.contacts[0].tierFloor === undefined;
+    upsert(d, [quiet], { tiers: true }, rulesCfg);
+    const floored = d.contacts[0].tier === 2 && d.contacts[0].tierFloor === 2;
+    upsert(d, [{ kind: "contact", address: "client@crm.fr", sent: 40, received: 5 }], {}, rulesCfg);
+    const kept = d.contacts[0].tier === 2;
+    upsert(d, [{ ...quiet, tier: 0 }], { tiers: true, counts: "set" }, rulesCfg);
+    const cleared = d.contacts[0].tierFloor === undefined && d.contacts[0].tier === 0;
+    check("a source's tier counts only when it declares setsTier, as a floor, and 0 removes it", ignored && floored && kept && cleared, JSON.stringify(d.contacts));
+  }
   const mc = await mcpSession();
   await mc.ask("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "banc", version: "1" } });
   const toolsNow = await mc.ask("tools/list", {});
