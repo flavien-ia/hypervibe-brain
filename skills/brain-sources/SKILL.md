@@ -59,6 +59,8 @@ For each one they want, define it **with them**, in plain words first:
 2. **What becomes a note**, and what does not (a post yes, a comment no), in which of the brain's types and domains.
 3. **How often**: every day or every week.
 4. **Whether a note may be refreshed later** (the likes of a post, the date of an event): only while it is still a seed, and only by this source. Never a validated note.
+   **Unless the source brings finished objects** (their posts, articles, talks given: records of something done, not thoughts): then its notes may be born trusted (`--finished`), and with `--updates` it keeps each record up to date, **as long as nobody has touched that file since**. One edit by hand and the record is the person's, never rewritten. A thought, a draft, anything to judge: seeds, always.
+   Whatever it brings, an item whose `source` is already a note's source is that note: nothing is ever doubled, even a note written before the source existed. A note may also go into a subfolder of its type (`"folder": "linkedin"` puts a publication in `publications/linkedin/`).
 5. **Which kind**:
    - **read automatically** (`script`): when the source can be read without judgment (a file, an API, a database). You write a small program with them: it reads and prints the notes to create, and the plugin writes them, with every check. A key it needs goes in the brain's `.env`, pasted by the person, never in the conversation.
    - **done by Claude** (`claude`): when it needs judgment or a browser (a website without an API, a feed to sort). You write, with them, the instructions Claude will follow during the weekly review.
@@ -66,7 +68,7 @@ For each one they want, define it **with them**, in plain words first:
 Then:
 
 ```bash
-node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" add <name> --kind <script|claude> --every <day|week> --type <type> --domains <d1,d2> --description "<one sentence>" [--updates]
+node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" add <name> --kind <script|claude> --every <day|week> --type <type> --domains <d1,d2> --description "<one sentence>" [--updates] [--finished]
 ```
 
 It creates `sources/<name>/` in the brain, with a `run.mjs` whose contract is written at its top, or an `instructions.md`. Write it with them.

@@ -65,8 +65,19 @@ export const INDEX = join(ROOT, "index");
 export const readsFile = (cfg = config()) => join(INDEX, cfg.format === "fr" ? "mcp-journal.jsonl" : "reads.jsonl");
 /** Every promotion, kept: which seed rose, when, and why. */
 export const promotionsFile = () => join(INDEX, "promotions.jsonl");
-export const DB_PATH = join(INDEX, "brain.sqlite");
-export const EMB_DIR = join(INDEX, "embeddings");
+// Where the index and the vectors live. A brain that already has files of
+// its own there (another program's index...) places them elsewhere, in
+// hyperbrain.json: "index": { "db": "index/x.sqlite", "embeddings": "index/y" }.
+const PLACES = (() => {
+  try {
+    return JSON.parse(readFileSync(join(ROOT, "hyperbrain.json"), "utf8")).index ?? {};
+  } catch {
+    return {};
+  }
+})();
+export const DB_PATH = join(ROOT, PLACES.db ?? "index/brain.sqlite");
+export const EMB_DIR = join(ROOT, PLACES.embeddings ?? "index/embeddings");
+const EMB_REL = `${String(PLACES.embeddings ?? "index/embeddings").replace(/\\/g, "/").replace(/^\.?\//, "").replace(/\/+$/, "")}/`;
 
 // THE FORMAT SPEAKS THE BRAIN'S LANGUAGE. A French brain writes `titre`,
 // `domaines`, `statut: graine`; an English one `title`, `domains`,
@@ -162,12 +173,12 @@ function ownRules(cfg) {
 const norm = (rel) => String(rel).replace(/\\/g, "/");
 export const isDerived = (rel, cfg = config()) => {
   const r = norm(rel);
-  return DERIVED.some((re) => re.test(r)) || ownRules(cfg).derived.some((f) => f(r));
+  return DERIVED.some((re) => re.test(r)) || r.startsWith(EMB_REL) || ownRules(cfg).derived.some((f) => f(r));
 };
 export const isOwned = (rel, cfg = config()) => {
   const r = norm(rel);
   const o = ownRules(cfg);
-  return OWNED.some((re) => re.test(r)) || o.canon.some((f) => f(r)) || o.derived.some((f) => f(r));
+  return OWNED.some((re) => re.test(r)) || r.startsWith(EMB_REL) || o.canon.some((f) => f(r)) || o.derived.some((f) => f(r));
 };
 
 /** For the scripts that compute: refuse clearly on a computer that is not the runner. */

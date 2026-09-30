@@ -40,8 +40,8 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, config, requireBrain, requireRunner, setUserConfig, sha256, today, userConfig } from "./lib.mjs";
-import { checkNote, createNote, refreshSeed, slugIndex } from "./notes.mjs";
+import { ROOT, config, readVault, requireBrain, requireRunner, setUserConfig, sha256, today, userConfig } from "./lib.mjs";
+import { checkNote, createNote, fileHash, refreshOwn, refreshSeed, slugIndex } from "./notes.mjs";
 import { readDirectory, upsert, writeDirectory } from "./directory.mjs";
 
 requireBrain();
@@ -84,6 +84,18 @@ function due(n) {
   return localDay < today();
 }
 
+/** The notes of the vault by their `source`, read once, when first needed. */
+function sourceIndex() {
+  let m = null;
+  return () => {
+    if (!m) {
+      m = new Map();
+      for (const f of readVault().fiches) if (f.fm.source) m.set(String(f.fm.source), join(ROOT, f.rel));
+    }
+    return m;
+  };
+}
+
 /** Runs the script and reads its notes. Nothing is written here. */
 function execute(n) {
   const d = def(n);
@@ -114,7 +126,11 @@ function execute(n) {
   return { ok: true, items, bad };
 }
 
-/** One note from an item: the source's defaults filled in. */
+/**
+ * One note from an item: the source's defaults filled in. A machine writes
+ * seeds; only a source of finished objects (posts, articles, talks given:
+ * records) may write them already trusted.
+ */
 const noteOf = (n, item) => {
   const d = def(n);
   return {
@@ -123,7 +139,8 @@ const noteOf = (n, item) => {
     domains: item.domains ?? d.domains,
     body: item.body,
     links: item.links,
-    status: item.status ?? "seed",
+    folder: item.folder,
+    status: d.finished ? item.status ?? "seed" : "seed",
     visibility: item.visibility,
     source: item.source ?? `source:${n}:${item.id}`,
     created: item.created,
@@ -181,7 +198,8 @@ function runOne(n) {
   }
   const seen = readJson(join(DIR, n, "seen.json"), {});
   const slugs = slugIndex();
-  const res = { name: n, ok: true, created: 0, updated: 0, unchanged: 0, contacts: 0, refused: [...x.bad] };
+  const bySource = sourceIndex();
+  const res = { name: n, ok: true, created: 0, updated: 0, unchanged: 0, adopted: 0, touched: 0, contacts: 0, refused: [...x.bad] };
   // A source may also feed the contacts directory: lines { "kind": "contact", "address", ... }.
   // Its counts are added (a period observed) or, with "contactCounts": "set" in its
   // definition, replace the old ones (a harvest that recounts everything).
@@ -195,17 +213,29 @@ function runOne(n) {
   for (const item of x.items.filter((i) => i.kind !== "contact")) {
     const id = String(item.id);
     try {
-      if (seen[id]) {
+      const note = noteOf(n, item);
+      let entry = typeof seen[id] === "string" ? { slug: seen[id] } : seen[id];
+      // Already in the brain under the same source (written before this source
+      // existed, by hand or by another program): it IS that note, never a twin.
+      if (!entry && bySource().has(note.source)) {
+        const abs = bySource().get(note.source);
+        entry = { slug: abs.replace(/\\/g, "/").split("/").pop().slice(0, -3), hash: fileHash(abs) };
+        seen[id] = entry;
+        res.adopted++;
+      }
+      if (entry) {
         if (!d.updates) {
           res.unchanged++;
           continue;
         }
-        const u = refreshSeed(seen[id], noteOf(n, item), cfg, slugs);
+        const u = d.finished ? refreshOwn(entry.slug, note, cfg, slugs, entry.hash) : refreshSeed(entry.slug, note, cfg, slugs);
+        if (u.hash) seen[id] = { ...entry, hash: u.hash };
         if (u.updated) res.updated++;
+        else if (u.reason === "touched") res.touched++;
         else res.unchanged++;
       } else {
-        const c = createNote(noteOf(n, item), cfg, slugs);
-        seen[id] = c.slug;
+        const c = createNote(note, cfg, slugs);
+        seen[id] = { slug: c.slug, hash: fileHash(join(ROOT, c.rel)) };
         res.created++;
       }
     } catch (e) {
@@ -311,7 +341,7 @@ if (command === "list") {
   }
   if (!cfg.types[type]) fail(`--type must be one of this brain's types: ${Object.keys(cfg.types).join(", ")}`);
   if (!domains.length || domains.some((x) => !cfg.domains.includes(x))) fail(`--domains among this brain's domains: ${cfg.domains.join(", ")}`);
-  const d = { name, description: opt("--description") ?? "", kind, every, type, domains, updates: args.includes("--updates"), enabled: true, timeoutMin: 5 };
+  const d = { name, description: opt("--description") ?? "", kind, every, type, domains, updates: args.includes("--updates"), ...(args.includes("--finished") ? { finished: true } : {}), enabled: true, timeoutMin: 5 };
   mkdirSync(join(DIR, name), { recursive: true });
   writeJson(join(DIR, name, "source.json"), d);
   if (kind === "script") writeFileSync(join(DIR, name, "run.mjs"), TEMPLATE_SCRIPT(name, d), "utf8");
@@ -325,10 +355,13 @@ if (command === "list") {
   if (!x.ok) fail(x.error);
   const seen = readJson(join(DIR, name, "seen.json"), {});
   const slugs = slugIndex();
+  const bySource = sourceIndex();
   const checked = x.items.filter((i) => i.kind !== "contact").map((item) => {
     try {
-      const c = checkNote(noteOf(name, item), cfg, slugs);
-      return { id: item.id, title: item.title, ...c, already: Boolean(seen[String(item.id)]) };
+      const note = noteOf(name, item);
+      const known = Boolean(seen[String(item.id)]) || bySource().has(note.source);
+      const c = known ? { slug: null, folder: null, taken: false } : checkNote(note, cfg, slugs);
+      return { id: item.id, title: item.title, ...c, already: known };
     } catch (e) {
       return { id: item.id, title: item.title, refused: e.message };
     }

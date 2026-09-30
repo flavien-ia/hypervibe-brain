@@ -8,7 +8,7 @@
 //   node tests/banc.mjs [--keep]
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -526,6 +526,36 @@ try {
   r = node("sources.mjs", ["run", "miroir"]);
   check("a failing step keeps its error", r.ok && json(r.out).runs[0].ok === false && JSON.parse(readFileSync(join(miroir, "state.json"), "utf8")).lastError.includes("the mirror is down"), r.out);
   unlinkSync(join(miroir, "fail"));
+  {
+    // A source of finished objects: its records, kept up to date while nobody touches them.
+    node("sources.mjs", ["add", "fil", "--kind", "script", "--every", "day", "--type", "source", "--domains", "ecriture", "--updates", "--finished"]);
+    const posts = join(BRAIN, "sources", "fil");
+    writeFileSync(join(posts, "run.mjs"), SOURCE_PROGRAM, "utf8");
+    node("sources.mjs", ["trust", "fil"]);
+    // One post already in the brain, written before the source existed.
+    const olderPost = join(BRAIN, "vault", "sources", "vieux-post.md");
+    writeFileSync(olderPost, "---\ntype: source\ntitle: \"Vieux post\"\ndomains: [ecriture]\nstatus: trusted\nvisibility: internal\ncreated: 2026-01-05\nupdated: 2026-01-05\nsource: \"base:post/2\"\n---\n\nLe vieux post.\n", "utf8");
+    const item = (id, title, body) => ({ id: `base:post/${id}`, source: `base:post/${id}`, title, body, status: "trusted", folder: "linkedin" });
+    writeFileSync(join(posts, "data.json"), JSON.stringify([item(1, "Premier post", "Dix likes."), item(2, "Vieux post", "Le vieux post.")]), "utf8");
+    r = node("sources.mjs", ["run", "fil"]);
+    const firstPost = join(BRAIN, "vault", "sources", "linkedin", "premier-post.md");
+    check("a finished record is born trusted, in its subfolder, and an existing one is adopted, never doubled", r.ok && json(r.out).runs[0].created === 1 && json(r.out).runs[0].adopted === 1 && existsSync(firstPost) && readFileSync(firstPost, "utf8").includes("status: trusted") && !existsSync(join(BRAIN, "vault", "sources", "linkedin", "vieux-post.md")), `${r.out} ${JSON.stringify(readdirSync(join(BRAIN, "vault"), { recursive: true }).filter((f) => f.includes("post")))}`);
+    writeFileSync(join(posts, "data.json"), JSON.stringify([item(1, "Premier post", "Trente likes."), item(2, "Vieux post", "Le vieux post, relu.")]), "utf8");
+    r = node("sources.mjs", ["run", "fil"]);
+    check("while nobody touches them, the source keeps its records up to date", r.ok && json(r.out).runs[0].updated === 2 && readFileSync(firstPost, "utf8").includes("Trente likes."), r.out);
+    writeFileSync(firstPost, readFileSync(firstPost, "utf8").replace("Trente likes.", "Trente likes. Ma note a la main."), "utf8");
+    writeFileSync(join(posts, "data.json"), JSON.stringify([item(1, "Premier post", "Cent likes."), item(2, "Vieux post", "Le vieux post, relu.")]), "utf8");
+    r = node("sources.mjs", ["run", "fil"]);
+    check("one edit by hand, and the record is the person's: never rewritten", r.ok && json(r.out).runs[0].touched === 1 && json(r.out).runs[0].unchanged === 1 && readFileSync(firstPost, "utf8").includes("Ma note a la main.") && !readFileSync(firstPost, "utf8").includes("Cent likes."), r.out);
+    // Any other source writes seeds, whatever it asks.
+    node("sources.mjs", ["add", "brouillons", "--kind", "script", "--every", "day", "--type", "note", "--domains", "ecriture"]);
+    const brouillons = join(BRAIN, "sources", "brouillons");
+    writeFileSync(join(brouillons, "run.mjs"), SOURCE_PROGRAM, "utf8");
+    writeFileSync(join(brouillons, "data.json"), JSON.stringify([{ id: "b1", title: "Brouillon presse", body: "Une pensee.", status: "trusted" }]), "utf8");
+    node("sources.mjs", ["trust", "brouillons"]);
+    node("sources.mjs", ["run", "brouillons"]);
+    check("a source that is not of finished objects writes seeds, whatever it asks", readFileSync(join(BRAIN, "vault", "notes", "brouillon-presse.md"), "utf8").includes("status: seed"));
+  }
   const mc = await mcpSession();
   await mc.ask("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "banc", version: "1" } });
   const toolsNow = await mc.ask("tools/list", {});

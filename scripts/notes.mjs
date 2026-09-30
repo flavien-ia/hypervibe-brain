@@ -9,10 +9,14 @@
 // was written by the very source that asks (a source refreshing its own
 // drafts: the stats of a post, the date of an event). A validated note, or a
 // note of someone else, is never touched.
+// One exception, as narrow as it can be: a source of FINISHED objects (a post,
+// an article, a talk given: records, not thoughts) may keep its records up to
+// date, but only a file nobody has touched since it wrote it (it keeps each
+// one's fingerprint). A single edit by hand, and the record is the person's.
 
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { ROOT, STATUSES, VAULT, VISIBILITIES, listFiches, parseFiche, slugify, toPosix, today, validate, vocab } from "./lib.mjs";
+import { ROOT, STATUSES, VAULT, VISIBILITIES, listFiches, parseFiche, parseFrontmatter, sha256, slugify, toPosix, today, validate, vocab } from "./lib.mjs";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const q = (s) => JSON.stringify(String(s));
@@ -23,6 +27,31 @@ export function slugIndex() {
   const m = new Map();
   for (const f of listFiches()) m.set(f.replace(/\\/g, "/").split("/").pop().slice(0, -3), f);
   return m;
+}
+
+/** The fingerprint of a note's file, line endings aside. */
+export const fileHash = (abs) => sha256(readFileSync(abs, "utf8").replace(/\r\n/g, "\n"));
+
+/** Same frontmatter (the date of the last change aside, in any order) and same body. */
+export function sameContent(a, b, cfg) {
+  const split = (t) => {
+    const m = /^---\n([\s\S]*?)\n---[ \t]*(?:\n([\s\S]*))?$/.exec(String(t).replace(/\r\n/g, "\n").replace(/^﻿/, ""));
+    if (!m) return null;
+    const fm = parseFrontmatter(m[1]);
+    delete fm[vocab(cfg).keys.updated];
+    const sorted = Object.fromEntries(Object.keys(fm).sort().map((k) => [k, Array.isArray(fm[k]) ? fm[k].map(String) : String(fm[k])]));
+    return JSON.stringify([sorted, String(m[2] ?? "").trim()]);
+  };
+  const x = split(a);
+  return x !== null && x === split(b);
+}
+
+/** A subfolder inside the type's folder (publications/linkedin): plain names only. */
+function subfolder(folder) {
+  if (!folder) return [];
+  const parts = String(folder).replace(/\\/g, "/").split("/").filter(Boolean);
+  for (const p of parts) if (p === "." || p === ".." || !/^[\p{L}\p{N}_. -]+$/u.test(p)) throw new Error(`"${folder}" is not a plain subfolder`);
+  return parts;
 }
 
 /** A value of an extra field, written the way the frontmatter reader reads it back. */
@@ -75,7 +104,7 @@ function render(n, cfg, slugs, { keepCreated } = {}) {
     ...(links.length && !links.every((l) => body.includes(`[[${l}]]`)) ? ["", links.filter((l) => !body.includes(`[[${l}]]`)).map((l) => `[[${l}]]`).join(" ")] : []),
     "",
   ].join("\n");
-  return { slug: slugify(n.slug ?? n.title), dir: join(VAULT, cfg.types[type]), text };
+  return { slug: slugify(n.slug ?? n.title), dir: join(VAULT, cfg.types[type], ...subfolder(n.folder)), text };
 }
 
 /** Checks a note without writing anything: what a source's test shows. */
@@ -122,9 +151,25 @@ export function refreshSeed(slug, n, cfg, slugs = slugIndex()) {
   if (current.fm.status !== "seed") return { slug, rel: toPosix(relative(ROOT, abs)), updated: false, reason: "validated" };
   const r = render({ ...n, slug, type: current.fm.type }, cfg, slugs, { keepCreated: String(current.fm.created) });
   const previous = readFileSync(abs, "utf8");
-  if (previous.replace(/\r\n/g, "\n").replace(/^(touche|updated): .*$/m, "") === r.text.replace(/^(touche|updated): .*$/m, "")) {
-    return { slug, rel: toPosix(relative(ROOT, abs)), updated: false, reason: "unchanged" };
-  }
+  if (sameContent(previous, r.text, cfg)) return { slug, rel: toPosix(relative(ROOT, abs)), updated: false, reason: "unchanged" };
   writeJudged(abs, r.text, cfg, previous);
   return { slug, rel: toPosix(relative(ROOT, abs)), updated: true };
+}
+
+/**
+ * Rewrites a finished object's record ONLY if nobody touched its file since
+ * the source wrote it: `lastHash` is the fingerprint the source kept.
+ * @returns {{ slug: string, rel: string, updated: boolean, hash?: string, reason?: string }}
+ */
+export function refreshOwn(slug, n, cfg, slugs, lastHash) {
+  const abs = slugs.get(slug);
+  if (!abs || !existsSync(abs)) return { slug, rel: null, updated: false, reason: "gone" };
+  const rel = toPosix(relative(ROOT, abs));
+  if (!lastHash || fileHash(abs) !== lastHash) return { slug, rel, updated: false, reason: "touched" };
+  const current = parseFiche(abs, vocab(cfg));
+  const r = render({ ...n, slug, type: current.fm.type }, cfg, slugs, { keepCreated: String(current.fm.created) });
+  const previous = readFileSync(abs, "utf8");
+  if (sameContent(previous, r.text, cfg)) return { slug, rel, updated: false, reason: "unchanged", hash: lastHash };
+  writeJudged(abs, r.text, cfg, previous);
+  return { slug, rel, updated: true, hash: fileHash(abs) };
 }
