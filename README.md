@@ -1,44 +1,51 @@
-# create-hyperbrain
+# Hyperbrain
 
-Une skill Claude Code qui accompagne, étape par étape, la construction d'un **second brain** personnel : des fiches markdown liées entre elles (idées, projets, personnes, publications, décisions), une recherche plein texte et par le sens, et un branchement qui permet à Claude de le consulter depuis n'importe quelle session, et d'y écrire proprement.
+**A second brain for Claude Code.** Your ideas, projects, the people who matter to you, what you have written and decided, as linked markdown notes. Claude consults them from any conversation, without being asked, and knows how to write to them properly.
 
-Elle est **autonome** : aucun plugin requis, aucune dépendance à installer. Il faut seulement **Node 22.13 ou plus récent**, **git**, et Claude Code (en ligne de commande ou dans l'app de bureau).
+*[Version française](README.fr.md)*
 
-## Installer
+## What you get
 
-1. Récupérer ce dossier (une archive ou un clone).
-2. Dans ce dossier : `node installer.mjs`
-3. Ouvrir une **nouvelle** session Claude Code et taper `/create-hyperbrain`.
+- **Your notes are yours**: plain markdown files in a folder of your choice, in your own git repository (private GitHub backup recommended). No cloud service, no lock-in.
+- **Claude reads your brain everywhere**: the plugin's MCP server tells every session that your brain exists and when to consult it.
+- **Search by words and by meaning**: every word, anywhere, accents ignored; and, with an OpenAI key (a few cents for thousands of notes), by meaning.
+- **A trust model**: what the machine writes enters as a `seed`, never overwrites what you validated, and becomes `trusted` once it has taken root. Private notes are never shown to an AI.
+- **It lives on its own**: a save every evening (no AI, no cost) and a weekly review by Claude.
 
-La skill fait le reste, en posant ses questions une à une. On peut s'arrêter à tout moment : `/create-hyperbrain` reprend là où on s'était arrêté.
+## Install
 
-## Le parcours
+Requirements: Claude Code (desktop app or CLI). Node 22.13+ and git are checked, and installed if needed, by the first skill.
 
-| Étape | Ce qui se passe | On passe à la suivante quand... |
-|---|---|---|
-| 1. Les décisions | pourquoi ce brain, ses domaines, ses sources, ce qui reste privé, sa sauvegarde | le récapitulatif est validé |
-| 2. La création | le dossier du brain, puis une vingtaine de fiches tirées d'une conversation | une recherche retrouve une fiche |
-| 3. Le branchement | Claude sait lire le brain et y écrire, depuis n'importe quelle session ; en option la recherche par le sens et une sauvegarde GitHub privée | une nouvelle session répond à partir des fiches |
-| 4. Les sources | ce qu'on a déjà écrit entre, une source à la fois | une source entière est ingérée et vérifiée |
-| 5. La vie | le réflexe de capturer, et une revue chaque semaine | une première revue a tourné |
+```
+/plugin marketplace add flavien-ia/hyperbrain-harness
+/plugin install hyperbrain@hyperbrain-harness
+```
 
-## Ce que contient le brain créé
+Then, in a new session: **`/hyperbrain:start-hyperbrain`**.
 
-- `vault/` : les fiches, **la seule source de vérité**, une par sujet, en neuf types.
-- `BRAIN.md` : pourquoi ce brain existe, ses domaines, ses règles. `SOURCES.md` : ce qui y entre, dans quel ordre.
-- `scripts/` : l'index (SQLite, fourni par Node), la recherche, le serveur MCP que Claude interroge, la capture, la sauvegarde, la revue de la semaine.
-- `index/embeddings/` : les vecteurs de la recherche par le sens, un petit fichier par fiche, **versionnés dans git** : un clone du brain retrouve sa recherche par le sens sans un seul appel payant.
+## The skills
 
-## Les principes
+| Skill | What it does |
+|---|---|
+| `/hyperbrain:start-hyperbrain` | Checks this computer (Node, git, your git identity; GitHub and Cloudflare as options), installs what is missing, offers to create the brain. |
+| `/hyperbrain:create-brain` | The guided construction, in five steps with a gate each: decisions, creation and first notes, Claude reading it everywhere, your sources, the routines. Resumes where you left off. |
+| `/hyperbrain:brain` | Capture a thought, classified right away (searches first, never duplicates). |
+| `/hyperbrain:brain-ingest` | Bring one existing source in (notes, articles, documents), three trial notes first. |
+| `/hyperbrain:brain-review` | The weekly review: what is new, promotions, orphans, broken links, proposed links. |
+| `/hyperbrain:brain-status` | Where the brain stands, and the next useful step. |
+| `/hyperbrain:brain-routines` | Arm, check or stop the evening save and the weekly review. |
 
-1. **La machine crée, elle ne modifie jamais une fiche validée.** Ce qu'elle écrit entre en `seed` avec sa source ; la personne garde un droit de veto. Une `seed` devient `trusted` quand elle a pris racine.
-2. **Une fiche `private` n'est jamais montrée à une IA.** Elle existe (titre, liens), son contenu ne sort jamais.
-3. **Une source à la fois**, avec trois fiches d'essai relues avant chaque lot.
-4. **Aucun secret** dans le brain, ni dans la conversation : une clé d'API se colle à la main dans le fichier `.env`.
-5. **Rien n'est écrasé** dans la configuration de Claude : le branchement prend un autre nom si `brain` est déjà pris, sauvegarde `~/.claude.json` avant de le toucher, et se défait d'une commande (`node outils/connect.mjs --dir <brain> --remove`).
+## How it is built
 
-## Pour qui maintient la skill
+- **The code lives in the plugin, the brain is only data**: a plugin update repairs every brain at once. The brain is found through `~/.hyperbrain/config.json`.
+- **Zero dependency**: the database is the SQLite built into Node, the MCP server speaks its protocol by hand. Nothing to install, nothing that breaks on install.
+- **The index is rebuilt from the notes**, by itself, whenever a note moved. The vectors of the search by meaning are versioned in git, one small file per note: a clone gets its semantic search back without a single paid call.
+- `tests/banc.mjs` plays the whole journey in a throwaway folder, with a fake home and a fake embeddings API. Run it after any change: `node tests/banc.mjs`.
 
-- `gabarit/` : ce qui est copié dans chaque nouveau brain.
-- `outils/init.mjs` crée un brain, `outils/connect.mjs` le branche ou le débranche.
-- `tests/banc.mjs` joue le parcours complet dans un dossier jetable, avec un faux dossier utilisateur et une fausse API d'embeddings : **à relancer après toute modification** (`node tests/banc.mjs`). Rien n'y touche à la vraie configuration.
+## Related
+
+**Hyperbrain entreprise** is a separate tool: mapping a company's data and building its business ontology.
+
+## License
+
+Apache-2.0.
