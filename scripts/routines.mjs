@@ -180,6 +180,8 @@ const steps = [
   ...(runner ? [["cold-copy.mjs", []], ["viz.mjs", ["build", "--if-exists"]], ["viz.mjs", ["publish-app"]]] : []),
   // The cloud copy, by difference, if the person set one up.
   ...(runner && brainCfg.cloud?.database ? [["cloud.mjs", ["sync"]]] : []),
+  // The brain's own steps that come after the save (a mirror, a publication...).
+  ...(runner ? [["sources.mjs", ["run", "--due", "--phase", "after"]]] : []),
 ];
 for (const [script, extra] of steps) {
   // The command first (viz.mjs reads it as its first argument), the brain after.

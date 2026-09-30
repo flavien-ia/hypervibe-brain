@@ -492,6 +492,24 @@ try {
       && !isOwned("index/brain.sqlite", own) && isOwned("vault/notes/a.md", {}) && !isDerived("vault/notes/a.md", own);
     check("a brain's own ownership rules: settings kept by hand, each computer's journal, its own derived files", okRules);
   }
+  // A step: a program of the brain's own that writes no note.
+  r = node("sources.mjs", ["add", "miroir", "--kind", "step", "--every", "day", "--when", "after", "--description", "Publishes a mirror"]);
+  const miroir = join(BRAIN, "sources", "miroir");
+  check("a step is created, with its program and without a type", r.ok && json(r.out).when === "after" && existsSync(join(miroir, "run.mjs")) && !JSON.parse(readFileSync(join(miroir, "source.json"), "utf8")).type, r.out);
+  writeFileSync(join(miroir, "run.mjs"), 'import { existsSync, writeFileSync } from "node:fs";\nif (existsSync("fail")) { console.error("the mirror is down"); process.exit(2); }\nwriteFileSync("done.txt", "yes");\nconsole.log("12 objects published");\n', "utf8");
+  const notesBeforeStep = notesCount();
+  r = node("sources.mjs", ["run", "--due", "--phase", "after"]);
+  check("a step does not run before it is approved here", r.ok && json(r.out).runs.find((x) => x.name === "miroir")?.skipped && !existsSync(join(miroir, "done.txt")), r.out);
+  node("sources.mjs", ["trust", "miroir"]);
+  r = node("sources.mjs", ["run", "--due"]);
+  check("an 'after' step is not run with the sources", r.ok && !json(r.out).runs.some((x) => x.name === "miroir"), r.out);
+  r = node("sources.mjs", ["run", "--due", "--phase", "after"]);
+  const stepRun = json(r.out).runs.find((x) => x.name === "miroir");
+  check("once approved, it runs after the save and keeps its report, writing no note", r.ok && stepRun?.ok && stepRun.report === "12 objects published" && existsSync(join(miroir, "done.txt")) && notesCount() === notesBeforeStep, r.out);
+  writeFileSync(join(miroir, "fail"), "", "utf8");
+  r = node("sources.mjs", ["run", "miroir"]);
+  check("a failing step keeps its error", r.ok && json(r.out).runs[0].ok === false && JSON.parse(readFileSync(join(miroir, "state.json"), "utf8")).lastError.includes("the mirror is down"), r.out);
+  unlinkSync(join(miroir, "fail"));
   const mc = await mcpSession();
   await mc.ask("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "banc", version: "1" } });
   const toolsNow = await mc.ask("tools/list", {});

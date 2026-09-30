@@ -86,6 +86,16 @@ The first run brings everything the source holds: say how many notes before runn
 
 **For a source done by Claude**, do it once together now, following its instructions, then record it: `node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" mark <name> --ok --created <n>`. The weekly review does it afterwards.
 
+**A step of their own** (`step`): a program that brings no note but must run with the brain every evening or week, such as publishing a copy of the brain for an app of theirs, mirroring some notes elsewhere, or checking something. Same care as a script (written with them, approved on this computer, a key in `.env`), and one more question: **before** the brain's index is rebuilt, or **after** the evening's save.
+
+```bash
+node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" add <name> --kind step --every <day|week> --when <before|after> --description "<one sentence>"
+node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" trust <name>
+node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" run <name>
+```
+
+What it prints is its report, kept with its last success or error, and read in the weekly review.
+
 ## The writings
 
 Ask what they have already written and where, order it by interest with them, and write it in `SOURCES.md` as a checklist (`- [ ] <source>: <where>`), in the brain's language. Then propose to bring in the first one now: invoke `/hyperbrain:brain-ingest`.

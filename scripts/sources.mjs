@@ -11,6 +11,11 @@
 //                   notes to create, one JSON per line (the contract is at the
 //                   top of the template). It never writes a note itself: the
 //                   plugin does, through notes.mjs, with every check.
+//   run.mjs         kind "step": a program of the brain's own that writes NO
+//                   note (it publishes, mirrors, checks...), run every evening
+//                   or week, "before" the index is rebuilt or "after" the save.
+//                   Approved on each computer like a script. Its output is only
+//                   its report.
 //   instructions.md kind "claude": what Claude does during the weekly review,
 //                   for what needs judgment or a browser.
 //   seen.json       which item became which note (never twice the same)
@@ -25,9 +30,10 @@
 //
 //   node scripts/sources.mjs list [--json]
 //   node scripts/sources.mjs add <name> --kind script|claude --every day|week --type <type> --domains a,b [--description "..."] [--updates]
+//   node scripts/sources.mjs add <name> --kind step --every day|week --when before|after [--description "..."]
 //   node scripts/sources.mjs test <name>        run it, check its notes, write nothing
 //   node scripts/sources.mjs trust <name>       approve its script on this computer
-//   node scripts/sources.mjs run [<name>] [--due]
+//   node scripts/sources.mjs run [<name>] [--due] [--phase after]   (without --phase: scripts and "before" steps)
 //   node scripts/sources.mjs mark <name> --ok [--created N] | --error "<what>"   (for "claude" sources)
 //   node scripts/sources.mjs enable|disable <name>
 
@@ -126,10 +132,41 @@ const noteOf = (n, item) => {
   };
 };
 
+/** A step: its program runs, its exit code says whether it worked, its last lines are its report. */
+function runStep(n) {
+  const d = def(n);
+  const st = state(n);
+  const now = new Date().toISOString();
+  const r = spawnSync(process.execPath, [join(DIR, n, "run.mjs")], {
+    cwd: join(DIR, n),
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: (d.timeoutMin ?? 5) * 60_000,
+    maxBuffer: 64 * 1024 * 1024,
+    env: { ...process.env, HYPERBRAIN_BRAIN_DIR: ROOT, HYPERBRAIN_SOURCE_SINCE: st.lastSuccess ?? "", HYPERBRAIN_SOURCE_NAME: n },
+  });
+  const lines = (s) => String(s ?? "").split("\n").filter((l) => l.trim() && !/ExperimentalWarning|trace-warnings/.test(l));
+  const report = lines(r.stdout).slice(-3).join(" | ").slice(0, 400);
+  if (r.error || r.status !== 0) {
+    const error = r.error?.code === "ETIMEDOUT" ? `stopped after ${d.timeoutMin ?? 5} min` : `exit ${r.status}: ${lines(r.stderr).slice(-3).join(" | ")}`.slice(0, 400);
+    writeJson(join(DIR, n, "state.json"), { ...st, lastRun: now, lastError: error });
+    return { name: n, ok: false, error };
+  }
+  writeJson(join(DIR, n, "state.json"), { ...st, lastRun: now, lastSuccess: now, lastError: null, lastReport: report });
+  return { name: n, ok: true, step: true, report };
+}
+
 function runOne(n) {
   const d = def(n);
   const st = state(n);
   const now = new Date().toISOString();
+  if (d.kind === "step") {
+    if (!trusted(n)) {
+      writeJson(join(DIR, n, "state.json"), { ...st, lastRun: now, lastError: "not approved on this computer (sources.mjs trust)" });
+      return { name: n, skipped: "not approved on this computer" };
+    }
+    return runStep(n);
+  }
   if (d.kind !== "script") return { name: n, skipped: "done by Claude during the weekly review" };
   if (!trusted(n)) {
     writeJson(join(DIR, n, "state.json"), { ...st, lastRun: now, lastError: "not approved on this computer (sources.mjs trust)" });
@@ -186,6 +223,19 @@ function runOne(n) {
   });
   return res;
 }
+
+const TEMPLATE_STEP = (n, d) => `// ${n}: ${d.description ?? "a step of this brain's evening"}
+//
+// A STEP writes no note: it publishes, mirrors or checks something, every
+// ${d.every === "day" ? "evening" : "week"}, ${d.when === "before" ? "before the index is rebuilt" : "once the evening's save is done"}.
+// What it prints is its report (the last lines are kept); exit with a non-zero
+// code when something went wrong. It receives HYPERBRAIN_BRAIN_DIR and
+// HYPERBRAIN_SOURCE_SINCE (the date of its last success), and runs in its own
+// folder. A key it needs goes in the brain's .env, never here.
+// It runs only once approved on this computer, and again after any change.
+
+console.log("nothing to do yet");
+`;
 
 const TEMPLATE_SCRIPT = (n, d) => `// ${n}: ${d.description ?? "a source of this brain"}
 //
@@ -247,8 +297,18 @@ if (command === "list") {
   const every = opt("--every") ?? "week";
   const type = opt("--type");
   const domains = String(opt("--domains") ?? "").split(",").map((x) => x.trim()).filter(Boolean);
-  if (!["script", "claude"].includes(kind)) fail("--kind script (it reads by itself) or claude (Claude does it during the review)");
+  if (!["script", "claude", "step"].includes(kind)) fail("--kind script (it reads by itself), claude (Claude does it during the review) or step (a program that writes no note)");
   if (!["day", "week"].includes(every)) fail("--every day or week");
+  if (kind === "step") {
+    const when = opt("--when") ?? "after";
+    if (!["before", "after"].includes(when)) fail("--when before (the index is rebuilt after it) or after (once the evening's save is done)");
+    const d = { name, description: opt("--description") ?? "", kind, every, when, enabled: true, timeoutMin: 5 };
+    mkdirSync(join(DIR, name), { recursive: true });
+    writeJson(join(DIR, name, "source.json"), d);
+    writeFileSync(join(DIR, name, "run.mjs"), TEMPLATE_STEP(name, d), "utf8");
+    out({ ok: true, name, kind, when, folder: join(DIR, name).replace(/\\/g, "/"), file: "run.mjs" });
+    process.exit(0);
+  }
   if (!cfg.types[type]) fail(`--type must be one of this brain's types: ${Object.keys(cfg.types).join(", ")}`);
   if (!domains.length || domains.some((x) => !cfg.domains.includes(x))) fail(`--domains among this brain's domains: ${cfg.domains.join(", ")}`);
   const d = { name, description: opt("--description") ?? "", kind, every, type, domains, updates: args.includes("--updates"), enabled: true, timeoutMin: 5 };
@@ -259,6 +319,7 @@ if (command === "list") {
   out({ ok: true, name, kind, folder: join(DIR, name).replace(/\\/g, "/"), file: kind === "script" ? "run.mjs" : "instructions.md" });
 } else if (command === "test") {
   if (!def(name)) fail(`no source named "${name}"`);
+  if (def(name).kind === "step") fail("a step writes no note: run it once with sources.mjs run <name>, after approving it");
   if (def(name).kind !== "script") fail("a source done by Claude is tested by doing it once, together");
   const x = execute(name);
   if (!x.ok) fail(x.error);
@@ -281,13 +342,15 @@ if (command === "list") {
     sample: x.items.slice(0, 3).map((i) => ({ id: i.id, title: i.title, type: i.type ?? def(name).type, body: String(i.body ?? "").slice(0, 300) })),
   });
 } else if (command === "trust") {
-  if (!def(name) || def(name).kind !== "script") fail(`no script source named "${name}"`);
+  if (!def(name) || !["script", "step"].includes(def(name).kind)) fail(`no script or step named "${name}"`);
   setUserConfig({ trustedSources: { ...(userConfig().trustedSources ?? {}), [trustKey(name)]: scriptHash(name) } });
   out({ ok: true, name, trusted: true });
 } else if (command === "run") {
   // Running a source writes notes and state: the runner's work.
   requireRunner(cfg);
-  const names = name && !name.startsWith("--") ? [name] : all().filter((n) => def(n).enabled !== false && def(n).kind === "script" && (!args.includes("--due") || due(n)));
+  const after = opt("--phase") === "after";
+  const inPhase = (d) => (after ? d.kind === "step" && d.when === "after" : d.kind === "script" || (d.kind === "step" && d.when === "before"));
+  const names = name && !name.startsWith("--") ? [name] : all().filter((n) => def(n).enabled !== false && inPhase(def(n)) && (!args.includes("--due") || due(n)));
   if (name && !name.startsWith("--") && !def(name)) fail(`no source named "${name}"`);
   out({ ok: true, runs: names.map(runOne) });
 } else if (command === "mark") {
