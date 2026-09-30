@@ -67,18 +67,34 @@ function wranglerCmd() {
 }
 const WR = wranglerCmd();
 function wrangler(a, { input, cwd, timeout = 300_000 } = {}) {
-  const r = spawnSync(WR[0], [...WR[1], ...a], { cwd: cwd ?? TMP, input, encoding: "utf8", windowsHide: true, timeout, maxBuffer: 256 * 1024 * 1024, shell: WR[0].endsWith(".cmd") });
+  // Through npx.cmd a shell is unavoidable: an argument with spaces (a query) is quoted whole.
+  const shell = WR[0].endsWith(".cmd");
+  const argv = shell ? a.map((x) => (/[\s"&|<>^()]/.test(x) ? `"${x.replace(/"/g, '\\"')}"` : x)) : a;
+  const r = spawnSync(WR[0], [...WR[1], ...argv], { cwd: cwd ?? TMP, input, encoding: "utf8", windowsHide: true, timeout, maxBuffer: 256 * 1024 * 1024, shell });
   return { ok: r.status === 0, out: String(r.stdout ?? ""), err: String(r.stderr ?? "") + (r.error ? ` ${r.error.message}` : "") };
 }
-const firstLine = (s) => String(s).split("\n").map((l) => l.trim()).filter((l) => l && !/^[⛅▲✘ ]*$/.test(l))[0]?.slice(0, 300) ?? "";
+// The line that says what went wrong: an error first, never a warning (a file
+// import always warns that the database pauses meanwhile), colours removed.
+const firstLine = (s) => {
+  const lines = String(s).replace(/\u001b\[[0-9;]*m/g, "").split("\n").map((l) => l.trim()).filter((l) => l && !/^[⛅▲✘─ ]*$/.test(l));
+  return (lines.find((l) => /error/i.test(l)) ?? lines.find((l) => !/warning/i.test(l)) ?? lines[0] ?? "").slice(0, 300);
+};
 
-/** Runs SQL on the remote database, from a file (no shell quoting, no size trap). */
-function d1(sql, { json = false } = {}) {
-  const f = join(TMP, `q-${process.pid}-${Date.now()}.sql`);
-  writeFileSync(f, sql, "utf8");
-  const r = wrangler(["d1", "execute", cloud.database, "--remote", "--file", f, "--yes", ...(json ? ["--json"] : [])]);
-  if (!r.ok) throw new Error(`D1 refused: ${firstLine(r.err || r.out)}`);
-  if (!json) return null;
+/**
+ * Runs SQL on the remote database. Writes go from a file (no quoting, no size
+ * trap); a read goes as a command, because an import from a file only ever
+ * answers with statistics, never with the rows (checked on real D1).
+ */
+function d1(sql, { read = false } = {}) {
+  let r;
+  if (read) r = wrangler(["d1", "execute", cloud.database, "--remote", "--command", sql.trim(), "--json"]);
+  else {
+    const f = join(TMP, `q-${process.pid}-${Date.now()}.sql`);
+    writeFileSync(f, sql, "utf8");
+    r = wrangler(["d1", "execute", cloud.database, "--remote", "--file", f, "--yes"]);
+  }
+  if (!r.ok) throw new Error(`D1 refused: ${firstLine(`${r.err}\n${r.out}`)}`);
+  if (!read) return null;
   const parsed = JSON.parse(r.out.slice(r.out.indexOf("[")));
   return parsed.flatMap((x) => x.results ?? []);
 }
@@ -146,7 +162,7 @@ if (command === "setup") {
     const rowData = { type: f.type, title: f.title, domains: f.domains, status: f.status, visibility: f.visibility, created: f.created, updated: f.updated, source: f.source, body };
     local.set(f.slug, { table: priv ? "private_note" : "note", priv, hash: hashOf(rowData), ...rowData });
   }
-  const remote = new Map((ALL ? [] : d1("SELECT slug, hash, 'note' t FROM note UNION ALL SELECT slug, hash, 'private_note' t FROM private_note;", { json: true })).map((x) => [x.slug, x]));
+  const remote = new Map((ALL ? [] : d1("SELECT slug, hash, 'note' t FROM note UNION ALL SELECT slug, hash, 'private_note' t FROM private_note;", { read: true })).map((x) => [x.slug, x]));
   for (const [slug, x] of remote) {
     const l = local.get(slug);
     if (!l || l.table !== x.t) {
@@ -174,7 +190,7 @@ if (command === "setup") {
 
   // The links: the whole set is small, compared as a set.
   const localLinks = new Set(db.prepare("SELECT src, dst FROM link").all().map((x) => `${x.src}\u0001${x.dst}`));
-  const remoteLinks = new Set((ALL ? [] : d1("SELECT src, dst FROM link;", { json: true })).map((x) => `${x.src}\u0001${x.dst}`));
+  const remoteLinks = new Set((ALL ? [] : d1("SELECT src, dst FROM link;", { read: true })).map((x) => `${x.src}\u0001${x.dst}`));
   for (const k of remoteLinks) if (!localLinks.has(k)) {
     const [s, d] = k.split("\u0001");
     stmts.push(`DELETE FROM link WHERE src = ${lit(s)} AND dst = ${lit(d)};`);
@@ -188,7 +204,7 @@ if (command === "setup") {
 
   // The directory: every contact whole (its address is only served with the right).
   const dir = readDirectory(cfg);
-  const remoteContacts = new Map((ALL ? [] : d1("SELECT address, hash FROM contact;", { json: true })).map((x) => [x.address, x.hash]));
+  const remoteContacts = new Map((ALL ? [] : d1("SELECT address, hash FROM contact;", { read: true })).map((x) => [x.address, x.hash]));
   const localContacts = new Map(dir.contacts.map((c) => [String(c.address).toLowerCase(), c]));
   for (const a of remoteContacts.keys()) if (!localContacts.has(a)) stmts.push(`DELETE FROM contact WHERE address = ${lit(a)};`);
   for (const [a, c] of localContacts) {
@@ -208,7 +224,7 @@ if (command === "setup") {
     const dims = Buffer.from(vec[0].vec).byteLength / 4;
     const bin = Buffer.concat(vec.map((v) => Buffer.from(v.vec)));
     const md5 = createHash("md5").update(bin).digest("hex");
-    const known = ALL ? null : d1("SELECT v FROM meta WHERE k = 'matrix_md5';", { json: true })[0]?.v;
+    const known = ALL ? null : d1("SELECT v FROM meta WHERE k = 'matrix_md5';", { read: true })[0]?.v;
     if (known !== md5) {
       const norms = vec.map((v) => {
         const b = Buffer.from(v.vec);
@@ -339,15 +355,27 @@ async function verify() {
     const r = await fetch(cloud.url, { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
     return { status: r.status, body: r.status === 200 ? await r.json() : null };
   };
-  check("without a token, the door is closed", (await ask(null, "tools/list")).status === 401);
+  // Right after a deployment, or a change of tokens, the new version takes a
+  // few seconds to reach every Cloudflare server: until then an answer can be
+  // a 500 or come from the version before (seen on the real account). Each
+  // check waits for the server to settle, up to a minute and a half.
+  const settle = async (get, ok) => {
+    let last;
+    for (const end = Date.now() + 90_000; Date.now() < end; await new Promise((r) => setTimeout(r, 3000))) {
+      last = await get().catch((e) => ({ status: 0, body: null, error: e.message }));
+      if (ok(last)) break;
+    }
+    return last;
+  };
+  const door = await settle(() => ask(null, "tools/list"), (r) => r.status === 401);
+  check("without a token, the door is closed", door.status === 401, JSON.stringify(door));
   check("with a false token too", (await ask("hb_false", "tools/list")).status === 401);
   // A throwaway token that lives only in this process.
   const value = `hb_${randomBytes(32).toString("base64url")}`;
   const temp = { name: "verify-throwaway", hash: createHash("sha256").update(value).digest("hex"), private: false, addresses: false };
   pushTokens(build, [temp]);
   try {
-    await new Promise((r) => setTimeout(r, 3000));
-    const init = await ask(value, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "verify", version: "1" } });
+    const init = await settle(() => ask(value, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "verify", version: "1" } }), (r) => r.status === 200);
     check("with a token, the handshake answers", init.status === 200 && init.body?.result?.serverInfo?.name === "hyperbrain-cloud", JSON.stringify(init));
     const list = await ask(value, "tools/list");
     check("six tools", list.body?.result?.tools?.length === 6, JSON.stringify(list.body).slice(0, 200));
@@ -371,8 +399,8 @@ async function verify() {
   } finally {
     pushTokens(build);
   }
-  await new Promise((r) => setTimeout(r, 3000));
-  check("the throwaway token no longer enters", (await ask(value, "tools/list")).status === 401);
+  const gone = await settle(() => ask(value, "tools/list"), (r) => r.status === 401);
+  check("the throwaway token no longer enters", gone.status === 401, JSON.stringify(gone));
   const failed = checks.filter((x) => !x.ok);
   out({ ok: !failed.length, url: cloud.url, checks: checks.length, failed });
   process.exitCode = failed.length ? 1 : 0;

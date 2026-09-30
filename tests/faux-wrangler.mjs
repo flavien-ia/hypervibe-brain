@@ -31,13 +31,17 @@ if (a0 === "d1" && a1 === "create") {
     process.exit(1);
   }
   const db = new DatabaseSync(join(DIR, `d1-${a2}.sqlite`));
-  const sql = readFileSync(opt("--file"), "utf8");
+  // Like the real one: a command answers with its rows, an import from a file
+  // only with statistics (and a warning on stderr), even for a SELECT.
+  const fromFile = args.includes("--file");
+  const sql = fromFile ? readFileSync(opt("--file"), "utf8") : opt("--command");
   try {
-    if (args.includes("--json") && /^\s*select/i.test(sql)) {
+    if (!fromFile && /^\s*select/i.test(sql)) {
       console.log(JSON.stringify([{ results: db.prepare(sql.trim().replace(/;\s*$/, "")).all(), success: true }]));
     } else {
       db.exec(sql);
-      console.log(args.includes("--json") ? JSON.stringify([{ results: [], success: true }]) : "executed");
+      if (fromFile) console.error("▲ [WARNING] This process may take some time, during which your D1 database will be unavailable to serve queries.");
+      console.log(args.includes("--json") ? JSON.stringify([{ results: [{ "Total queries executed": 1 }], success: true }]) : "executed");
     }
   } catch (e) {
     console.error(`✘ [ERROR] ${e.message}`);
