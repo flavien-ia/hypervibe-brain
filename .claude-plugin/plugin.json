@@ -1,7 +1,7 @@
 {
   "name": "hyperbrain",
   "description": "A second brain for Claude Code: your notes, ideas, projects and people as linked markdown files, searchable by words and by meaning, read by Claude from any session. Guided creation, capture, weekly review.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "name": "Flavien Chervet"
   },

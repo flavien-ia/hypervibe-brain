@@ -26,6 +26,13 @@ Requirements: Claude Code (desktop app or CLI). Node 22.13+ and git are checked,
 /plugin install hyperbrain@hyperbrain-harness
 ```
 
+**From a zip you received**: unzip it into a folder that will not move (for instance `Documents/hyperbrain`, outside any synced folder), then give that folder to Claude Code:
+
+```
+/plugin marketplace add <path of the unzipped folder>
+/plugin install hyperbrain@hyperbrain-harness
+```
+
 Then, in a new session: **`/hyperbrain:start-hyperbrain`**.
 
 ## The skills

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 (in progress)
+## 0.3.0 (2026-10-01)
 
 - **Architecture like Hypervibe's `/bootstrap`**: `create-brain` builds the core (decisions, creation, first notes, sources, Claude reading it everywhere), then proposes the modules by family, each a skill of its own that can also be added later.
 - **The sources are the core**: `brain-sources` sets up the living sources (mail and calendar, watched folders, work with Claude) and lists the writings to bring in.
