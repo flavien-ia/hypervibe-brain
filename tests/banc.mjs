@@ -561,6 +561,29 @@ try {
     node("sources.mjs", ["trust", "brouillons"]);
     node("sources.mjs", ["run", "brouillons"]);
     check("a source that is not of finished objects writes seeds, whatever it asks", readFileSync(join(BRAIN, "vault", "notes", "brouillon-presse.md"), "utf8").includes("status: seed"));
+    // A record may have no text; a thought may not.
+    writeFileSync(join(posts, "data.json"), JSON.stringify([{ id: "base:post/9", source: "base:post/9", title: "Video sans texte", body: "", status: "trusted" }]), "utf8");
+    r = node("sources.mjs", ["run", "fil"]);
+    writeFileSync(join(brouillons, "data.json"), JSON.stringify([{ id: "b2", title: "Pensee vide", body: "" }]), "utf8");
+    const r2 = node("sources.mjs", ["run", "brouillons"]);
+    check("a finished record may have no text; a thought without text is refused", json(r.out).runs[0].created === 1 && existsSync(join(BRAIN, "vault", "sources", "video-sans-texte.md")) && json(r2.out).runs[0].created === 0 && json(r2.out).runs[0].refused.some((x) => x.includes("the body is empty")), `${r.out} ${r2.out}`);
+    // A machine zone: a source keeps its own marked lines up to date inside a validated note.
+    node("sources.mjs", ["add", "compteurs", "--kind", "script", "--every", "day", "--type", "note", "--domains", "ecriture", "--zones", "chiffres"]);
+    const compteurs = join(BRAIN, "sources", "compteurs");
+    writeFileSync(join(compteurs, "run.mjs"), SOURCE_PROGRAM, "utf8");
+    node("sources.mjs", ["trust", "compteurs"]);
+    const validated = join(BRAIN, "vault", "notes", "vieille-note.md");
+    const before = readFileSync(validated, "utf8");
+    const zoneItem = (name, body) => ({ kind: "zone", note: "vieille-note", name, body });
+    writeFileSync(join(compteurs, "data.json"), JSON.stringify([zoneItem("chiffres", "12 messages."), zoneItem("autre", "Intrus.")]), "utf8");
+    r = node("sources.mjs", ["run", "compteurs"]);
+    const afterFirst = readFileSync(validated, "utf8");
+    check("a declared zone is added to a validated note, nothing else changes; an undeclared one is refused", json(r.out).runs[0].zones === 1 && json(r.out).runs[0].refused.length === 1 && afterFirst.startsWith(before.trimEnd()) && afterFirst.includes("<!-- chiffres:auto -->\n12 messages.\n<!-- /chiffres:auto -->") && !afterFirst.includes("Intrus"), `${r.out}\n${afterFirst}`);
+    writeFileSync(validated, afterFirst.replace("<!-- chiffres:auto -->", "Une phrase a moi.\n\n<!-- chiffres:auto -->"), "utf8");
+    writeFileSync(join(compteurs, "data.json"), JSON.stringify([zoneItem("chiffres", "15 messages.")]), "utf8");
+    r = node("sources.mjs", ["run", "compteurs"]);
+    const afterSecond = readFileSync(validated, "utf8");
+    check("afterwards only what is between its marks is rewritten", json(r.out).runs[0].zones === 1 && afterSecond.includes("Une phrase a moi.") && afterSecond.includes("15 messages.") && !afterSecond.includes("12 messages.") && afterSecond.includes("status: trusted"), afterSecond);
   }
   const mc = await mcpSession();
   await mc.ask("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "banc", version: "1" } });

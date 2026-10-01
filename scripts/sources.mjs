@@ -41,7 +41,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ROOT, config, noteWritten, readVault, requireBrain, requireRunner, setUserConfig, sha256, today, userConfig } from "./lib.mjs";
-import { checkNote, createNote, fileHash, refreshOwn, refreshSeed, slugIndex } from "./notes.mjs";
+import { checkNote, createNote, fileHash, refreshOwn, refreshSeed, slugIndex, writeZone } from "./notes.mjs";
 import { readDirectory, upsert, writeDirectory } from "./directory.mjs";
 
 requireBrain();
@@ -117,6 +117,8 @@ function execute(n) {
       const o = JSON.parse(line);
       if (o.kind === "contact") {
         if (!o.address) throw new Error("a contact needs an address");
+      } else if (o.kind === "zone") {
+        if (!o.note || !o.name) throw new Error("a zone needs the note it belongs to and its name");
       } else if (!o.id || !o.title) throw new Error("each note needs an id and a title");
       items.push(o);
     } catch (e) {
@@ -140,6 +142,8 @@ const noteOf = (n, item) => {
     body: item.body,
     links: item.links,
     folder: item.folder,
+    // A record may have no text; a thought may not.
+    allowEmpty: d.finished === true,
     status: d.finished ? item.status ?? "seed" : "seed",
     visibility: item.visibility,
     source: item.source ?? `source:${n}:${item.id}`,
@@ -199,7 +203,7 @@ function runOne(n) {
   const seen = readJson(join(DIR, n, "seen.json"), {});
   const slugs = slugIndex();
   const bySource = sourceIndex();
-  const res = { name: n, ok: true, created: 0, updated: 0, unchanged: 0, adopted: 0, touched: 0, contacts: 0, refused: [...x.bad] };
+  const res = { name: n, ok: true, created: 0, updated: 0, unchanged: 0, adopted: 0, touched: 0, zones: 0, contacts: 0, refused: [...x.bad] };
   const wrote = [];
   // A source may also feed the contacts directory: lines { "kind": "contact", "address", ... }.
   // Its counts are added (a period observed) or, with "contactCounts": "set" in its
@@ -211,7 +215,20 @@ function runOne(n) {
     writeDirectory(dir, cfg);
     res.contacts = contactItems.length;
   }
-  for (const item of x.items.filter((i) => i.kind !== "contact")) {
+  // Its machine zones: only the ones its definition names, only between their marks.
+  for (const z of x.items.filter((i) => i.kind === "zone")) {
+    try {
+      if (!(d.zones ?? []).includes(z.name)) throw new Error(`the zone "${z.name}" is not one this source declared (zones in source.json)`);
+      const u = writeZone(String(z.note), z.name, z.body, cfg, slugs);
+      if (u.updated) {
+        res.zones++;
+        wrote.push(u.rel);
+      } else if (u.reason === "gone") throw new Error("no such note");
+    } catch (e) {
+      res.refused.push(`zone ${z.name} of ${z.note}: ${e.message}`);
+    }
+  }
+  for (const item of x.items.filter((i) => i.kind !== "contact" && i.kind !== "zone")) {
     const id = String(item.id);
     try {
       const note = noteOf(n, item);
@@ -293,6 +310,12 @@ const TEMPLATE_SCRIPT = (n, d) => `// ${n}: ${d.description ?? "a source of this
 // and, only if source.json says "setsTier": true, "tier": 0, 1 or 2 (kept as a
 // floor under the brain's own rules; 0 removes it).
 //
+// And it may keep a MACHINE ZONE up to date inside an existing note (a count,
+// a figure), if source.json names it ("zones": ["figures"]):
+//   { "kind": "zone", "note": "<slug of the note>", "name": "figures", "body": "..." }
+// Only what is between <!-- figures:auto --> and <!-- /figures:auto --> is
+// rewritten (added at the end the first time), never the rest of the note.
+//
 // What it receives: HYPERBRAIN_SOURCE_SINCE (the date of its last success, empty
 // the first time: read only what is newer), HYPERBRAIN_BRAIN_DIR, and it runs
 // in its own folder. A key it needs goes in the brain's .env, never here.
@@ -346,7 +369,7 @@ if (command === "list") {
   }
   if (!cfg.types[type]) fail(`--type must be one of this brain's types: ${Object.keys(cfg.types).join(", ")}`);
   if (!domains.length || domains.some((x) => !cfg.domains.includes(x))) fail(`--domains among this brain's domains: ${cfg.domains.join(", ")}`);
-  const d = { name, description: opt("--description") ?? "", kind, every, type, domains, updates: args.includes("--updates"), ...(args.includes("--finished") ? { finished: true } : {}), enabled: true, timeoutMin: 5 };
+  const d = { name, description: opt("--description") ?? "", kind, every, type, domains, updates: args.includes("--updates"), ...(args.includes("--finished") ? { finished: true } : {}), ...(opt("--zones") ? { zones: String(opt("--zones")).split(",").map((z) => z.trim()).filter(Boolean) } : {}), enabled: true, timeoutMin: 5 };
   mkdirSync(join(DIR, name), { recursive: true });
   writeJson(join(DIR, name, "source.json"), d);
   if (kind === "script") writeFileSync(join(DIR, name, "run.mjs"), TEMPLATE_SCRIPT(name, d), "utf8");
@@ -361,7 +384,7 @@ if (command === "list") {
   const seen = readJson(join(DIR, name, "seen.json"), {});
   const slugs = slugIndex();
   const bySource = sourceIndex();
-  const checked = x.items.filter((i) => i.kind !== "contact").map((item) => {
+  const checked = x.items.filter((i) => i.kind !== "contact" && i.kind !== "zone").map((item) => {
     try {
       const note = noteOf(name, item);
       const known = Boolean(seen[String(item.id)]) || bySource().has(note.source);
@@ -375,6 +398,7 @@ if (command === "list") {
     ok: true,
     items: x.items.length,
     contacts: x.items.filter((i) => i.kind === "contact").length,
+    zones: x.items.filter((i) => i.kind === "zone").length,
     new: checked.filter((c) => !c.refused && !c.already).length,
     refused: [...x.bad, ...checked.filter((c) => c.refused).map((c) => `${c.id}: ${c.refused}`)],
     sample: x.items.slice(0, 3).map((i) => ({ id: i.id, title: i.title, type: i.type ?? def(name).type, body: String(i.body ?? "").slice(0, 300) })),

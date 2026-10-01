@@ -13,6 +13,10 @@
 // an article, a talk given: records, not thoughts) may keep its records up to
 // date, but only a file nobody has touched since it wrote it (it keeps each
 // one's fingerprint). A single edit by hand, and the record is the person's.
+// And one place where a program may write INSIDE any note, validated or not:
+// a MACHINE ZONE, between `<!-- name:auto -->` and `<!-- /name:auto -->`, that
+// a source declared as its own (a count, a figure kept up to date). Only what
+// is between the two marks is ever rewritten; not a character outside them.
 
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -80,7 +84,9 @@ function render(n, cfg, slugs, { keepCreated } = {}) {
   for (const d of domains) if (!cfg.domains.includes(d)) throw new Error(`"${d}" is not a domain of this brain (${cfg.domains.join(", ")})`);
   if (!STATUSES.includes(status)) throw new Error(`the status must be one of ${Object.values(voc.status).join(", ")}`);
   if (!VISIBILITIES.includes(visibility)) throw new Error(`the visibility must be one of ${Object.values(voc.visibility).join(", ")}`);
-  if (!body) throw new Error("the body is empty");
+  // A record of something done may have no text (a video published without a
+  // word): it still exists. A thought without text is nothing.
+  if (!body && !n.allowEmpty) throw new Error("the body is empty");
   const created = keepCreated ?? (n.created && DATE.test(String(n.created)) ? String(n.created) : today());
   const missing = links.filter((l) => !slugs.has(l));
   if (missing.length) throw new Error(`these links point to no note: ${missing.join(", ")}`);
@@ -154,6 +160,32 @@ export function refreshSeed(slug, n, cfg, slugs = slugIndex()) {
   if (sameContent(previous, r.text, cfg)) return { slug, rel: toPosix(relative(ROOT, abs)), updated: false, reason: "unchanged" };
   writeJudged(abs, r.text, cfg, previous);
   return { slug, rel: toPosix(relative(ROOT, abs)), updated: true };
+}
+
+/**
+ * Writes a machine zone of a note: only what is between `<!-- name:auto -->`
+ * and `<!-- /name:auto -->`. If the note has no such zone yet, it is added at
+ * the end. Nothing else in the file changes, not even its dates.
+ * @returns {{ slug: string, rel: string|null, updated: boolean, reason?: string }}
+ */
+export function writeZone(slug, name, content, cfg, slugs = slugIndex()) {
+  if (!/^[a-z][a-z0-9-]*$/.test(String(name))) throw new Error(`"${name}" is not a zone name (lowercase letters, digits, dashes)`);
+  const abs = slugs.get(slug);
+  if (!abs || !existsSync(abs)) return { slug, rel: null, updated: false, reason: "gone" };
+  const rel = toPosix(relative(ROOT, abs));
+  const start = `<!-- ${name}:auto -->`;
+  const end = `<!-- /${name}:auto -->`;
+  const zone = `${start}\n${String(content ?? "").replace(/\r\n/g, "\n").trim()}\n${end}`;
+  const previous = readFileSync(abs, "utf8");
+  const nl = previous.includes("\r\n") ? "\r\n" : "\n";
+  const text = previous.replace(/\r\n/g, "\n");
+  const i = text.indexOf(start);
+  const j = text.indexOf(end);
+  if (i >= 0 && j < i) throw new Error(`the zone ${name} of ${rel} has no closing mark: left as it is`);
+  const next = i >= 0 ? text.slice(0, i) + zone + text.slice(j + end.length) : `${text.trimEnd()}\n\n${zone}\n`;
+  if (next === text) return { slug, rel, updated: false, reason: "unchanged" };
+  writeJudged(abs, next.replace(/\n/g, nl), cfg, previous);
+  return { slug, rel, updated: true };
 }
 
 /**
