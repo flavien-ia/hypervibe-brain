@@ -102,6 +102,25 @@ try {
     // skill's description holds a chevron, and nothing else says so.
     const chevrons = readdirSync(join(PLUGIN, "skills")).filter((s) => /^description:.*[<>]/m.test(readFileSync(join(PLUGIN, "skills", s, "SKILL.md"), "utf8")));
     check("no skill description holds a chevron (the app's upload would refuse the zip)", chevrons.length === 0, chevrons.join(", "));
+    // Each skill carries its documentation for people, in French and in
+    // English, with the same sections (what a site shows about the plugin).
+    const SECTIONS = { "DOC.fr.md": ["## Quand l'utiliser", "## Comment ça se passe", "## Ce que ça crée pour vous", "## Prérequis", "## Astuces"], "DOC.md": ["## When to use it", "## How it goes", "## What it creates for you", "## Prerequisites", "## Tips"] };
+    const docFaults = [];
+    for (const s of readdirSync(join(PLUGIN, "skills"))) {
+      for (const [file, sections] of Object.entries(SECTIONS)) {
+        const p = join(PLUGIN, "skills", s, file);
+        if (!existsSync(p)) {
+          docFaults.push(`${s}/${file}: missing`);
+          continue;
+        }
+        const text = readFileSync(p, "utf8");
+        if (!text.startsWith(`# /${s}`)) docFaults.push(`${s}/${file}: must start with "# /${s}"`);
+        for (const sec of sections) if (!text.includes(sec)) docFaults.push(`${s}/${file}: no "${sec}"`);
+        if (/[—–]/.test(text)) docFaults.push(`${s}/${file}: a long dash`);
+        if ((text.match(/\{\{callout:/g) ?? []).length !== (text.match(/\{\{\/callout\}\}/g) ?? []).length) docFaults.push(`${s}/${file}: a callout is not closed`);
+      }
+    }
+    check("every skill has its documentation in French and English, with all its sections", docFaults.length === 0, docFaults.join(" | "));
   }
   check("the audit records where the plugin lives",JSON.parse(readFileSync(join(HOME, ".hyperbrain", "config.json"), "utf8")).pluginRoot === PLUGIN.replace(/\\/g, "/"));
   r = node("status.mjs");

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 (2026-10-01)
+
+- **The documentation of every skill is in the plugin**: a `DOC.fr.md` and a `DOC.md` next to each `SKILL.md`, written for people who are not developers (when to use it, how it goes, what it creates, prerequisites, tips). The bench checks that every skill has both, with all their sections.
+- The weekly review, when it runs by itself, only creates the seeds its living sources bring; the skill said "no note" in one place and the opposite in another.
+
 ## 0.3.0 (2026-10-01)
 
 - **Architecture like Hypervibe's `/bootstrap`**: `create-brain` builds the core (decisions, creation, first notes, sources, Claude reading it everywhere), then proposes the modules by family, each a skill of its own that can also be added later.

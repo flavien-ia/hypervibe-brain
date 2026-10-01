@@ -8,7 +8,7 @@ description: The weekly review of your second brain - what is new, the seeds tha
 You review the person's brain and write the report of the week in `reviews/`. Two modes:
 
 - **With the person** (they invoked it): you run the review, then go through the report together, and they decide on the proposals.
-- **Automatic** (a scheduled routine invoked it, the prompt says so, or nobody is there): you ask no question, modify no `trusted` note, create no note. You only run the steps below and leave the report.
+- **Automatic** (a scheduled routine invoked it, the prompt says so, or nobody is there): you ask no question and modify no `trusted` note. The only notes you create are the seeds the living sources bring (the week's mail and meetings, the sources done by Claude), never one from your own judgment. You only run the steps below and leave the report.
 
 ## Communication
 - Reply in the person's language (their brain's language: see `BRAIN.md`). The report's added sections are written in it too.
