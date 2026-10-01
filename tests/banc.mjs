@@ -97,7 +97,13 @@ try {
   let r = node("prereqs.mjs", ["--json"]);
   const pre = json(r.out);
   check("the audit runs and sees Node and git", r.ok && pre.node.ok && pre.git.installed && pre.brain === null, r.out);
-  check("the audit records where the plugin lives", JSON.parse(readFileSync(join(HOME, ".hyperbrain", "config.json"), "utf8")).pluginRoot === PLUGIN.replace(/\\/g, "/"));
+  {
+    // The "Upload a plugin" dialog of the Claude app refuses a zip if any
+    // skill's description holds a chevron, and nothing else says so.
+    const chevrons = readdirSync(join(PLUGIN, "skills")).filter((s) => /^description:.*[<>]/m.test(readFileSync(join(PLUGIN, "skills", s, "SKILL.md"), "utf8")));
+    check("no skill description holds a chevron (the app's upload would refuse the zip)", chevrons.length === 0, chevrons.join(", "));
+  }
+  check("the audit records where the plugin lives",JSON.parse(readFileSync(join(HOME, ".hyperbrain", "config.json"), "utf8")).pluginRoot === PLUGIN.replace(/\\/g, "/"));
   r = node("status.mjs");
   check("a script without a brain says so and stops", r.status === 3 && r.err.includes("create-brain"), r.out);
   let m = await mcpSession();

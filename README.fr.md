@@ -26,12 +26,7 @@ Il faut Claude Code (l'app de bureau ou la ligne de commande). Node 22.13+ et gi
 /plugin install hyperbrain@hyperbrain-harness
 ```
 
-**Depuis un zip reçu** : décompressez-le dans un dossier qui ne bougera plus (par exemple `Documents/hyperbrain`, hors d'un dossier synchronisé), puis donnez ce dossier à Claude Code :
-
-```
-/plugin marketplace add <chemin du dossier décompressé>
-/plugin install hyperbrain@hyperbrain-harness
-```
+**Depuis un zip reçu, dans l'app Claude (le plus simple)** : sans le décompresser, ouvrez **Personnalisation > Plugins**, choisissez **Téléverser un plugin** et donnez-lui le fichier zip. Aucune commande à taper. Pour une mise à jour, téléversez le nouveau zip de la même façon.
 
 Puis, dans une nouvelle session : **`/hyperbrain:start-hyperbrain`**.
 
