@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "hyperbrain": {
+    "brain": {
       "type": "stdio",
       "command": "node",
       "args": [

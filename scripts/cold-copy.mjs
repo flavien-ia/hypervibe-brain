@@ -35,7 +35,7 @@ if (!existsSync(dir)) {
   process.exit(0);
 }
 
-const prefix = `hyperbrain-${slugify(cfg.name || "brain")}-`;
+const prefix = `brain-${slugify(cfg.name || "brain")}-`;
 const archives = readdirSync(dir).filter((n) => n.startsWith(prefix) && /^\d{4}-\d{2}-\d{2}\.bundle$/.test(n.slice(prefix.length))).sort();
 const newest = archives.at(-1);
 if (newest && !args.includes("--force") && Date.now() - statSync(join(dir, newest)).mtimeMs < 7 * 86400_000) {

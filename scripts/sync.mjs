@@ -24,7 +24,7 @@
 //   node scripts/sync.mjs [--quiet] [--state] [--json]
 //
 // Runs only on a computer where the person allowed it (sync: true in
-// ~/.hyperbrain/config.json, set by /hyperbrain:add-second-computer): it
+// ~/.hypervibe-brain/config.json, set by /brain:add-second-computer): it
 // commits and pushes by itself.
 
 import { spawnSync } from "node:child_process";
@@ -40,7 +40,7 @@ const QUIET = args.includes("--quiet");
 const out = (o) => {
   if (!QUIET || args.includes("--json")) console.log(JSON.stringify(o, null, args.includes("--json") ? 2 : 0));
 };
-const STATE = join(HOME, ".hyperbrain", `sync-${createHash("sha256").update(ROOT.replace(/\\/g, "/").toLowerCase()).digest("hex").slice(0, 12)}.json`);
+const STATE = join(HOME, ".hypervibe-brain", `sync-${createHash("sha256").update(ROOT.replace(/\\/g, "/").toLowerCase()).digest("hex").slice(0, 12)}.json`);
 const LOCK = join(ROOT, "index", "sync.lock");
 const readState = () => {
   try {
@@ -76,7 +76,7 @@ function take(ahead) {
   }
   const top = () => tryGit(["rev-parse", "-q", "--verify", "refs/stash"]).out;
   const topBefore = top();
-  const put = tryGit(["stash", "push", "--quiet", "-m", `hyperbrain sync ${new Date().toISOString()}`], { timeout: 180_000 });
+  const put = tryGit(["stash", "push", "--quiet", "-m", `brain sync ${new Date().toISOString()}`], { timeout: 180_000 });
   // "Nothing to stash" succeeds without creating one: read it at the top of the stack.
   const stash = top() && top() !== topBefore ? top() : null;
   if (!put.ok && !stash) return { ok: false, error: `stash impossible: ${firstLine(put.err)}` };
@@ -122,7 +122,7 @@ function run() {
     return report;
   };
 
-  if (userConfig().sync !== true) return finish("off", { reason: "the synchronisation is not allowed on this computer (/hyperbrain:add-second-computer)" });
+  if (userConfig().sync !== true) return finish("off", { reason: "the synchronisation is not allowed on this computer (/brain:add-second-computer)" });
   const branch = tryGit(["rev-parse", "--abbrev-ref", "HEAD"]);
   if (!branch.ok) return finish("busy", { reason: "not a git repository" });
   if (branch.out !== "main") return finish("busy", { reason: `on branch ${branch.out}, not main` });

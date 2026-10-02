@@ -1,4 +1,4 @@
-# /add-cloud
+# /brain:add-cloud
 
 Makes your brain **readable from the cloud, read only**, by the online agents you choose. A copy is placed on your own Cloudflare account, in Europe, behind a small server that answers only the agents you gave a key to.
 
@@ -30,8 +30,8 @@ Makes your brain **readable from the cloud, read only**, by the online agents yo
 
 - A brain already created, and being on the computer that runs it
 - A free Cloudflare account (Claude guides you to create it)
-- The evening save (`/add-routines`) for the copy to stay up to date
-- For search by meaning online: that it is already on in the brain (`/add-meaning`), the server uses the same key
+- The evening save (`/brain:add-routines`) for the copy to stay up to date
+- For search by meaning online: that it is already on in the brain (`/brain:add-meaning`), the server uses the same key
 
 ## Tips
 

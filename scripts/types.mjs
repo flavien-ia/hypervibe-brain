@@ -36,7 +36,7 @@ if (command === "add") {
     process.exit(1);
   }
   // Written in the file itself, with the default types made explicit.
-  const file = join(ROOT, "hyperbrain.json");
+  const file = join(ROOT, "brain.json");
   const raw = JSON.parse(readFileSync(file, "utf8"));
   raw.types = { ...cfg.types, [type]: folder };
   writeFileSync(file, `${JSON.stringify(raw, null, 2)}\n`, "utf8");

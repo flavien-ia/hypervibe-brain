@@ -26,7 +26,7 @@ Chosen with {{NAME}} at the creation. The folder **is** the type: a note of a ty
 
 ## The fields
 
-- `domains`: one or two domains, **taken from the list in `hyperbrain.json`**. Never empty: a blocking error.
+- `domains`: one or two domains, **taken from the list in `brain.json`**. Never empty: a blocking error.
 - `status`: `seed` (written by a machine, not validated yet), `trusted` (validated), `archived` (closed).
 - `visibility`: `public`, `internal` (the default), `private` (the content is never shown to an AI).
 - `created`, `updated`: dates `YYYY-MM-DD`.

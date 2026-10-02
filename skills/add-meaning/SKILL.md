@@ -3,7 +3,7 @@ name: add-meaning
 description: Let your second brain find a note even when you search with other words than its own - search by meaning, for a few cents. Sets up the key without it ever going through the conversation.
 ---
 
-# /add-meaning - Search by meaning
+# /brain:add-meaning - Search by meaning
 
 ## Communication
 - Reply in the person's language. Plain words: "search by meaning", never "embeddings" or "vectors" unless they ask.

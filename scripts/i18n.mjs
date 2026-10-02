@@ -8,7 +8,7 @@
 // falls back to English, and Claude translates what it writes itself.
 //
 // The language is chosen once, at the brain's creation, from the computer's
-// locale (or --lang), and kept in hyperbrain.json.
+// locale (or --lang), and kept in brain.json.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -43,10 +43,10 @@ export function osLang() {
   return String(locale).toLowerCase().startsWith("fr") ? "fr" : "en";
 }
 
-/** The brain's language: hyperbrain.json, else the computer's. */
+/** The brain's language: brain.json, else the computer's. */
 export function brainLang(root) {
   try {
-    const p = join(root, "hyperbrain.json");
+    const p = join(root, "brain.json");
     if (existsSync(p)) {
       const l = JSON.parse(readFileSync(p, "utf8")).lang;
       if (LANGS.includes(l)) return l;
@@ -62,8 +62,8 @@ const T = {
     commitCapture: (title) => `capture: ${title}`,
     commitSave: (notes, others) => `save: ${notes} note(s), ${others} other file(s)`,
     commitCreate: (name) => `${name}'s brain is created`,
-    taskName: "Hyperbrain evening save",
-    taskDescription: "Hyperbrain: rebuilds the index of the second brain and saves it. No AI, no cost.",
+    taskName: "Hypervibe Brain evening save",
+    taskDescription: "Hypervibe Brain: rebuilds the index of the second brain and saves it. No AI, no cost.",
     review: {
       title: (name, date) => `# Review of ${name}'s brain, ${date}`,
       summary: (n, fresh, days) => `${n} notes. ${fresh} new in the last ${days} days.`,
@@ -99,8 +99,8 @@ const T = {
     commitCapture: (title) => `capture : ${title}`,
     commitSave: (notes, others) => `sauvegarde : ${notes} fiche(s), ${others} autre(s) fichier(s)`,
     commitCreate: (name) => `Création du brain de ${name}`,
-    taskName: "Hyperbrain sauvegarde du soir",
-    taskDescription: "Hyperbrain : reconstruit l'index du second brain et le sauvegarde. Sans IA, sans coût.",
+    taskName: "Hypervibe Brain sauvegarde du soir",
+    taskDescription: "Hypervibe Brain : reconstruit l'index du second brain et le sauvegarde. Sans IA, sans coût.",
     review: {
       title: (name, date) => `# Revue du brain de ${name}, ${date}`,
       summary: (n, fresh, days) => `${n} fiches. ${fresh} nouvelle(s) ces ${days} derniers jours.`,

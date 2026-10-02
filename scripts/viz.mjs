@@ -11,7 +11,7 @@
 //                 save refreshes it).
 //   export        the same data as JSON, for the persistent app.
 //   publish-app   writes that JSON into the app's repository (the path chosen
-//                 at the app's creation, in hyperbrain.json), commits ONLY
+//                 at the app's creation, in brain.json), commits ONLY
 //                 that file, and pushes if the person agreed to it.
 //
 // WHAT NEVER LEAVES: the content of a private note. Its title and links are
@@ -89,7 +89,7 @@ function graph({ forApp = false } = {}) {
 
 if (command === "detect") {
   const hv = findHypervibe();
-  out({ hypervibe: hv.length > 0, plugins: hv, brain: ROOT && existsSync(join(ROOT, "hyperbrain.json")) ? ROOT.replace(/\\/g, "/") : null });
+  out({ hypervibe: hv.length > 0, plugins: hv, brain: ROOT && existsSync(join(ROOT, "brain.json")) ? ROOT.replace(/\\/g, "/") : null });
 } else if (command === "build") {
   requireBrain();
   const file = join(ROOT, "viz", "brain.html");
@@ -99,7 +99,7 @@ if (command === "detect") {
   }
   const data = graph();
   const html = readFileSync(join(PLUGIN_ROOT, "templates", "viz", "brain.html"), "utf8")
-    .replace("/*HYPERBRAIN_DATA*/null", JSON.stringify(data).replace(/</g, "\\u003c"));
+    .replace("/*HVBRAIN_DATA*/null", JSON.stringify(data).replace(/</g, "\\u003c"));
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, html, "utf8");
   // The viewer is rebuilt from the notes: it stays out of git.

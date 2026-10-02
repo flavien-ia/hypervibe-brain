@@ -195,7 +195,7 @@ export function toHtml(md, week) {
 }
 
 const writeConfig = (patch) => {
-  const file = join(ROOT, "hyperbrain.json");
+  const file = join(ROOT, "brain.json");
   const raw = JSON.parse(readFileSync(file, "utf8"));
   raw.letter = { ...(raw.letter ?? {}), ...patch };
   writeFileSync(file, `${JSON.stringify(raw, null, 2)}\n`, "utf8");
@@ -243,13 +243,13 @@ if (command === "setup") {
   if (!key) fail(`no ${letter.channel === "brevo" ? "BREVO_API_KEY" : "RESEND_API_KEY"} in the brain's .env`);
   const res =
     letter.channel === "brevo"
-      ? await fetch(`${process.env.HYPERBRAIN_BREVO_URL ?? "https://api.brevo.com/v3"}/smtp/email`, {
+      ? await fetch(`${process.env.HVBRAIN_BREVO_URL ?? "https://api.brevo.com/v3"}/smtp/email`, {
         method: "POST",
         headers: { "api-key": key, "Content-Type": "application/json", accept: "application/json" },
         body: JSON.stringify({ sender: { name: letter.fromName ?? WORDS.brand, email: letter.from }, to: [{ email: letter.to }], subject, htmlContent: html, textContent: md }),
         signal: AbortSignal.timeout(60_000),
       })
-      : await fetch(`${process.env.HYPERBRAIN_RESEND_URL ?? "https://api.resend.com"}/emails`, {
+      : await fetch(`${process.env.HVBRAIN_RESEND_URL ?? "https://api.resend.com"}/emails`, {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({ from: `${letter.fromName ?? WORDS.brand} <${letter.from}>`, to: [letter.to], subject, html, text: md }),

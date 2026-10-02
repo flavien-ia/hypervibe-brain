@@ -2,7 +2,7 @@
 
 Ce dossier est le second brain de {{NAME}}. Les fiches de `vault/` sont **la seule source de vérité** ; tout le reste (l'index, les vecteurs) se reconstruit à partir d'elles.
 
-Il est animé par le plugin **Hyperbrain** pour Claude Code : le code vit dans le plugin, ce dossier ne contient que des données. À lire avant toute décision : [`BRAIN.md`](BRAIN.md) (pourquoi ce brain existe, ses domaines, ses règles, ses composantes) et [`SOURCES.md`](SOURCES.md) (ce qui y entre, ce qui n'y entre jamais).
+Il est animé par le plugin **Hypervibe Brain** pour Claude Code : le code vit dans le plugin, ce dossier ne contient que des données. À lire avant toute décision : [`BRAIN.md`](BRAIN.md) (pourquoi ce brain existe, ses domaines, ses règles, ses composantes) et [`SOURCES.md`](SOURCES.md) (ce qui y entre, ce qui n'y entre jamais).
 
 ## Interroger
 
@@ -10,9 +10,9 @@ Par les outils MCP du plugin (`brain_search`, `brain_get`, `brain_neighbors`, `b
 
 ## Écrire
 
-- **Une fiche neuve** passe par la skill `/hyperbrain:brain` : elle cherche d'abord, classe, valide et sauvegarde. Jamais un fichier écrit à la main.
+- **Une fiche neuve** passe par la skill `/brain:capture` : elle cherche d'abord, classe, valide et sauvegarde. Jamais un fichier écrit à la main.
 - **Modifier une fiche existante** ne se fait qu'avec l'accord de {{NAME}}, devant lui ou elle, puis `touche` à la date du jour.
-- `/hyperbrain:brain-status` dit où en est le brain ; la sauvegarde du soir enregistre ce qui est au repos.
+- `/brain:status` dit où en est le brain ; la sauvegarde du soir enregistre ce qui est au repos.
 
 ## Les règles qui ne plient pas
 

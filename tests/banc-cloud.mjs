@@ -15,7 +15,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SCRIPTS = join(HERE, "..", "scripts");
-const BASE = join(tmpdir(), `hyperbrain-cloud-${process.pid}`);
+const BASE = join(tmpdir(), `hypervibe-brain-cloud-${process.pid}`);
 const BRAIN = join(BASE, "brain");
 const HOME = join(BASE, "home");
 const FAKE = join(BASE, "cloudflare");
@@ -36,8 +36,8 @@ const check = (name, cond, detail = "") => {
 const fake = spawn("node", [join(HERE, "faux-embeddings.mjs")], { windowsHide: true });
 const port = await new Promise((res) => fake.stdout.once("data", (d) => res(Number(String(d).trim()))));
 const env = {
-  ...process.env, HYPERBRAIN_HOME: HOME, HYPERBRAIN_DIR: "", GIT_CONFIG_GLOBAL: GITCONFIG, GIT_CONFIG_NOSYSTEM: "1",
-  HYPERBRAIN_WRANGLER: join(HERE, "faux-wrangler.mjs"), FAKE_CF_DIR: FAKE, HYPERBRAIN_NO_CLIPBOARD: "1",
+  ...process.env, HVBRAIN_HOME: HOME, HVBRAIN_DIR: "", GIT_CONFIG_GLOBAL: GITCONFIG, GIT_CONFIG_NOSYSTEM: "1",
+  HVBRAIN_WRANGLER: join(HERE, "faux-wrangler.mjs"), FAKE_CF_DIR: FAKE, HVBRAIN_NO_CLIPBOARD: "1",
   EMBEDDINGS_API_KEY: "k", EMBEDDINGS_BASE_URL: `http://127.0.0.1:${port}/v1`, OPENAI_API_KEY: "",
 };
 const run = (script, a = [], input = "") => {
@@ -55,14 +55,14 @@ const calls = () => readFileSync(join(FAKE, "calls.jsonl"), "utf8").trim().split
 // The Worker, run in Node on the fake D1 and R2, as Cloudflare would run it.
 const opened = [];
 function workerEnv(tokensJson) {
-  const db = new DatabaseSync(join(FAKE, "d1-hyperbrain-sam.sqlite"));
+  const db = new DatabaseSync(join(FAKE, "d1-brain-sam.sqlite"));
   opened.push(db);
   const stmt = (sql, params = []) => ({
     bind: (...p) => stmt(sql, p),
     all: async () => ({ results: db.prepare(sql).all(...params) }),
     first: async () => db.prepare(sql).get(...params) ?? null,
   });
-  const bucket = join(FAKE, "r2-hyperbrain-sam");
+  const bucket = join(FAKE, "r2-brain-sam");
   return {
     DB: { prepare: (sql) => stmt(sql) },
     BRAIN: {
@@ -96,7 +96,7 @@ try {
   // ---- setup: everything asked in the EU
   r = run("cloud.mjs", ["setup", "--include-private"]);
   const setup = json(r.out);
-  check("the cloud copy is set up and recorded in the brain", r.ok && setup.cloud.database === "hyperbrain-sam" && setup.cloud.databaseId && setup.cloud.includePrivate === true, r.out);
+  check("the cloud copy is set up and recorded in the brain", r.ok && setup.cloud.database === "brain-sam" && setup.cloud.databaseId && setup.cloud.includePrivate === true, r.out);
   check("the database and the bucket are created IN THE EU jurisdiction", calls().filter((c) => /create/.test(c.call)).every((c) => c.jurisdiction === "eu") && calls().filter((c) => /create/.test(c.call)).length === 2, JSON.stringify(calls()));
 
   // ---- the first copy, then by difference
@@ -107,7 +107,7 @@ try {
     const puts = calls().filter((c) => c.call === "r2 object put");
     return puts.length === 2 && puts.every((p) => p.jurisdiction === "eu" && p.remote) && puts[0].key === "matrix.f32" && puts[1].key === "matrix.json";
   })(), JSON.stringify(calls().filter((c) => c.call === "r2 object put")));
-  const d1 = new DatabaseSync(join(FAKE, "d1-hyperbrain-sam.sqlite"));
+  const d1 = new DatabaseSync(join(FAKE, "d1-brain-sam.sqlite"));
   opened.push(d1);
   check("a long text is cut in parts, none over what D1 accepts", d1.prepare("SELECT COUNT(*) n FROM note_more WHERE slug = 'very-long-note'").get().n >= 1 && Math.max(...calls().filter((c) => c.call === "d1 execute").map((c) => c.bytes)) > 0, "");
   check("a private note's text is copied only because the person chose it, and apart", d1.prepare("SELECT body FROM private_note WHERE slug = 'health-file'").get()?.body === "My blood results." && !d1.prepare("SELECT COUNT(*) n FROM note WHERE slug = 'health-file'").get().n);
@@ -129,21 +129,21 @@ try {
   // ---- deploy, tokens
   r = run("cloud.mjs", ["deploy"]);
   const dep = json(r.out);
-  check("the Worker is deployed, its bucket bound in the EU jurisdiction", r.ok && dep.url === "https://hyperbrain-sam.fake-account.workers.dev/mcp" && calls().some((c) => c.call === "deploy" && c.r2Jurisdiction), r.out);
-  const secrets = () => JSON.parse(readFileSync(join(FAKE, "secrets-hyperbrain-sam.json"), "utf8"));
+  check("the Worker is deployed, its bucket bound in the EU jurisdiction", r.ok && dep.url === "https://brain-sam.fake-account.workers.dev/mcp" && calls().some((c) => c.call === "deploy" && c.r2Jurisdiction), r.out);
+  const secrets = () => JSON.parse(readFileSync(join(FAKE, "secrets-brain-sam.json"), "utf8"));
   check("deployed with no token: the door is closed", JSON.parse(secrets().TOKENS).length === 0 && secrets().OPENAI_API_KEY === "k", JSON.stringify(secrets()));
   r = run("cloud.mjs", ["token", "create", "reader"]);
   const tok = json(r.out);
-  const tokenFile = join(HOME, ".hyperbrain", "token-reader.txt");
+  const tokenFile = join(HOME, ".hypervibe-brain", "token-reader.txt");
   const readerValue = readFileSync(tokenFile, "utf8").trim();
   check("a token is created, its value handed over outside this output", r.ok && !r.out.includes(readerValue) && tok.value.includes("token-reader.txt") && tok.private === false && tok.addresses === false, r.out);
   check("the brain keeps its print only", readFileSync(join(BRAIN, "cloud", "tokens.json"), "utf8").includes('"hash"') && !readFileSync(join(BRAIN, "cloud", "tokens.json"), "utf8").includes(readerValue));
   r = run("cloud.mjs", ["token", "create", "trusted-agent", "--private", "--addresses"]);
-  const trustedValue = readFileSync(join(HOME, ".hyperbrain", "token-trusted-agent.txt"), "utf8").trim();
+  const trustedValue = readFileSync(join(HOME, ".hypervibe-brain", "token-trusted-agent.txt"), "utf8").trim();
   check("the Worker knows both tokens", JSON.parse(secrets().TOKENS).length === 2);
 
   // ---- the Worker itself
-  const build = join(HOME, ".hyperbrain", "cloud", "hyperbrain-sam");
+  const build = join(HOME, ".hypervibe-brain", "cloud", "brain-sam");
   const worker = (await import(pathToFileURL(join(build, "worker.js")).href)).default;
   const wenv = workerEnv(secrets().TOKENS);
   const ask = async (token, method, params = {}, id = 1) => {

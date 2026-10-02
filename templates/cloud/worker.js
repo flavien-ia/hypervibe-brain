@@ -234,7 +234,7 @@ export default {
       try {
         if (method === "initialize") {
           const m = await meta(env);
-          return { jsonrpc: "2.0", id, result: { protocolVersion: params?.protocolVersion ?? "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "hyperbrain-cloud", version: "1.0.0" }, instructions: instructionsFor(m.name) } };
+          return { jsonrpc: "2.0", id, result: { protocolVersion: params?.protocolVersion ?? "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "hypervibe-brain-cloud", version: "1.0.0" }, instructions: instructionsFor(m.name) } };
         }
         if (method === "ping") return { jsonrpc: "2.0", id, result: {} };
         if (method === "tools/list") return { jsonrpc: "2.0", id, result: { tools: TOOLS } };

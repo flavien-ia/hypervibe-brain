@@ -3,7 +3,7 @@ name: add-second-computer
 description: The same second brain on two computers (a desktop and a laptop), kept in sync through its private GitHub copy. One computer runs the routines, the other reads and writes notes.
 ---
 
-# /add-second-computer - The brain on two computers
+# /brain:add-second-computer - The brain on two computers
 
 ## Communication
 - Reply in the person's language. Plain words: "your laptop gets the brain, and what you write on one appears on the other", never "a rebase" or "a fast-forward".
@@ -20,7 +20,7 @@ description: The same second brain on two computers (a desktop and a laptop), ke
 node "${CLAUDE_SKILL_DIR}/../../scripts/computers.mjs" state
 ```
 
-- No online copy (`remote: null`): the two computers meet on GitHub. Invoke `/hyperbrain:add-backup` first (the online copy), then come back.
+- No online copy (`remote: null`): the two computers meet on GitHub. Invoke `/brain:add-backup` first (the online copy), then come back.
 - Then, on the person's word that this computer runs the brain:
 
 ```bash
@@ -38,9 +38,9 @@ node "${CLAUDE_SKILL_DIR}/../../scripts/sync.mjs"
 
 ## Step 2 - On the other computer
 
-The person opens Claude on the other computer, with Hyperbrain installed (`/hyperbrain:start-hyperbrain` there first), and says "add this computer to my brain". There:
+The person opens Claude on the other computer, with Hypervibe Brain installed (`/brain:start` there first), and says "add this computer to my brain". There:
 
-1. The GitHub access: `gh auth status` (connected to an account that can read their private brain; the person signs in if needed, as in `/hyperbrain:add-backup`).
+1. The GitHub access: `gh auth status` (connected to an account that can read their private brain; the person signs in if needed, as in `/brain:add-backup`).
 2. The brain, from GitHub, in a folder of their home (never a synchronised folder):
 
 ```bash
@@ -48,8 +48,8 @@ node "${CLAUDE_SKILL_DIR}/../../scripts/computers.mjs" clone --url <the brain's 
 ```
 
 3. **Their agreement on this computer too**, then `computers.mjs allow-sync on`.
-4. **The evening save** on this computer as well, so that it sends and receives every evening: `/hyperbrain:add-routines`, the evening save only (the weekly review and the letter stay on the computer that runs the brain). Its evening does less: it saves its notes and synchronises; it never runs the sources, the cold copy or the app.
-5. Test it together: a capture here (`/hyperbrain:brain`), then on the other computer, "synchronise my brain" (`sync.mjs`), and the note is there.
+4. **The evening save** on this computer as well, so that it sends and receives every evening: `/brain:add-routines`, the evening save only (the weekly review and the letter stay on the computer that runs the brain). Its evening does less: it saves its notes and synchronises; it never runs the sources, the cold copy or the app.
+5. Test it together: a capture here (`/brain:capture`), then on the other computer, "synchronise my brain" (`sync.mjs`), and the note is there.
 
 ## When something is off
 
@@ -63,7 +63,7 @@ It says who runs the brain, how far behind or ahead this computer is, and whethe
 - **A stash waiting** (`stash`): the synchronisation set changes aside and could not give them back. `git stash show --stat` shows them; give them back with `git stash pop --index` (by the hash it names), then `sync.mjs`.
 - **Offline**: nothing to do, it catches up at the next run.
 
-To stop synchronising on a computer: `computers.mjs allow-sync off`. To make the other computer the one that runs the brain (the first one is replaced, for instance): stop the evening save and the weekly review on the old one, then on the new one `computers.mjs make-runner --take-over`, and set its routines up with `/hyperbrain:add-routines`.
+To stop synchronising on a computer: `computers.mjs allow-sync off`. To make the other computer the one that runs the brain (the first one is replaced, for instance): stop the evening save and the weekly review on the old one, then on the new one `computers.mjs make-runner --take-over`, and set its routines up with `/brain:add-routines`.
 
 ## End
 

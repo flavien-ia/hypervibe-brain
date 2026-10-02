@@ -14,7 +14,7 @@
 //   1  who matters: enough exchanges IN BOTH DIRECTIONS (a mass mailing, or
 //      someone who never answered, never rises)
 //   0  everyone else: kept, searchable, no note
-// The thresholds are the brain's own (hyperbrain.json, `contacts`).
+// The thresholds are the brain's own (brain.json, `contacts`).
 // A source that declares `"setsTier": true` may give a tier per contact, from
 // rules the plugin cannot know (the first people of each client in a CRM...):
 // it is kept as a FLOOR (`tierFloor`, `etage_min` in French), so the counts can

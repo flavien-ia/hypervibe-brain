@@ -14,13 +14,25 @@ import { fileURLToPath } from "node:url";
 // THE CODE LIVES IN THE PLUGIN, THE BRAIN IS ONLY DATA. A brain folder holds
 // its notes, its founding documents and its vectors, never a script: an
 // update of the plugin repairs every brain at once. The scripts find the
-// brain through a small settings file, ~/.hyperbrain/config.json, written
-// when the brain is created. HYPERBRAIN_HOME replaces the home folder (the
-// test bench never touches the real one); HYPERBRAIN_DIR or --brain <dir>
+// brain through a small settings file, ~/.hypervibe-brain/config.json, written
+// when the brain is created. HVBRAIN_HOME replaces the home folder (the
+// test bench never touches the real one); HVBRAIN_DIR or --brain <dir>
 // point at another brain for one command.
 export const PLUGIN_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-export const HOME = process.env.HYPERBRAIN_HOME || homedir();
-export const CONFIG_FILE = join(HOME, ".hyperbrain", "config.json");
+export const HOME = process.env.HVBRAIN_HOME || homedir();
+// THE NAMES OF BEFORE. Until version 0.4 this plugin had another name: its
+// settings lived in ~/.hyperbrain and a brain's own file was hyperbrain.json. A computer
+// or a brain set up back then is carried over once, by a rename, the first
+// time any script runs. Nothing is copied twice, nothing is deleted.
+export const LEGACY_NAME = "hyperbrain";
+try {
+  const before = join(HOME, `.${LEGACY_NAME}`);
+  const now = join(HOME, ".hypervibe-brain");
+  if (existsSync(before) && !existsSync(now)) renameSync(before, now);
+} catch {
+  // another script is doing it right now, or the folder is in use: next time
+}
+export const CONFIG_FILE = join(HOME, ".hypervibe-brain", "config.json");
 
 export function userConfig() {
   try {
@@ -42,23 +54,31 @@ export function setUserConfig(patch) {
 function resolveBrain() {
   const i = process.argv.indexOf("--brain");
   if (i >= 0 && process.argv[i + 1]) return resolve(process.argv[i + 1]);
-  if (process.env.HYPERBRAIN_DIR) return resolve(process.env.HYPERBRAIN_DIR);
+  if (process.env.HVBRAIN_DIR) return resolve(process.env.HVBRAIN_DIR);
   const c = userConfig();
   return c.brain ? resolve(c.brain) : null;
 }
 
 /** The brain's folder, or null when no brain is set up on this computer. */
 export const BRAIN = resolveBrain();
-export const hasBrain = () => Boolean(BRAIN && existsSync(join(BRAIN, "hyperbrain.json")));
+if (BRAIN) {
+  try {
+    const before = join(BRAIN, `${LEGACY_NAME}.json`);
+    if (existsSync(before) && !existsSync(join(BRAIN, "brain.json"))) renameSync(before, join(BRAIN, "brain.json"));
+  } catch {
+    // read-only or in use: the brain is then reported as not set up, plainly
+  }
+}
+export const hasBrain = () => Boolean(BRAIN && existsSync(join(BRAIN, "brain.json")));
 
 /** For the command-line scripts: stop with a clear sentence when there is no brain. */
 export function requireBrain() {
   if (hasBrain()) return;
-  console.error(BRAIN ? `no brain in ${BRAIN} (no hyperbrain.json)` : "no brain set up on this computer yet: run /hyperbrain:create-brain");
+  console.error(BRAIN ? `no brain in ${BRAIN} (no brain.json)` : "no brain set up on this computer yet: run /brain:create");
   process.exit(3);
 }
 
-export const ROOT = BRAIN ?? join(HOME, ".hyperbrain", "no-brain");
+export const ROOT = BRAIN ?? join(HOME, ".hypervibe-brain", "no-brain");
 export const VAULT = join(ROOT, "vault");
 export const INDEX = join(ROOT, "index");
 /** Which notes Claude read through the tools: a promotion signal, local to each computer, never in git. */
@@ -67,8 +87,8 @@ export const readsFile = (cfg = config()) => join(INDEX, cfg.format === "fr" ? "
 // less than 30 minutes ago (a person may be editing it). A note a source wrote
 // a minute ago is not being edited: the sources record what they wrote, with
 // the file's date, and the save takes it at once if it has not changed since.
-// Local to this computer (~/.hyperbrain/written.json), by brain.
-const WRITTEN = () => join(HOME, ".hyperbrain", "written.json");
+// Local to this computer (~/.hypervibe-brain/written.json), by brain.
+const WRITTEN = () => join(HOME, ".hypervibe-brain", "written.json");
 export function readWritten() {
   try {
     return JSON.parse(readFileSync(WRITTEN(), "utf8"))[ROOT.replace(/\\/g, "/")] ?? {};
@@ -84,7 +104,7 @@ export function setWritten(map) {
     // first time
   }
   all[ROOT.replace(/\\/g, "/")] = map;
-  mkdirSync(join(HOME, ".hyperbrain"), { recursive: true });
+  mkdirSync(join(HOME, ".hypervibe-brain"), { recursive: true });
   writeFileSync(WRITTEN(), `${JSON.stringify(all)}\n`, "utf8");
 }
 /** Records notes a source has just written (paths relative to the brain). */
@@ -104,10 +124,10 @@ export function noteWritten(rels) {
 export const promotionsFile = () => join(INDEX, "promotions.jsonl");
 // Where the index and the vectors live. A brain that already has files of
 // its own there (another program's index...) places them elsewhere, in
-// hyperbrain.json: "index": { "db": "index/x.sqlite", "embeddings": "index/y" }.
+// brain.json: "index": { "db": "index/x.sqlite", "embeddings": "index/y" }.
 const PLACES = (() => {
   try {
-    return JSON.parse(readFileSync(join(ROOT, "hyperbrain.json"), "utf8")).index ?? {};
+    return JSON.parse(readFileSync(join(ROOT, "brain.json"), "utf8")).index ?? {};
   } catch {
     return {};
   }
@@ -128,7 +148,7 @@ export const STATUSES = ["seed", "trusted", "archived"];
 export const VISIBILITIES = ["public", "internal", "private"];
 
 // THE TYPES BELONG TO THE BRAIN, not to the plugin: they live in
-// hyperbrain.json (`types`: type => folder, the folder IS the type), proposed
+// brain.json (`types`: type => folder, the folder IS the type), proposed
 // from what the person's computer shows and validated with them at the
 // creation. These are only what a brain gets when it has none.
 export const DEFAULT_TYPES = {
@@ -144,7 +164,7 @@ const SKIPPED_DIRS = new Set(["danger-zone"]);
 const SKIPPED_FILES = new Set(["CLAUDE.md", "README.md"]);
 
 export function config() {
-  const cfg = JSON.parse(readFileSync(join(ROOT, "hyperbrain.json"), "utf8"));
+  const cfg = JSON.parse(readFileSync(join(ROOT, "brain.json"), "utf8"));
   cfg.embeddings ??= {};
   cfg.embeddings.model ??= "text-embedding-3-small";
   cfg.embeddings.dims ??= 512;
@@ -171,14 +191,14 @@ export const vocab = (cfg = safeConfig()) => VOCAB[cfg?.format] ?? VOCAB.en;
 
 // ---------------------------------------------------------- two computers
 // ONE COMPUTER RUNS THE BRAIN, the others only read and write notes. The
-// "runner" (named in hyperbrain.json, so every computer knows it) runs what
+// "runner" (named in brain.json, so every computer knows it) runs what
 // computes: the person's sources, the vectors, the directory, the reviews,
 // the cold copy. What it computes is DERIVED, and only the runner commits
 // it: two computers computing the same vector write two files that are
 // equal in value but not in bytes, and git would see a conflict every night.
 // A brain on a single computer has no runner named: that computer is it.
 
-export const computerName = () => String(userConfig().computer ?? (process.env.HYPERBRAIN_COMPUTER || hostname())).trim().toLowerCase();
+export const computerName = () => String(userConfig().computer ?? (process.env.HVBRAIN_COMPUTER || hostname())).trim().toLowerCase();
 
 export function isRunner(cfg = config()) {
   return !cfg.runner || String(cfg.runner).toLowerCase() === computerName();
@@ -187,9 +207,9 @@ export function isRunner(cfg = config()) {
 /** What only the runner writes and commits. Everything else in the brain is canon. */
 export const DERIVED = [/^index\/embeddings\//, /^index\/(annuaire|directory)\.json$/, /^index\/promotions\.jsonl$/, /^reviews\//, /^sources\/[^/]+\/(seen|state)\.json$/];
 /** What the saves commit at all: anything else in the folder stays out of git. */
-export const OWNED = [/^vault\//, /^index\/embeddings\//, /^reviews\//, /^sources\//, /^index\/(annuaire|directory)\.json$/, /^index\/promotions\.jsonl$/, /^(BRAIN|SOURCES)\.md$/, /^hyperbrain\.json$/];
+export const OWNED = [/^vault\//, /^index\/embeddings\//, /^reviews\//, /^sources\//, /^index\/(annuaire|directory)\.json$/, /^index\/promotions\.jsonl$/, /^(BRAIN|SOURCES)\.md$/, /^brain\.json$/, /^hyperbrain\.json$/];
 
-// A brain may add its own rules in hyperbrain.json, `ownership`:
+// A brain may add its own rules in brain.json, `ownership`:
 //   "canon":   files any computer commits (settings kept by hand...)
 //   "derived": files only the runner commits (what its own programs compute)
 // A path ending with "/" is a folder. "{computer}" stands for this computer's

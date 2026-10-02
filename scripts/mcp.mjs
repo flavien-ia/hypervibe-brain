@@ -27,10 +27,10 @@ const TOOL = join(dirname(fileURLToPath(import.meta.url)), "tool.mjs");
 
 /** Read fresh each time: the brain may be created after the server started. */
 function brainInfo() {
-  const dir = process.env.HYPERBRAIN_DIR || userConfig().brain;
-  if (!dir || !existsSync(join(dir, "hyperbrain.json"))) return null;
+  const dir = process.env.HVBRAIN_DIR || userConfig().brain;
+  if (!dir || !existsSync(join(dir, "brain.json"))) return null;
   try {
-    return { dir, name: JSON.parse(readFileSync(join(dir, "hyperbrain.json"), "utf8")).name || "The person" };
+    return { dir, name: JSON.parse(readFileSync(join(dir, "brain.json"), "utf8")).name || "The person" };
   } catch {
     return null;
   }
@@ -84,7 +84,7 @@ if (process.argv.includes("--self-test")) {
     const { id, method, params } = msg;
     if (id === undefined || id === null) return; // a notification: nothing to answer
     if (method === "initialize") {
-      send({ id, result: { protocolVersion: params?.protocolVersion ?? "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "hyperbrain", version: "1.0.0" }, instructions: instructionsFor(brainInfo()?.name ?? null) } });
+      send({ id, result: { protocolVersion: params?.protocolVersion ?? "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "brain", version: "1.0.0" }, instructions: instructionsFor(brainInfo()?.name ?? null) } });
     } else if (method === "ping") send({ id, result: {} });
     else if (method === "tools/list") send({ id, result: { tools: TOOLS } });
     else if (method === "tools/call") {

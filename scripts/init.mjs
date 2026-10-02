@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // init.mjs - Creates a new brain: a folder of DATA (notes, founding documents,
-// vectors), its own git repository, and its entry in ~/.hyperbrain/config.json
+// vectors), its own git repository, and its entry in ~/.hypervibe-brain/config.json
 // so that every script and the MCP server find it. No script is copied into
 // the brain: the code stays in the plugin.
 //
@@ -58,10 +58,10 @@ const types = opt("--types")
 for (const [t, f] of Object.entries(types)) if (!SLUG.test(t) || !SLUG.test(f)) fail(`type "${t}" or folder "${f}": lowercase words without accents, joined by dashes`);
 if (new Set(Object.values(types)).size !== Object.keys(types).length) fail("two types cannot share a folder");
 if (Object.keys(types).length < 3) fail("choose at least three types");
-// "~/hyperbrain" in quotes reaches us unexpanded: expand it ourselves.
+// "~/brain" in quotes reaches us unexpanded: expand it ourselves.
 const dir = resolve(dirArg.replace(/^~(?=[\\/]|$)/, HOME));
 const current = userConfig().brain;
-if (current && resolve(current) !== dir && existsSync(join(current, "hyperbrain.json")) && !args.includes("--switch")) {
+if (current && resolve(current) !== dir && existsSync(join(current, "brain.json")) && !args.includes("--switch")) {
   fail(`a brain is already set up on this computer (${current}). Creating another one would make it the active brain: repeat with --switch if that is what the person wants`);
 }
 // Windows: Dropbox, OneDrive (also "OneDrive - Company", where Documents and
@@ -82,7 +82,7 @@ for (let p = dir; ; p = dirname(p)) {
 // macOS: with "Desktop and Documents Folders" ticked in iCloud, ~/Desktop and
 // ~/Documents keep their usual path but live in iCloud.
 const icloudDocs = process.platform === "darwin" && ["Desktop", "Documents"].some((f) => {
-  const home = process.env.HYPERBRAIN_HOME || homedir();
+  const home = process.env.HVBRAIN_HOME || homedir();
   const inside = (p) => real === p || real.startsWith(`${p}/`);
   return existsSync(join(home, "Library", "Mobile Documents", "com~apple~CloudDocs", f)) && inside(join(home, f));
 });
@@ -107,7 +107,7 @@ for (const f of ["CLAUDE.md", "BRAIN.md", "SOURCES.md", "vault/CLAUDE.md"]) {
   const p = join(dir, f);
   writeFileSync(p, readFileSync(p, "utf8").replaceAll("{{NAME}}", name).replaceAll("{{DATE}}", today).replaceAll("{{DIR}}", dir.replace(/\\/g, "/")).replaceAll("{{TYPES}}", table), "utf8");
 }
-writeFileSync(join(dir, "hyperbrain.json"), `${JSON.stringify({
+writeFileSync(join(dir, "brain.json"), `${JSON.stringify({
   name,
   lang,
   format,
@@ -132,7 +132,7 @@ if (!args.includes("--no-git")) {
     } catch {
       result.identity = null;
     }
-    git(["add", "--", ".gitignore", ".gitattributes", "CLAUDE.md", "BRAIN.md", "SOURCES.md", "hyperbrain.json", "vault/CLAUDE.md"]);
+    git(["add", "--", ".gitignore", ".gitattributes", "CLAUDE.md", "BRAIN.md", "SOURCES.md", "brain.json", "vault/CLAUDE.md"]);
     if (result.identity) {
       git(["commit", "-q", "-m", t(lang).commitCreate(name)]);
       result.commit = true;

@@ -41,7 +41,7 @@ export const hasRemote = () => Boolean(tryGit(["remote"]).out);
 /** Commits exactly these paths (added first), with this message. */
 export function commitPaths(paths, message) {
   if (!paths.length) return { ok: true, committed: 0 };
-  const list = join(tmpdir(), `hyperbrain-${process.pid}-${Date.now()}.txt`);
+  const list = join(tmpdir(), `brain-${process.pid}-${Date.now()}.txt`);
   writeFileSync(list, paths.join("\0"), "utf8");
   try {
     const add = tryGit(["add", `--pathspec-from-file=${list}`, "--pathspec-file-nul"]);
@@ -58,7 +58,7 @@ export function commitPaths(paths, message) {
 }
 
 /**
- * Pushes when the person agreed to it (autoPush in hyperbrain.json) and a
+ * Pushes when the person agreed to it (autoPush in brain.json) and a
  * remote exists. A failure is reported, never fatal: the commit is safe
  * locally and the next push carries it.
  */

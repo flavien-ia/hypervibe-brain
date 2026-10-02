@@ -1,4 +1,4 @@
-# /add-routines
+# /brain:add-routines
 
 Sets up what happens without you asking: **the evening save** (no AI, no cost), **the weekly review** by Claude, and, if you want it, a letter by email that sums it up. The same skill is used to check these tasks, change their time or stop them.
 
@@ -28,7 +28,7 @@ Sets up what happens without you asking: **the evening save** (no AI, no cost), 
 
 ## Prerequisites
 
-- A brain already created (`/create-brain`)
+- A brain already created (`/brain:create`)
 - For the automatic review: the Claude desktop app, open at the scheduled time
 - For the letter: your mail connected to Claude, or a Brevo or Resend account with a verified sender address
 

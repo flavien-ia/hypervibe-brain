@@ -10,7 +10,7 @@
 
 {{DOMAINS}}
 
-A domain more or less is decided here first, then in `hyperbrain.json`.
+A domain more or less is decided here first, then in `brain.json`.
 
 ## The chosen components
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // banc.mjs - The whole journey of a brain through the plugin's scripts, in a
-// throwaway folder, with a fake home (HYPERBRAIN_HOME), a fake embeddings API
+// throwaway folder, with a fake home (HVBRAIN_HOME), a fake embeddings API
 // in its own process, and the evening routine only ever armed in --dry-run.
-// Nothing here touches the real ~/.claude, ~/.hyperbrain, a git remote, a
+// Nothing here touches the real ~/.claude, ~/.hypervibe-brain, a git remote, a
 // scheduler or a paid API. To run after any change to the plugin.
 //
 //   node tests/banc.mjs [--keep]
@@ -16,7 +16,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLUGIN = join(HERE, "..");
 const SCRIPTS = join(PLUGIN, "scripts");
-const BASE = join(tmpdir(), `hyperbrain-banc-${process.pid}`);
+const BASE = join(tmpdir(), `brain-banc-${process.pid}`);
 const BRAIN = join(BASE, "brain");
 const HOME = join(BASE, "home");
 mkdirSync(HOME, { recursive: true });
@@ -36,7 +36,7 @@ const check = (name, cond, detail = "") => {
   }
 };
 const env = {
-  ...process.env, HYPERBRAIN_HOME: HOME, HYPERBRAIN_DIR: "", OPENAI_API_KEY: "", EMBEDDINGS_API_KEY: "", HYPERBRAIN_TASK_SUFFIX: " banc", GIT_CONFIG_GLOBAL: GITCONFIG, GIT_CONFIG_NOSYSTEM: "1",
+  ...process.env, HVBRAIN_HOME: HOME, HVBRAIN_DIR: "", OPENAI_API_KEY: "", EMBEDDINGS_API_KEY: "", HVBRAIN_TASK_SUFFIX: " banc", GIT_CONFIG_GLOBAL: GITCONFIG, GIT_CONFIG_NOSYSTEM: "1",
   GIT_AUTHOR_NAME: "banc", GIT_AUTHOR_EMAIL: "banc@example.invalid", GIT_COMMITTER_NAME: "banc", GIT_COMMITTER_EMAIL: "banc@example.invalid",
 };
 const run = (cmd, a, o = {}) => {
@@ -91,7 +91,7 @@ async function mcpSession(extraEnv = {}) {
 }
 
 try {
-  console.log(`\nBanc du plugin Hyperbrain, dans ${BASE}\n`);
+  console.log(`\nBanc du plugin Hypervibe Brain, dans ${BASE}\n`);
 
   // ---- before any brain
   let r = node("prereqs.mjs", ["--json"]);
@@ -114,7 +114,7 @@ try {
           continue;
         }
         const text = readFileSync(p, "utf8");
-        if (!text.startsWith(`# /${s}`)) docFaults.push(`${s}/${file}: must start with "# /${s}"`);
+        if (!text.startsWith(`# /brain:${s}`)) docFaults.push(`${s}/${file}: must start with "# /brain:${s}"`);
         for (const sec of sections) if (!text.includes(sec)) docFaults.push(`${s}/${file}: no "${sec}"`);
         if (/[—–]/.test(text)) docFaults.push(`${s}/${file}: a long dash`);
         if ((text.match(/\{\{callout:/g) ?? []).length !== (text.match(/\{\{\/callout\}\}/g) ?? []).length) docFaults.push(`${s}/${file}: a callout is not closed`);
@@ -122,14 +122,28 @@ try {
     }
     check("every skill has its documentation in French and English, with all its sections", docFaults.length === 0, docFaults.join(" | "));
   }
-  check("the audit records where the plugin lives",JSON.parse(readFileSync(join(HOME, ".hyperbrain", "config.json"), "utf8")).pluginRoot === PLUGIN.replace(/\\/g, "/"));
+  {
+    // A computer and a brain set up under the plugin's name of before (until
+    // 0.4) are carried over by a rename, the first time any script runs.
+    const before = "hyper" + "brain";
+    const oldHome = join(BASE, "home-before");
+    const oldBrain = join(BASE, "brain-before");
+    mkdirSync(join(oldHome, `.${before}`), { recursive: true });
+    mkdirSync(join(oldBrain, "vault"), { recursive: true });
+    writeFileSync(join(oldBrain, `${before}.json`), JSON.stringify({ name: "Avant", lang: "en", domains: ["a"] }), "utf8");
+    writeFileSync(join(oldHome, `.${before}`, "config.json"), JSON.stringify({ brain: oldBrain.replace(/\\/g, "/"), routines: { save: { time: "21:00", task: "Hyper" + "brain evening save" } } }), "utf8");
+    const carried = node("routines.mjs", ["state", "--json"], { env: { HVBRAIN_HOME: oldHome } });
+    check("a setup made under the name of before is carried over: settings folder, brain file, and the save to arm again",
+      existsSync(join(oldHome, ".hypervibe-brain", "config.json")) && !existsSync(join(oldHome, `.${before}`)) && existsSync(join(oldBrain, "brain.json")) && !existsSync(join(oldBrain, `${before}.json`)) && json(carried.out).rearm === true, carried.out);
+  }
+  check("the audit records where the plugin lives",JSON.parse(readFileSync(join(HOME, ".hypervibe-brain", "config.json"), "utf8")).pluginRoot === PLUGIN.replace(/\\/g, "/"));
   r = node("status.mjs");
-  check("a script without a brain says so and stops", r.status === 3 && r.err.includes("create-brain"), r.out);
+  check("a script without a brain says so and stops", r.status === 3 && r.err.includes("create"), r.out);
   let m = await mcpSession();
   let init = await m.ask("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "banc", version: "1" } });
-  check("without a brain, the MCP instructions point to start-hyperbrain", init?.result?.instructions?.includes("start-hyperbrain"), JSON.stringify(init));
+  check("without a brain, the MCP instructions point to start", init?.result?.instructions?.includes("start"), JSON.stringify(init));
   let call = await m.ask("tools/call", { name: "brain_stats", arguments: {} });
-  check("without a brain, a tool answers with the way to create one", m.text(call).includes("create-brain"), m.text(call));
+  check("without a brain, a tool answers with the way to create one", m.text(call).includes("create"), m.text(call));
 
   // ---- creation
   r = node("init.mjs", ["--dir", join(HOME, "Dropbox", "brain"), "--name", "X", "--domains", "a,b"]);
@@ -145,7 +159,7 @@ try {
   check("domains are normalised (accents, case)", JSON.stringify(created.domains) === JSON.stringify(["travail", "ecriture", "famille"]), created.domains);
   check("init commits the template, and nothing else", created.commit === true && git("log", "--oneline").split("\n").length === 1 && git("status", "--porcelain") === "", git("status", "--porcelain"));
   check("the brain holds data only, no script", !existsSync(join(BRAIN, "scripts")) && !existsSync(join(BRAIN, "package.json")));
-  check("init registers the brain for this computer", JSON.parse(readFileSync(join(HOME, ".hyperbrain", "config.json"), "utf8")).brain === BRAIN.replace(/\\/g, "/"));
+  check("init registers the brain for this computer", JSON.parse(readFileSync(join(HOME, ".hypervibe-brain", "config.json"), "utf8")).brain === BRAIN.replace(/\\/g, "/"));
   check("placeholders are filled", readFileSync(join(BRAIN, "CLAUDE.md"), "utf8").includes("Camille's second brain"));
   r = node("init.mjs", ["--dir", join(BASE, "autre"), "--name", "X", "--domains", "a,b"]);
   check("a second brain is refused without --switch", !r.ok && r.out.includes("--switch"), r.out);
@@ -227,14 +241,14 @@ try {
   const CLONE = join(BASE, "clone");
   run("git", ["clone", "-q", BRAIN, CLONE]);
   const before = await embedCalls();
-  r = node("build.mjs", [], { env: { ...EMB, HYPERBRAIN_DIR: CLONE } });
+  r = node("build.mjs", [], { env: { ...EMB, HVBRAIN_DIR: CLONE } });
   check("a clone gets its vectors from git, with no API call", r.ok && r.out.includes("2 taken from git") && (await embedCalls()) === before, `${r.out} calls ${(await embedCalls()) - before}`);
   check("and its tree stays clean", run("git", ["status", "--porcelain"], { cwd: CLONE }).out.trim() === "");
 
   // ---- the MCP server with a brain
   m = await mcpSession(EMB);
   init = await m.ask("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "banc", version: "1" } });
-  check("the MCP instructions name the person and the capture skill", init?.result?.instructions?.includes("Camille has a second brain") && init.result.instructions.includes("/hyperbrain:brain"), init?.result?.instructions);
+  check("the MCP instructions name the person and the capture skill", init?.result?.instructions?.includes("Camille has a second brain") && init.result.instructions.includes("/brain:capture"), init?.result?.instructions);
   const list = await m.ask("tools/list", {});
   check("MCP lists six tools", list?.result?.tools?.length === 6, JSON.stringify(list));
   call = await m.ask("tools/call", { name: "brain_search", arguments: { query: "roman" } });
@@ -269,7 +283,7 @@ try {
 
   // ---- the work journal, the hook of the plugin
   const hook = (payload, extra = {}) => run("node", [join(SCRIPTS, "hook-journal.mjs")], { input: JSON.stringify(payload), env: extra });
-  const JOURNAL = join(HOME, ".hyperbrain", "journal.jsonl");
+  const JOURNAL = join(HOME, ".hypervibe-brain", "journal.jsonl");
   r = hook({ session_id: "s1", cwd: join(BASE, "projet-roman") });
   check("the hook is silent", r.ok && r.out.trim() === "", r.out);
   hook({ session_id: "s1", cwd: join(BASE, "projet-roman") });
@@ -341,7 +355,7 @@ try {
   check("Hypervibe is detected where Claude installs plugins", r.ok && json(r.out).hypervibe === true, r.out);
   r = node("viz.mjs", ["build"]);
   const page = existsSync(join(BRAIN, "viz", "brain.html")) ? readFileSync(join(BRAIN, "viz", "brain.html"), "utf8") : "";
-  check("the simple viewer is written", r.ok && page.includes("Projet de roman") && !page.includes("HYPERBRAIN_DATA*/null"), r.out);
+  check("the simple viewer is written", r.ok && page.includes("Projet de roman") && !page.includes("HVBRAIN_DATA*/null"), r.out);
   check("the viewer never holds a private note's content", page.includes("Dossier santé") && !page.includes("Mes notes de santé"));
   check("the viewer stays out of git", git("check-ignore", "viz/brain.html") === "viz/brain.html");
   const exported = json(node("viz.mjs", ["export"]).out);
@@ -366,21 +380,21 @@ try {
   check("arming the evening save (dry run) names its own test task", r.ok && armed.ok && armed.armed.endsWith(" banc") && armed.time === "21:30", r.out);
   r = node("routines.mjs", ["arm", "--time", "25:00", "--dry-run"]);
   check("a wrong time is refused", !r.ok, r.out);
-  r = node("routines.mjs", ["note-review", "--when", "dimanche 18:00", "--id", "hyperbrain-weekly-review"]);
+  r = node("routines.mjs", ["note-review", "--when", "dimanche 18:00", "--id", "brain-weekly-review"]);
   check("the weekly review is recorded", r.ok && json(r.out).review.when === "dimanche 18:00", r.out);
   r = node("routines.mjs", ["run-now"]);
   const now = json(r.out);
   check("the evening save runs through its launcher, all its steps", r.ok && ["save.mjs exit 0", "cold-copy.mjs exit 0", "viz.mjs exit 0"].every((s) => now.lastRun.some((l) => l.includes(s))), r.out);
   // Everything was saved just before the cold copy: nothing is left behind.
   check("and nothing is left unsaved in the brain", git("status", "--porcelain") === "", git("status", "--porcelain"));
-  const logToday = join(HOME, ".hyperbrain", "logs", `nightly-${localDay()}.log`);
+  const logToday = join(HOME, ".hypervibe-brain", "logs", `nightly-${localDay()}.log`);
   const linesBefore = readFileSync(logToday, "utf8").trim().split("\n").length;
-  r = run("node", [join(HOME, ".hyperbrain", "nightly.mjs")]);
+  r = run("node", [join(HOME, ".hypervibe-brain", "nightly.mjs")]);
   check("started again by the scheduler the same evening, the save does nothing", r.ok && readFileSync(logToday, "utf8").trim().split("\n").length === linesBefore, readFileSync(logToday, "utf8"));
-  writeFileSync(join(HOME, ".hyperbrain", "nightly.lock"), String(process.pid), "utf8");
-  r = run("node", [join(HOME, ".hyperbrain", "nightly.mjs"), "--force"]);
+  writeFileSync(join(HOME, ".hypervibe-brain", "nightly.lock"), String(process.pid), "utf8");
+  r = run("node", [join(HOME, ".hypervibe-brain", "nightly.mjs"), "--force"]);
   check("two saves never run at once", r.ok && readFileSync(logToday, "utf8").includes("another save is running"), readFileSync(logToday, "utf8"));
-  unlinkSync(join(HOME, ".hyperbrain", "nightly.lock"));
+  unlinkSync(join(HOME, ".hypervibe-brain", "nightly.lock"));
   r = node("routines.mjs", ["state", "--json"]);
   check("state reports the review and the last run", r.ok && json(r.out).review?.when === "dimanche 18:00" && json(r.out).lastLog, r.out);
 
@@ -527,7 +541,7 @@ try {
     check("tiers left to the sources are never recomputed by the plugin", harvested.contacts[0].tier === 1, JSON.stringify(harvested.contacts));
   }
   {
-    // A brain's own ownership rules (hyperbrain.json, `ownership`).
+    // A brain's own ownership rules (brain.json, `ownership`).
     const { isOwned, isDerived, computerName } = await import(pathToFileURL(join(SCRIPTS, "lib.mjs")).href);
     const own = { ownership: { canon: ["index/contacts-alias.json", "index/activity/{computer}.jsonl"], derived: ["vault/log.md", "index/graph.json", "index/digests/"] } };
     const me = computerName();
@@ -656,11 +670,11 @@ try {
   node("letter.mjs", ["setup", "--channel", "brevo", "--to", "camille@exemple.fr", "--from", "brain@exemple.fr"]);
   r = letter([]);
   check("without its key in the brain's .env, nothing leaves", !r.ok && r.out.includes("BREVO_API_KEY"), r.out);
-  r = letter([], { BREVO_API_KEY: "test-brevo", HYPERBRAIN_BREVO_URL: `http://127.0.0.1:${port}/v3` });
+  r = letter([], { BREVO_API_KEY: "test-brevo", HVBRAIN_BREVO_URL: `http://127.0.0.1:${port}/v3` });
   const brevoMail = await (await fetch(`http://127.0.0.1:${port}/mail`)).json();
   check("with it, the letter goes to the person, from the verified sender", r.ok && json(r.out).sent === true && brevoMail?.headers["api-key"] === "test-brevo" && brevoMail.body.to[0].email === "camille@exemple.fr" && brevoMail.body.sender.email === "brain@exemple.fr" && brevoMail.body.htmlContent.includes("Oh, by the way") && brevoMail.body.textContent === LETTER, JSON.stringify(brevoMail).slice(0, 400));
   node("letter.mjs", ["setup", "--channel", "resend", "--to", "camille@exemple.fr", "--from", "brain@exemple.fr"]);
-  r = letter([], { RESEND_API_KEY: "test-resend", HYPERBRAIN_RESEND_URL: `http://127.0.0.1:${port}` });
+  r = letter([], { RESEND_API_KEY: "test-resend", HVBRAIN_RESEND_URL: `http://127.0.0.1:${port}` });
   const resendMail = await (await fetch(`http://127.0.0.1:${port}/mail`)).json();
   check("Resend works the same way", r.ok && json(r.out).sent === true && resendMail?.headers.authorization === "Bearer test-resend" && resendMail.body.to[0] === "camille@exemple.fr", JSON.stringify(resendMail).slice(0, 300));
   node("letter.mjs", ["setup", "--channel", "none"]);
@@ -740,7 +754,7 @@ try {
   r = node("adopt.mjs", ["--dir", join(BASE, "rien")]);
   check("adopting refuses a folder that is not a brain", !r.ok, r.out);
   r = node("adopt.mjs", ["--dir", CLONE, "--switch"]);
-  check("adopting a clone makes it the brain of this computer", r.ok && JSON.parse(readFileSync(join(HOME, ".hyperbrain", "config.json"), "utf8")).brain === CLONE.replace(/\\/g, "/"), r.out);
+  check("adopting a clone makes it the brain of this computer", r.ok && JSON.parse(readFileSync(join(HOME, ".hypervibe-brain", "config.json"), "utf8")).brain === CLONE.replace(/\\/g, "/"), r.out);
   check("and it answers at once", json(node("query.mjs", ["search", "roman", "--json"]).out).some((x) => x.slug === "projet-de-roman"));
 } finally {
   fake.kill();

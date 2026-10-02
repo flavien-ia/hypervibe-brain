@@ -2,7 +2,7 @@
 
 This folder is {{NAME}}'s second brain. The notes in `vault/` are **the only source of truth**; everything else (the index, the vectors) is rebuilt from them.
 
-It is run by the **Hyperbrain** plugin for Claude Code: the code lives in the plugin, this folder only holds data. Read before any decision: [`BRAIN.md`](BRAIN.md) (why this brain exists, its domains, its rules) and [`SOURCES.md`](SOURCES.md) (what goes in, what never does).
+It is run by the **Hypervibe Brain** plugin for Claude Code: the code lives in the plugin, this folder only holds data. Read before any decision: [`BRAIN.md`](BRAIN.md) (why this brain exists, its domains, its rules) and [`SOURCES.md`](SOURCES.md) (what goes in, what never does).
 
 ## Asking
 
@@ -10,9 +10,9 @@ Through the MCP tools of the plugin (`brain_search`, `brain_get`, `brain_neighbo
 
 ## Writing
 
-- **A new note** goes through the `/hyperbrain:brain` skill: it searches first, classifies, validates and commits. Never a file written by hand.
+- **A new note** goes through the `/brain:capture` skill: it searches first, classifies, validates and commits. Never a file written by hand.
 - **Changing an existing note** only with {{NAME}}'s agreement, in front of them, then setting `updated` to today.
-- `/hyperbrain:brain-status` tells where the brain stands; the evening routine saves what is at rest.
+- `/brain:status` tells where the brain stands; the evening routine saves what is at rest.
 
 ## The rules that do not bend
 

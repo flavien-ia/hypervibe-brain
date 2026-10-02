@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SCRIPTS = join(HERE, "..", "scripts");
-const BASE = join(tmpdir(), `hyperbrain-sync-${process.pid}`);
+const BASE = join(tmpdir(), `brain-sync-${process.pid}`);
 const PIVOT = join(BASE, "github.git");
 const A = join(BASE, "alpha-brain");
 const B = join(BASE, "beta-brain");
@@ -32,8 +32,8 @@ const check = (name, cond, detail = "") => {
     console.log(`  FAIL  ${name}${detail ? `\n        ${String(detail).slice(0, 600)}` : ""}`);
   }
 };
-const baseEnv = { ...process.env, OPENAI_API_KEY: "", EMBEDDINGS_API_KEY: "", GIT_CONFIG_GLOBAL: GITCONFIG, GIT_CONFIG_NOSYSTEM: "1", HYPERBRAIN_DIR: "", HYPERBRAIN_TASK_SUFFIX: " banc-sync" };
-const computer = (name) => ({ HYPERBRAIN_HOME: join(BASE, `home-${name}`), HYPERBRAIN_COMPUTER: name });
+const baseEnv = { ...process.env, OPENAI_API_KEY: "", EMBEDDINGS_API_KEY: "", GIT_CONFIG_GLOBAL: GITCONFIG, GIT_CONFIG_NOSYSTEM: "1", HVBRAIN_DIR: "", HVBRAIN_TASK_SUFFIX: " banc-sync" };
+const computer = (name) => ({ HVBRAIN_HOME: join(BASE, `home-${name}`), HVBRAIN_COMPUTER: name });
 const ALPHA = computer("alpha");
 const BETA = computer("beta");
 const run = (cmd, a, o = {}) => {
@@ -69,14 +69,14 @@ try {
   git(A, "remote", "add", "origin", PIVOT);
   git(A, "push", "-q", "-u", "origin", "main");
   let r = on(ALPHA, "computers.mjs", ["make-runner"]);
-  check("alpha becomes the runner, written in the brain for the other computer to know", r.ok && json(r.out).runner === "alpha" && JSON.parse(readFileSync(join(A, "hyperbrain.json"), "utf8")).runner === "alpha", r.out);
+  check("alpha becomes the runner, written in the brain for the other computer to know", r.ok && json(r.out).runner === "alpha" && JSON.parse(readFileSync(join(A, "brain.json"), "utf8")).runner === "alpha", r.out);
   r = json(on(ALPHA, "sync.mjs", ["--json"]).out);
   check("without the person's agreement on this computer, nothing is synchronised", r.result === "off", JSON.stringify(r));
   on(ALPHA, "computers.mjs", ["allow-sync", "on"]);
   r = sync(ALPHA);
   check("allowed, alpha sends what it has", r.result === "ok" && r.pushed >= 1, JSON.stringify(r));
   r = on(BETA, "computers.mjs", ["clone", "--url", PIVOT, "--dir", B]);
-  check("beta gets the brain from GitHub, made its active brain", r.ok && json(r.out).runner === "alpha" && JSON.parse(readFileSync(join(BASE, "home-beta", ".hyperbrain", "config.json"), "utf8")).brain === B.replace(/\\/g, "/"), r.out);
+  check("beta gets the brain from GitHub, made its active brain", r.ok && json(r.out).runner === "alpha" && JSON.parse(readFileSync(join(BASE, "home-beta", ".hypervibe-brain", "config.json"), "utf8")).brain === B.replace(/\\/g, "/"), r.out);
   on(BETA, "computers.mjs", ["allow-sync", "on"]);
   r = json(on(BETA, "computers.mjs", ["state"]).out);
   check("beta knows it is not the runner", r.isRunner === false && r.runner === "alpha" && r.computer === "beta", JSON.stringify(r));
@@ -172,7 +172,7 @@ try {
   git(B, "stash", "push", "-q", "-m", "left by a failed sync");
   const stash = git(B, "rev-parse", "refs/stash");
   const stateFile = run("node", ["-e", `const {createHash}=require("crypto");console.log(createHash("sha256").update(${JSON.stringify(B.replace(/\\/g, "/").toLowerCase())}).digest("hex").slice(0,12))`]).out.trim();
-  const statePath = join(BASE, "home-beta", ".hyperbrain", `sync-${stateFile}.json`);
+  const statePath = join(BASE, "home-beta", ".hypervibe-brain", `sync-${stateFile}.json`);
   writeFileSync(statePath, JSON.stringify({ ...JSON.parse(readFileSync(statePath, "utf8")), stash }), "utf8");
   const head8 = head(B);
   r = sync(BETA);
@@ -196,7 +196,7 @@ try {
 
   // ---- 10. the evening on the other computer: save and sync, nothing of the runner's
   on(BETA, "routines.mjs", ["run-now"]);
-  const logDir = join(BASE, "home-beta", ".hyperbrain", "logs");
+  const logDir = join(BASE, "home-beta", ".hypervibe-brain", "logs");
   const log = existsSync(logDir) ? readFileSync(join(logDir, readdirSync(logDir).filter((n) => n.startsWith("nightly-")).sort().at(-1)), "utf8") : "";
   check("10. beta's evening: save and sync; sources, cold copy and app left to the runner", log.includes("not the runner (alpha)") && log.includes("sync.mjs exit 0") && !log.includes("sources.mjs") && !log.includes("cold-copy.mjs"), log);
 } finally {

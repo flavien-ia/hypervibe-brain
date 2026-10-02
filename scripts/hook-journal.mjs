@@ -6,7 +6,7 @@
 // It only writes if the person chose the "journal" component. It never prints
 // anything and never fails: a hook that speaks or breaks disturbs every
 // conversation. One line per session and per six hours, in
-// ~/.hyperbrain/journal.jsonl; lines older than 90 days are dropped.
+// ~/.hypervibe-brain/journal.jsonl; lines older than 90 days are dropped.
 // The weekly review reads it: "what you worked on this week".
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -14,9 +14,9 @@ import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
 try {
-  const HOME = process.env.HYPERBRAIN_HOME || homedir();
-  const config = JSON.parse(readFileSync(join(HOME, ".hyperbrain", "config.json"), "utf8"));
-  const brain = JSON.parse(readFileSync(join(config.brain, "hyperbrain.json"), "utf8"));
+  const HOME = process.env.HVBRAIN_HOME || homedir();
+  const config = JSON.parse(readFileSync(join(HOME, ".hypervibe-brain", "config.json"), "utf8"));
+  const brain = JSON.parse(readFileSync(join(config.brain, "brain.json"), "utf8"));
   if (brain.sources?.journal !== true) process.exit(0);
 
   let input = {};
@@ -27,7 +27,7 @@ try {
   }
   const cwd = String(input.cwd || process.cwd()).replace(/\\/g, "/");
   const session = String(input.session_id || "");
-  const file = join(HOME, ".hyperbrain", "journal.jsonl");
+  const file = join(HOME, ".hypervibe-brain", "journal.jsonl");
   const now = Date.now();
 
   const lines = existsSync(file) ? readFileSync(file, "utf8").split("\n").filter(Boolean) : [];

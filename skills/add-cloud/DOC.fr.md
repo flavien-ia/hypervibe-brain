@@ -1,4 +1,4 @@
-# /add-cloud
+# /brain:add-cloud
 
 Rend votre brain **lisible depuis le cloud, en lecture seule**, par les agents en ligne que vous choisissez. Une copie est placée sur votre propre compte Cloudflare, en Europe, derrière un petit serveur qui ne répond qu'aux agents à qui vous avez donné une clé.
 
@@ -30,8 +30,8 @@ Rend votre brain **lisible depuis le cloud, en lecture seule**, par les agents e
 
 - Un brain déjà créé, et être sur l'ordinateur qui le fait tourner
 - Un compte Cloudflare gratuit (Claude vous guide pour le créer)
-- La sauvegarde du soir (`/add-routines`) pour que la copie reste à jour
-- Pour la recherche par le sens en ligne : qu'elle soit déjà active sur le brain (`/add-meaning`), le serveur reprend la même clé
+- La sauvegarde du soir (`/brain:add-routines`) pour que la copie reste à jour
+- Pour la recherche par le sens en ligne : qu'elle soit déjà active sur le brain (`/brain:add-meaning`), le serveur reprend la même clé
 
 ## Astuces
 

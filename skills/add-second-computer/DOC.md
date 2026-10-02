@@ -1,4 +1,4 @@
-# /add-second-computer
+# /brain:add-second-computer
 
 Puts the **same brain on two computers** (a desktop and a laptop, for instance). What you write on one is on the other the same evening, or at once when you capture a thought. The two meet on your private online copy on GitHub.
 
@@ -13,10 +13,10 @@ Puts the **same brain on two computers** (a desktop and a laptop, for instance).
 
 1. **The explanation**: Claude tells you how the two computers share the work and what it implies, before changing anything.
 2. **The role of each**: one of the two **runs the brain** (it follows your sources, computes the search by meaning, keeps the directory, makes the weekly review and the letter). The other one reads and writes notes, and receives all of that. Choose the one that is on most often.
-3. **The online copy**: if the brain has no copy on GitHub yet, Claude runs `/add-backup` first, then comes back here.
+3. **The online copy**: if the brain has no copy on GitHub yet, Claude runs `/brain:add-backup` first, then comes back here.
 4. **On the first computer**: on your word, Claude marks it as the one that runs the brain. With your agreement, the brain now records and sends its changes there by itself, and Claude sends what is there a first time.
-5. **On the second computer**: you open Claude there, with Hyperbrain installed (`/start-hyperbrain` first), and say "add this computer to my brain". Claude checks the access to GitHub, fetches the brain into a folder of your home space, and asks for the same agreement.
-6. **The evening save, there too**: Claude runs `/add-routines` on the second computer, for the evening save only. Its evening does less: it saves its notes and synchronises, nothing else.
+5. **On the second computer**: you open Claude there, with Hypervibe Brain installed (`/brain:start` first), and say "add this computer to my brain". Claude checks the access to GitHub, fetches the brain into a folder of your home space, and asks for the same agreement.
+6. **The evening save, there too**: Claude runs `/brain:add-routines` on the second computer, for the evening save only. Its evening does less: it saves its notes and synchronises, nothing else.
 7. **The trial, together**: you capture a thought on one computer, say "synchronise my brain" on the other, and the note is there.
 
 ## What it creates for you
@@ -28,8 +28,8 @@ Puts the **same brain on two computers** (a desktop and a laptop, for instance).
 
 ## Prerequisites
 
-- A brain already created, with its online copy on GitHub (`/add-backup`)
-- Hyperbrain installed on both computers
+- A brain already created, with its online copy on GitHub (`/brain:add-backup`)
+- Hypervibe Brain installed on both computers
 - On the second one, access to the GitHub account that holds your private brain
 - Your agreement, given on each computer, for the brain to send its changes by itself
 
@@ -44,5 +44,5 @@ On the second computer, the brain goes in a folder of your home space, never in 
 {{/callout}}
 
 {{callout:tip|Changing the main computer}}
-To have the other computer run the brain in turn, tell Claude: it stops the evening save and the review on the old one, gives the role to the new one, then sets the tasks up there with `/add-routines`. When offline, there is nothing to do: the delay is caught up at the next run.
+To have the other computer run the brain in turn, tell Claude: it stops the evening save and the review on the old one, gives the role to the new one, then sets the tasks up there with `/brain:add-routines`. When offline, there is nothing to do: the delay is caught up at the next run.
 {{/callout}}

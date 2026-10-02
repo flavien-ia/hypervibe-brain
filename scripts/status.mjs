@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // status.mjs - Where this brain stands, for the person and for the skill that
-// guides its construction (/hyperbrain:create-brain reads it to resume at the right
+// guides its construction (/brain:create reads it to resume at the right
 // stage). Reads only; changes nothing.
 //
 //   node scripts/status.mjs [--json]

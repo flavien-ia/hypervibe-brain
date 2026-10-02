@@ -1,4 +1,4 @@
-# /add-backup
+# /brain:add-backup
 
 Protects your brain against loss: **a private online copy on GitHub**, **a cold copy** every week in a place you choose, or both. Both are recommended, because they do not protect against the same accidents.
 
@@ -7,7 +7,7 @@ Protects your brain against loss: **a private online copy on GitHub**, **a cold 
 - Your brain exists only on your computer and you do not want to lose it to a breakdown, a theft or an accident
 - You want to be able to go back to a past version of a note
 - You want a complete offline archive that depends on no account
-- You are preparing to put the brain on a second computer (`/add-second-computer` needs the online copy)
+- You are preparing to put the brain on a second computer (`/brain:add-second-computer` needs the online copy)
 
 ## How it goes
 
@@ -18,7 +18,7 @@ Protects your brain against loss: **a private online copy on GitHub**, **a cold 
 5. **Sending by itself**: Claude asks whether the brain may send its saves to GitHub by itself (at each capture and every evening), or only when you ask. It is a permission you give or not.
 6. **The cold copy, the place**: you say where to keep it. An external drive or a USB key is the safest; a synced folder (Dropbox, iCloud Drive, OneDrive) is fine too. One constraint: not inside the brain itself.
 7. **The first cold copy**: Claude makes it right away, verifies it before keeping it, and gives you the file created and the number of saves it holds.
-8. **Afterwards**: the evening save makes a new one every seven days. If it is not set up, Claude says so and offers `/add-routines`.
+8. **Afterwards**: the evening save makes a new one every seven days. If it is not set up, Claude says so and offers `/brain:add-routines`.
 
 ## What it creates for you
 
@@ -30,10 +30,10 @@ Protects your brain against loss: **a private online copy on GitHub**, **a cold 
 
 ## Prerequisites
 
-- A brain already created (`/create-brain`)
+- A brain already created (`/brain:create`)
 - For the online copy: a free GitHub account (Claude guides you to create it)
 - For the cold copy: a place to keep it, and no account
-- For the cold copy to renew itself: the evening save (`/add-routines`)
+- For the cold copy to renew itself: the evening save (`/brain:add-routines`)
 
 ## Tips
 

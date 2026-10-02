@@ -1,4 +1,4 @@
-# /add-routines
+# /brain:add-routines
 
 Met en place ce qui se passe sans que vous le demandiez : **la sauvegarde du soir** (sans IA, sans coût), **la revue de la semaine** par Claude, et, si vous le voulez, une lettre par email qui la résume. La même skill sert à vérifier ces tâches, à changer leur horaire ou à les arrêter.
 
@@ -28,7 +28,7 @@ Met en place ce qui se passe sans que vous le demandiez : **la sauvegarde du soi
 
 ## Prérequis
 
-- Un brain déjà créé (`/create-brain`)
+- Un brain déjà créé (`/brain:create`)
 - Pour la revue automatique : l'application de bureau Claude, ouverte au moment prévu
 - Pour la lettre : votre messagerie reliée à Claude, ou un compte Brevo ou Resend avec une adresse d'expéditeur vérifiée
 

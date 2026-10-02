@@ -3,7 +3,7 @@ name: add-routines
 description: Set up, check or stop what happens without you asking - the evening save of your second brain (no AI, no cost), its weekly review by Claude, and the review sent to you by email.
 ---
 
-# /add-routines - What happens without the person asking
+# /brain:add-routines - What happens without the person asking
 
 Two automatic tasks, of two different natures. Present them in these words (translated), before setting anything up:
 
@@ -36,7 +36,7 @@ Then run it once right away, so that the person sees it work:
 node "${CLAUDE_SKILL_DIR}/../../scripts/routines.mjs" run-now
 ```
 
-`lastRun` must show `build.mjs exit 0` and `save.mjs exit 0` (and `cold-copy.mjs`, `viz.mjs` lines, which do nothing when not chosen). Otherwise read the trace (`~/.hyperbrain/logs/`, and on a Mac `launchd.err.log` there too), explain in plain words, fix.
+`lastRun` must show `build.mjs exit 0` and `save.mjs exit 0` (and `cold-copy.mjs`, `viz.mjs` lines, which do nothing when not chosen). Otherwise read the trace (`~/.hypervibe-brain/logs/`, and on a Mac `launchd.err.log` there too), explain in plain words, fix.
 
 **On a Mac, say two things before the first evening**:
 - macOS shows a notification "Background Items Added: node". It is this save; if it is switched off in System Settings, Login Items, the save stops without a word.
@@ -52,9 +52,9 @@ Ask the day and time (for instance Sunday 6 pm).
 
 **If this session offers a tool to create scheduled tasks** (the Claude desktop app has one, on Windows and on Mac), create a weekly task with exactly this prompt:
 
-> Run the skill /hyperbrain:brain-review in automatic mode: nobody is at the screen, ask no question, modify no trusted note. End with the five-line summary.
+> Run the skill /brain:review in automatic mode: nobody is at the screen, ask no question, modify no trusted note. End with the five-line summary.
 
-Name it `hyperbrain-weekly-review`. Then record it, so that `/hyperbrain:brain-status` can report it:
+Name it `brain-weekly-review`. Then record it, so that `/brain:status` can report it:
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/../../scripts/routines.mjs" note-review --when "<day and time, in plain words>" --id "<the task's id or name>"
@@ -80,7 +80,7 @@ On a yes, **the channel**, in this order of preference:
 node "${CLAUDE_SKILL_DIR}/../../scripts/letter.mjs" setup --channel <connector|brevo|resend> --to <their address> [--from <verified sender>]
 ```
 
-**A first letter, right now**, so that they see it and say whether it suits them: write a short one from the brain's current state (the structure is in `/hyperbrain:brain-review`, Step 6), send it with `letter.mjs send`, and ask them to check their inbox (and the spam folder, the first time). Their taste (shorter, another tone) is noted in `BRAIN.md`, and the review follows it.
+**A first letter, right now**, so that they see it and say whether it suits them: write a short one from the brain's current state (the structure is in `/brain:review`, Step 6), send it with `letter.mjs send`, and ask them to check their inbox (and the spam folder, the first time). Their taste (shorter, another tone) is noted in `BRAIN.md`, and the review follows it.
 
 To stop it: `node "${CLAUDE_SKILL_DIR}/../../scripts/letter.mjs" setup --channel none`.
 

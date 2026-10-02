@@ -25,7 +25,7 @@
 // TRUST. A script that arrives with a clone (a second computer, a restored
 // copy) must not run by itself: it runs only once the person approved it ON
 // THIS COMPUTER, and a script that changed since is not run again until it is
-// approved again. The approvals live in ~/.hyperbrain/config.json, never in
+// approved again. The approvals live in ~/.hypervibe-brain/config.json, never in
 // the brain.
 //
 //   node scripts/sources.mjs list [--json]
@@ -105,7 +105,7 @@ function execute(n) {
     windowsHide: true,
     timeout: (d.timeoutMin ?? 5) * 60_000,
     maxBuffer: 64 * 1024 * 1024,
-    env: { ...process.env, HYPERBRAIN_BRAIN_DIR: ROOT, HYPERBRAIN_SOURCE_SINCE: state(n).lastSuccess ?? "", HYPERBRAIN_SOURCE_NAME: n },
+    env: { ...process.env, HVBRAIN_BRAIN_DIR: ROOT, HVBRAIN_SOURCE_SINCE: state(n).lastSuccess ?? "", HVBRAIN_SOURCE_NAME: n },
   });
   const err = String(r.stderr ?? "").split("\n").filter((l) => l.trim() && !/ExperimentalWarning|trace-warnings/.test(l)).slice(-3).join(" | ");
   if (r.error || r.status !== 0) return { ok: false, error: r.error?.code === "ETIMEDOUT" ? `stopped after ${d.timeoutMin ?? 5} min` : `exit ${r.status}${err ? `: ${err}` : ""}`.slice(0, 400) };
@@ -164,7 +164,7 @@ function runStep(n) {
     windowsHide: true,
     timeout: (d.timeoutMin ?? 5) * 60_000,
     maxBuffer: 64 * 1024 * 1024,
-    env: { ...process.env, HYPERBRAIN_BRAIN_DIR: ROOT, HYPERBRAIN_SOURCE_SINCE: st.lastSuccess ?? "", HYPERBRAIN_SOURCE_NAME: n },
+    env: { ...process.env, HVBRAIN_BRAIN_DIR: ROOT, HVBRAIN_SOURCE_SINCE: st.lastSuccess ?? "", HVBRAIN_SOURCE_NAME: n },
   });
   const lines = (s) => String(s ?? "").split("\n").filter((l) => l.trim() && !/ExperimentalWarning|trace-warnings/.test(l));
   const report = lines(r.stdout).slice(-3).join(" | ").slice(0, 400);
@@ -281,8 +281,8 @@ const TEMPLATE_STEP = (n, d) => `// ${n}: ${d.description ?? "a step of this bra
 // A STEP writes no note: it publishes, mirrors or checks something, every
 // ${d.every === "day" ? "evening" : "week"}, ${d.when === "before" ? "before the index is rebuilt" : "once the evening's save is done"}.
 // What it prints is its report (the last lines are kept); exit with a non-zero
-// code when something went wrong. It receives HYPERBRAIN_BRAIN_DIR and
-// HYPERBRAIN_SOURCE_SINCE (the date of its last success), and runs in its own
+// code when something went wrong. It receives HVBRAIN_BRAIN_DIR and
+// HVBRAIN_SOURCE_SINCE (the date of its last success), and runs in its own
 // folder. A key it needs goes in the brain's .env, never here.
 // It runs only once approved on this computer, and again after any change.
 
@@ -293,7 +293,7 @@ const TEMPLATE_SCRIPT = (n, d) => `// ${n}: ${d.description ?? "a source of this
 //
 // THE CONTRACT. This program READS its source and prints, on its standard
 // output, ONE JSON OBJECT PER LINE, one per note to create. It writes nothing
-// itself: Hyperbrain writes the notes, with every check, and never twice the
+// itself: Hypervibe Brain writes the notes, with every check, and never twice the
 // same (the "id").
 //
 //   { "id": "a stable identifier of the item (an url, a database id...)",
@@ -316,13 +316,13 @@ const TEMPLATE_SCRIPT = (n, d) => `// ${n}: ${d.description ?? "a source of this
 // Only what is between <!-- figures:auto --> and <!-- /figures:auto --> is
 // rewritten (added at the end the first time), never the rest of the note.
 //
-// What it receives: HYPERBRAIN_SOURCE_SINCE (the date of its last success, empty
-// the first time: read only what is newer), HYPERBRAIN_BRAIN_DIR, and it runs
+// What it receives: HVBRAIN_SOURCE_SINCE (the date of its last success, empty
+// the first time: read only what is newer), HVBRAIN_BRAIN_DIR, and it runs
 // in its own folder. A key it needs goes in the brain's .env, never here.
 // Anything printed on the error output is kept as its error; exit with a
 // non-zero code when something went wrong: nothing will be written.
 
-const since = process.env.HYPERBRAIN_SOURCE_SINCE || "";
+const since = process.env.HVBRAIN_SOURCE_SINCE || "";
 
 // ... read the source here, then for each new item:
 // console.log(JSON.stringify({ id, title, body }));

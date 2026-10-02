@@ -5,12 +5,12 @@
 // What it does each evening, without any AI and at no cost: rebuild the index
 // (the vectors of new notes included, if a key is set), then commit what is
 // at rest and push if the person agreed to it. Its trace goes to
-// ~/.hyperbrain/logs/.
+// ~/.hypervibe-brain/logs/.
 //
 // The weekly REVIEW is not armed here: it needs Claude, so it is a scheduled
-// task of Claude itself, armed by the /hyperbrain:add-routines skill.
+// task of Claude itself, armed by the /brain:add-routines skill.
 //
-// WHY A LAUNCHER. The scheduler runs ~/.hyperbrain/nightly.mjs, which looks
+// WHY A LAUNCHER. The scheduler runs ~/.hypervibe-brain/nightly.mjs, which looks
 // up where the plugin lives at run time (pluginRoot in the settings file, or
 // a search of ~/.claude/plugins). A plugin update can move its folder; a task
 // pointing at the old path would fail in silence.
@@ -22,31 +22,37 @@
 //   node scripts/routines.mjs note-review --when "Sunday 18:00" --id <task> | --off
 //        (the weekly review is a task of Claude: this only records it, for the status)
 //
-// HYPERBRAIN_TASK_SUFFIX changes the task's name: the test bench arms its own
+// HVBRAIN_TASK_SUFFIX changes the task's name: the test bench arms its own
 // task, never the person's.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { HOME, PLUGIN_ROOT, setUserConfig, userConfig } from "./lib.mjs";
+import { HOME, LEGACY_NAME, PLUGIN_ROOT, setUserConfig, userConfig } from "./lib.mjs";
 import { brainLang, osLang, t } from "./i18n.mjs";
 
 const args = process.argv.slice(2);
 const command = args[0];
 const DRY = args.includes("--dry-run");
 const time = args.includes("--time") ? args[args.indexOf("--time") + 1] : "21:00";
-const SUFFIX = process.env.HYPERBRAIN_TASK_SUFFIX ?? "";
-const DIR = join(HOME, ".hyperbrain");
+const SUFFIX = process.env.HVBRAIN_TASK_SUFFIX ?? "";
+const DIR = join(HOME, ".hypervibe-brain");
 const LAUNCHER = join(DIR, "nightly.mjs");
 const VBS = join(DIR, "nightly.vbs");
 // The task's name is in the brain's language: the person sees it in their
 // scheduler. Once armed, the name is kept in the settings: a later change of
 // language must still find the task to stop it.
 const WORDS = t(userConfig().brain ? brainLang(userConfig().brain) : osLang());
-const TASK = userConfig().routines?.save?.task ?? `${WORDS.taskName}${SUFFIX}`;
-const LABEL = `fr.hyperbrain.nightly${SUFFIX.replace(/[^a-z0-9]/gi, "").toLowerCase()}`;
+// A save armed under the plugin's name of before (until 0.4) is removed from
+// the scheduler when the save is armed again, and armed under today's name.
+const STORED = userConfig().routines?.save?.task;
+const LEGACY = STORED && new RegExp(`^${LEGACY_NAME}\\b`, "i").test(STORED)
+  ? { task: STORED, label: `fr.${LEGACY_NAME}.nightly${SUFFIX.replace(/[^a-z0-9]/gi, "").toLowerCase()}`, mark: `# ${LEGACY_NAME}-nightly${SUFFIX}` }
+  : null;
+const TASK = LEGACY ? `${WORDS.taskName}${SUFFIX}` : STORED ?? `${WORDS.taskName}${SUFFIX}`;
+const LABEL = `fr.hypervibe.brain.nightly${SUFFIX.replace(/[^a-z0-9]/gi, "").toLowerCase()}`;
 const PLIST = join(HOME, "Library", "LaunchAgents", `${LABEL}.plist`);
-const CRON_MARK = `# hyperbrain-nightly${SUFFIX}`;
+const CRON_MARK = `# hypervibe-brain-nightly${SUFFIX}`;
 const OS = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "mac" : "linux";
 const out = (o) => console.log(JSON.stringify(o, null, args.includes("--json") ? 2 : 0));
 const fwd = (p) => p.replace(/\\/g, "/");
@@ -83,7 +89,7 @@ const sh = (cmd, a, input) => {
 const ps = (script) => sh("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script]);
 const psq = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
-const LAUNCHER_CODE = `// Written by Hyperbrain (scripts/routines.mjs). The evening save of the brain:
+const LAUNCHER_CODE = `// Written by Hypervibe Brain (scripts/routines.mjs). The evening save of the brain:
 // rebuild the index, then commit what is at rest and push if agreed.
 // It looks up the plugin at run time: an update of the plugin can move it.
 import { spawnSync } from "node:child_process";
@@ -92,8 +98,8 @@ import { hostname } from "node:os";
 import { join } from "node:path";
 
 const HOME = ${JSON.stringify(fwd(HOME))};
-const CONFIG = join(HOME, ".hyperbrain", "config.json");
-const LOGS = join(HOME, ".hyperbrain", "logs");
+const CONFIG = join(HOME, ".hypervibe-brain", "config.json");
+const LOGS = join(HOME, ".hypervibe-brain", "logs");
 const cfg = JSON.parse(readFileSync(CONFIG, "utf8"));
 mkdirSync(LOGS, { recursive: true });
 const localDay = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
@@ -119,7 +125,7 @@ if (!process.argv.includes("--force")) {
   if (done) process.exit(0);
 }
 // NEVER TWO AT ONCE: they would fight over git's own lock.
-const LOCK = join(HOME, ".hyperbrain", "nightly.lock");
+const LOCK = join(HOME, ".hypervibe-brain", "nightly.lock");
 try {
   process.kill(Number(readFileSync(LOCK, "utf8")), 0);
   log("another save is running: nothing done");
@@ -145,7 +151,7 @@ function findPlugin() {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
       if (!e.isDirectory() || e.name === "node_modules" || e.name.startsWith(".git")) continue;
       const p = join(dir, e.name);
-      if (existsSync(join(p, "scripts", "save.mjs")) && existsSync(join(p, "skills", "create-brain"))) found.push(p);
+      if (existsSync(join(p, "scripts", "save.mjs")) && existsSync(join(p, "skills", "create"))) found.push(p);
       else walk(p, depth + 1);
     }
   };
@@ -155,11 +161,11 @@ function findPlugin() {
 
 const root = findPlugin();
 if (!root) {
-  log("ERROR: the Hyperbrain plugin was not found (uninstalled?). Nothing done.");
+  log("ERROR: the Hypervibe Brain plugin was not found (uninstalled?). Nothing done.");
   process.exit(1);
 }
-if (!cfg.brain || !existsSync(join(cfg.brain, "hyperbrain.json"))) {
-  log("ERROR: no brain set up (~/.hyperbrain/config.json). Nothing done.");
+if (!cfg.brain || !existsSync(join(cfg.brain, "brain.json"))) {
+  log("ERROR: no brain set up (~/.hypervibe-brain/config.json). Nothing done.");
   process.exit(1);
 }
 // Rebuild (the vectors of new notes), save what is at rest, then the weekly
@@ -168,8 +174,8 @@ if (!cfg.brain || !existsSync(join(cfg.brain, "hyperbrain.json"))) {
 // persistent app, if there is one (both do nothing otherwise).
 // Two computers: only the runner computes (the sources, the cold copy, the
 // app); every computer saves its notes, then synchronises if allowed there.
-const brainCfg = JSON.parse(readFileSync(join(cfg.brain, "hyperbrain.json"), "utf8"));
-const me = String(cfg.computer ?? process.env.HYPERBRAIN_COMPUTER ?? hostname()).trim().toLowerCase();
+const brainCfg = JSON.parse(readFileSync(join(cfg.brain, "brain.json"), "utf8"));
+const me = String(cfg.computer ?? process.env.HVBRAIN_COMPUTER ?? hostname()).trim().toLowerCase();
 const runner = !brainCfg.runner || String(brainCfg.runner).toLowerCase() === me;
 if (!runner) log("not the runner (" + brainCfg.runner + "): its sources, cold copy and app are left to it");
 const steps = [
@@ -186,7 +192,7 @@ const steps = [
 for (const [script, extra] of steps) {
   // The command first (viz.mjs reads it as its first argument), the brain after.
   // The scripts read the same settings as this launcher (approvals of sources included).
-  const r = spawnSync(process.execPath, [join(root, "scripts", script), ...extra, "--brain", cfg.brain], { encoding: "utf8", windowsHide: true, timeout: 15 * 60_000, env: { ...process.env, HYPERBRAIN_HOME: HOME } });
+  const r = spawnSync(process.execPath, [join(root, "scripts", script), ...extra, "--brain", cfg.brain], { encoding: "utf8", windowsHide: true, timeout: 15 * 60_000, env: { ...process.env, HVBRAIN_HOME: HOME } });
   const text = ((r.stdout ?? "") + (r.stderr ?? "")).split("\\n").filter((l) => l.trim() && !/ExperimentalWarning|trace-warnings/.test(l)).join(" | ");
   log(script + " exit " + r.status + (text ? ": " + text.slice(0, 600) : ""));
 }
@@ -206,6 +212,16 @@ function writeLauncher() {
 
 function arm() {
   if (!userConfig().brain) return { ok: false, error: "no brain set up yet: create it first" };
+  if (LEGACY && !DRY) {
+    if (OS === "windows") ps(`Unregister-ScheduledTask -TaskName ${psq(LEGACY.task)} -Confirm:$false -ErrorAction SilentlyContinue; 'ok'`);
+    else if (OS === "mac") {
+      sh("launchctl", ["bootout", `gui/${process.getuid?.() ?? 501}/${LEGACY.label}`]);
+      rmSync(join(HOME, "Library", "LaunchAgents", `${LEGACY.label}.plist`), { force: true });
+    } else {
+      const kept = sh("crontab", ["-l"]).out.split("\n").filter((l) => l && !l.includes(LEGACY.mark) && !/no crontab/i.test(l));
+      sh("crontab", ["-"], kept.length ? `${kept.join("\n")}\n` : "");
+    }
+  }
   writeLauncher();
   const [h, m] = time.split(":").map(Number);
   let r;
@@ -285,7 +301,8 @@ function state() {
   const logs = join(DIR, "logs");
   const last = existsSync(logs) ? readdirSync(logs).filter((n) => n.startsWith("nightly-")).sort().at(-1) : null;
   const lastLines = last ? readFileSync(join(logs, last), "utf8").trim().split("\n").slice(-7) : [];
-  const s = { os: OS, task: TASK, armed: false, time: userConfig().routines?.save?.time ?? null, lastLog: last, lastRun: lastLines, review: userConfig().routines?.review ?? null };
+  // `rearm`: armed under the name of before, its launcher has moved: arm again, same time.
+  const s = { os: OS, task: TASK, rearm: Boolean(LEGACY), armed: false, time: userConfig().routines?.save?.time ?? null, lastLog: last, lastRun: lastLines, review: userConfig().routines?.review ?? null };
   if (OS === "windows") {
     const r = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
       `$t = Get-ScheduledTask -TaskName ${psq(TASK)} -ErrorAction SilentlyContinue; if ($t) { $i = $t | Get-ScheduledTaskInfo; '{0}|{1}|{2}|{3}' -f $t.State, $i.LastRunTime, $i.NextRunTime, $i.LastTaskResult }`], { encoding: "utf8", windowsHide: true });

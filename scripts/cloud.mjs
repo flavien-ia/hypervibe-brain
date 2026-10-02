@@ -7,7 +7,7 @@
 //
 //   node scripts/cloud.mjs setup [--name <name>] [--include-private]
 //        creates the database and the bucket, IN THE EU JURISDICTION (it can
-//        only be set at creation), and records them in hyperbrain.json
+//        only be set at creation), and records them in brain.json
 //   node scripts/cloud.mjs sync [--all]
 //        sends what changed since the last time (by difference: a missed
 //        evening is caught up at the next one); --all rewrites everything
@@ -44,21 +44,21 @@ const fail = (error) => {
   out({ ok: false, error });
   process.exit(1);
 };
-const CFG_FILE = join(ROOT, "hyperbrain.json");
+const CFG_FILE = join(ROOT, "brain.json");
 const cfg = config();
 const cloud = cfg.cloud ?? {};
-const TMP = join(HOME, ".hyperbrain", "cloud-work");
+const TMP = join(HOME, ".hypervibe-brain", "cloud-work");
 mkdirSync(TMP, { recursive: true });
 const PART = 20_000;
 
 // ---------------------------------------------------------------- wrangler
 /**
  * Runs wrangler without a shell (paths with spaces stay whole): the script of
- * HYPERBRAIN_WRANGLER (the test bench's fake), else the wrangler installed
+ * HVBRAIN_WRANGLER (the test bench's fake), else the wrangler installed
  * globally, else npx.
  */
 function wranglerCmd() {
-  if (process.env.HYPERBRAIN_WRANGLER) return [process.execPath, [process.env.HYPERBRAIN_WRANGLER]];
+  if (process.env.HVBRAIN_WRANGLER) return [process.execPath, [process.env.HVBRAIN_WRANGLER]];
   for (const root of ["pnpm", "npm"].map((pm) => spawnSync(pm, ["root", "-g"], { encoding: "utf8", shell: process.platform === "win32", windowsHide: true }).stdout?.trim()).filter(Boolean)) {
     const js = join(root, "wrangler", "bin", "wrangler.js");
     if (existsSync(js)) return [process.execPath, [js]];
@@ -126,7 +126,7 @@ const hashOf = (o) => createHash("sha256").update(JSON.stringify(o)).digest("hex
 // -------------------------------------------------------------------- setup
 if (command === "setup") {
   requireRunner(cfg);
-  const name = args.includes("--name") ? slugify(args[args.indexOf("--name") + 1]) : `hyperbrain-${slugify(cfg.name ?? "brain")}`;
+  const name = args.includes("--name") ? slugify(args[args.indexOf("--name") + 1]) : `brain-${slugify(cfg.name ?? "brain")}`;
   const created = {};
   if (!cloud.database) {
     const r = wrangler(["d1", "create", name, "--jurisdiction", "eu"]);
@@ -254,7 +254,7 @@ if (command === "setup") {
   requireRunner(cfg);
   if (!cloud.databaseId || !cloud.bucket) fail("no cloud copy yet: cloud.mjs setup first");
   // The Worker and the very files the computer runs, side by side.
-  const build = join(HOME, ".hyperbrain", "cloud", cloud.worker);
+  const build = join(HOME, ".hypervibe-brain", "cloud", cloud.worker);
   mkdirSync(build, { recursive: true });
   cpSync(join(PLUGIN_ROOT, "templates", "cloud", "worker.js"), join(build, "worker.js"));
   cpSync(join(PLUGIN_ROOT, "scripts", "pure.mjs"), join(build, "pure.mjs"));
@@ -299,13 +299,13 @@ if (command === "setup") {
     tokens.push({ name: subArg, hash: createHash("sha256").update(value).digest("hex"), private: args.includes("--private"), addresses: args.includes("--addresses"), created: new Date().toISOString().slice(0, 10) });
     writeTokens(tokens);
     const where = handOver(value, subArg);
-    const pushed = cloud.url ? pushTokens(join(HOME, ".hyperbrain", "cloud", cloud.worker)) : false;
+    const pushed = cloud.url ? pushTokens(join(HOME, ".hypervibe-brain", "cloud", cloud.worker)) : false;
     // The value never appears here: this output is read by Claude.
     out({ ok: true, name: subArg, private: args.includes("--private"), addresses: args.includes("--addresses"), value: where, active: pushed });
   } else if (sub === "revoke") {
     const tokens = readTokens().filter((t) => t.name !== subArg);
     writeTokens(tokens);
-    const pushed = cloud.url ? pushTokens(join(HOME, ".hyperbrain", "cloud", cloud.worker)) : false;
+    const pushed = cloud.url ? pushTokens(join(HOME, ".hypervibe-brain", "cloud", cloud.worker)) : false;
     out({ ok: true, revoked: subArg, active: pushed });
   } else fail("token create <name> [--private] [--addresses] | revoke <name> | list");
 } else if (command === "verify") {
@@ -336,11 +336,11 @@ function pushTokens(build, extra = []) {
 /** The value goes to the clipboard, or to a file the person opens and deletes. */
 function handOver(value, name) {
   const clip = process.platform === "win32" ? ["clip", []] : process.platform === "darwin" ? ["pbcopy", []] : ["xclip", ["-selection", "clipboard"]];
-  if (!process.env.HYPERBRAIN_NO_CLIPBOARD) {
+  if (!process.env.HVBRAIN_NO_CLIPBOARD) {
     const r = spawnSync(clip[0], clip[1], { input: value, windowsHide: true });
     if (r.status === 0) return "in the clipboard: paste it now into the agent's settings, then copy something else";
   }
-  const f = join(HOME, ".hyperbrain", `token-${name}.txt`);
+  const f = join(HOME, ".hypervibe-brain", `token-${name}.txt`);
   writeFileSync(f, `${value}\n`, { encoding: "utf8", mode: 0o600 });
   return `in ${f.replace(/\\/g, "/")}: open it, paste the value into the agent's settings, then delete the file`;
 }
@@ -348,7 +348,7 @@ function handOver(value, name) {
 // ------------------------------------------------------------------ verify
 async function verify() {
   if (!cloud.url) fail("not deployed yet: cloud.mjs deploy first");
-  const build = join(HOME, ".hyperbrain", "cloud", cloud.worker);
+  const build = join(HOME, ".hypervibe-brain", "cloud", cloud.worker);
   const checks = [];
   const check = (name, ok, detail = "") => checks.push({ name, ok: Boolean(ok), ...(ok ? {} : { detail: String(detail).slice(0, 300) }) });
   const ask = async (token, method, params = {}) => {
@@ -376,7 +376,7 @@ async function verify() {
   pushTokens(build, [temp]);
   try {
     const init = await settle(() => ask(value, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "verify", version: "1" } }), (r) => r.status === 200);
-    check("with a token, the handshake answers", init.status === 200 && init.body?.result?.serverInfo?.name === "hyperbrain-cloud", JSON.stringify(init));
+    check("with a token, the handshake answers", init.status === 200 && init.body?.result?.serverInfo?.name === "hypervibe-brain-cloud", JSON.stringify(init));
     const list = await ask(value, "tools/list");
     check("six tools", list.body?.result?.tools?.length === 6, JSON.stringify(list.body).slice(0, 200));
     const stats = JSON.parse((await ask(value, "tools/call", { name: "brain_stats", arguments: {} })).body?.result?.content?.[0]?.text ?? "{}");

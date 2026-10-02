@@ -1,11 +1,11 @@
 {
-  "name": "hyperbrain",
-  "description": "A second brain for Claude Code: your notes, ideas, projects and people as linked markdown files, searchable by words and by meaning, read by Claude from any session. Guided creation, capture, weekly review.",
-  "version": "0.3.1",
+  "name": "brain",
+  "description": "Hypervibe Brain, a second brain for Claude Code: your notes, ideas, projects and people as linked markdown files, searchable by words and by meaning, read by Claude from any session. Guided creation, capture, weekly review.",
+  "version": "0.4.0",
   "author": {
     "name": "Flavien Chervet"
   },
-  "repository": "https://github.com/flavien-ia/hyperbrain-harness",
+  "repository": "https://github.com/flavien-ia/hypervibe-brain",
   "license": "Apache-2.0",
   "keywords": [
     "claude-code",

@@ -2,7 +2,7 @@
 // tool.mjs - Runs ONE question of the MCP server, in a fresh process.
 //
 // Why a process per question: the server starts with the Claude session, and
-// the brain may be created during that very session (/hyperbrain:create-brain).
+// the brain may be created during that very session (/brain:create).
 // A long-lived process would keep the settings it read at start and see no
 // brain until the next session. A fresh process reads them each time; it
 // costs a fraction of a second.
@@ -23,7 +23,7 @@ const RUN = {
   // The directory is data, not notes: it is read from its file, not the index.
   brain_contact: (db, a) => {
     const dir = readDirectory();
-    if (!dir.contacts.length) return { error: "this brain has no contacts directory yet: /hyperbrain:brain-contacts sets it up" };
+    if (!dir.contacts.length) return { error: "this brain has no contacts directory yet: /brain:contacts sets it up" };
     return { generated: dir.generated, found: searchDirectory(dir, a.query ?? "", { limit: a.limit ?? 15 }) };
   },
 };
@@ -39,7 +39,7 @@ try {
 try {
   if (!RUN[name]) throw new Error(`unknown tool ${name}`);
   if (!hasBrain()) {
-    console.log(JSON.stringify({ ok: true, result: { error: "no second brain is set up on this computer yet: the person can create one with /hyperbrain:create-brain" } }));
+    console.log(JSON.stringify({ ok: true, result: { error: "no second brain is set up on this computer yet: the person can create one with /brain:create" } }));
   } else {
     const { db, warning } = await freshDb();
     try {

@@ -3,7 +3,7 @@ name: add-cloud
 description: Make your second brain reachable from the cloud, read only, by the online agents you choose - a copy on your own Cloudflare account in Europe, behind a door with one token per agent.
 ---
 
-# /add-cloud - The brain, reachable from the cloud
+# /brain:add-cloud - The brain, reachable from the cloud
 
 ## Communication
 - Reply in the person's language. Plain words: "a copy of your brain on your Cloudflare account, that only the agents you give a key to can read", never "a D1 database behind a Worker".
@@ -57,7 +57,7 @@ The brain keeps only the print of each key (`cloud/tokens.json`): who was given 
 
 ## To stop everything
 
-Revoke every key; then, with the person, delete the Worker, the database and the storage space in their Cloudflare dashboard, and remove `cloud` from `hyperbrain.json`.
+Revoke every key; then, with the person, delete the Worker, the database and the storage space in their Cloudflare dashboard, and remove `cloud` from `brain.json`.
 
 ## End
 

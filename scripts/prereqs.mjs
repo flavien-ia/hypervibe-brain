@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// prereqs.mjs - The silent audit of /start-hyperbrain: what this computer has,
+// prereqs.mjs - The silent audit of /start-brain: what this computer has,
 // what it lacks. Reads only; installs nothing (the skill installs, with the
 // person's agreement). Every command has its own timeout: a tool that hangs
 // on a network call becomes "timeout", never a frozen audit.
 //
-// It also records where the plugin lives (pluginRoot in ~/.hyperbrain/
+// It also records where the plugin lives (pluginRoot in ~/.hypervibe-brain/
 // config.json): the evening routine starts from there, and a plugin update
 // can move it.
 //
@@ -64,7 +64,7 @@ if (cloudflare.installed) {
 }
 
 const cfg = setUserConfig({ pluginRoot: PLUGIN_ROOT.replace(/\\/g, "/") });
-const brain = cfg.brain && existsSync(join(cfg.brain, "hyperbrain.json")) ? cfg.brain : null;
+const brain = cfg.brain && existsSync(join(cfg.brain, "brain.json")) ? cfg.brain : null;
 
 const report = {
   os,

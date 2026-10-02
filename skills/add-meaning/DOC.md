@@ -1,4 +1,4 @@
-# /add-meaning
+# /brain:add-meaning
 
 Turns on **search by meaning**: your brain finds a note even when you look for it with other words than its own. It needs an OpenAI key and costs a few cents for thousands of notes. The key never goes through the conversation.
 
@@ -25,7 +25,7 @@ Turns on **search by meaning**: your brain finds a note even when you look for i
 
 ## Prerequisites
 
-- A brain already created (`/create-brain`)
+- A brain already created (`/brain:create`)
 - An OpenAI account with a key and a small credit (Claude guides you to create them)
 - Another OpenAI-compatible service works too: tell Claude, and it records that service's address and key instead
 

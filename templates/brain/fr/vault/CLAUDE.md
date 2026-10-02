@@ -26,7 +26,7 @@ Choisis avec {{NAME}} à la création. Le dossier **est** le type : une fiche d'
 
 ## Les champs
 
-- `domaines` : un ou deux domaines, **pris dans la liste de `hyperbrain.json`**. Jamais vide : c'est une erreur bloquante.
+- `domaines` : un ou deux domaines, **pris dans la liste de `brain.json`**. Jamais vide : c'est une erreur bloquante.
 - `statut` : `graine` (écrite par la machine, pas encore validée), `fiable` (validée), `archive` (close).
 - `visibilite` : `public`, `interne` (le défaut), `prive` (le contenu n'est jamais montré à une IA).
 - `cree`, `touche` : dates `AAAA-MM-JJ` (création, dernière modification).

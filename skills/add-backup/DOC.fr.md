@@ -1,4 +1,4 @@
-# /add-backup
+# /brain:add-backup
 
 Protège votre brain contre la perte : **une copie privée en ligne sur GitHub**, **une copie froide** chaque semaine à l'endroit de votre choix, ou les deux. Les deux sont recommandées, parce qu'elles ne protègent pas des mêmes accidents.
 
@@ -7,7 +7,7 @@ Protège votre brain contre la perte : **une copie privée en ligne sur GitHub**
 - Votre brain n'existe que sur votre ordinateur et vous ne voulez pas le perdre en cas de panne, de vol ou de casse
 - Vous voulez pouvoir revenir à une version passée d'une fiche
 - Vous voulez une archive complète hors ligne, qui ne dépend d'aucun compte
-- Vous préparez l'installation du brain sur un second ordinateur (`/add-second-computer` a besoin de la copie en ligne)
+- Vous préparez l'installation du brain sur un second ordinateur (`/brain:add-second-computer` a besoin de la copie en ligne)
 
 ## Comment ça se passe
 
@@ -18,7 +18,7 @@ Protège votre brain contre la perte : **une copie privée en ligne sur GitHub**
 5. **L'envoi automatique** : Claude vous demande si le brain peut envoyer ses sauvegardes sur GitHub tout seul (à chaque capture et chaque soir), ou seulement quand vous le demandez. C'est une permission que vous donnez ou non.
 6. **La copie froide, l'endroit** : vous indiquez où la ranger. Un disque externe ou une clé USB est le plus sûr ; un dossier synchronisé (Dropbox, iCloud Drive, OneDrive) convient aussi. Seule contrainte : pas à l'intérieur du brain lui-même.
 7. **La première copie froide** : Claude la fait tout de suite, la vérifie avant de la garder, et vous donne le fichier créé et le nombre de sauvegardes qu'il contient.
-8. **La suite** : la sauvegarde du soir en refait une tous les sept jours. Si elle n'est pas en place, Claude vous le dit et vous propose `/add-routines`.
+8. **La suite** : la sauvegarde du soir en refait une tous les sept jours. Si elle n'est pas en place, Claude vous le dit et vous propose `/brain:add-routines`.
 
 ## Ce que ça crée pour vous
 
@@ -30,10 +30,10 @@ Protège votre brain contre la perte : **une copie privée en ligne sur GitHub**
 
 ## Prérequis
 
-- Un brain déjà créé (`/create-brain`)
+- Un brain déjà créé (`/brain:create`)
 - Pour la copie en ligne : un compte GitHub gratuit (Claude vous guide pour le créer)
 - Pour la copie froide : un endroit où la ranger, et aucun compte
-- Pour que la copie froide se refasse toute seule : la sauvegarde du soir (`/add-routines`)
+- Pour que la copie froide se refasse toute seule : la sauvegarde du soir (`/brain:add-routines`)
 
 ## Astuces
 

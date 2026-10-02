@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // components.mjs - What feeds this brain (its SOURCES) and what it does beyond
-// its notes (its MODULES), as the person chose them. Kept in hyperbrain.json.
+// its notes (its MODULES), as the person chose them. Kept in brain.json.
 //
 // SOURCES, the heart of the brain: what builds and enriches it, week after week.
 //   mail       the week's mail and calendar, read through the person's own
@@ -9,7 +9,7 @@
 //   journal    the work done with Claude: which projects, and their commits
 //   watch      folders whose new and changed files are looked at every week
 // (The person's existing writings are sources too, but they come in once,
-// through /hyperbrain:brain-ingest, and are listed in SOURCES.md.)
+// through /brain:ingest, and are listed in SOURCES.md.)
 //
 // MODULES, added by the add-* skills:
 //   backup     an online, private copy on GitHub (the brain's git remote)
@@ -31,7 +31,7 @@ import { join, resolve } from "node:path";
 import { HOME, ROOT, requireBrain } from "./lib.mjs";
 
 requireBrain();
-const FILE = join(ROOT, "hyperbrain.json");
+const FILE = join(ROOT, "brain.json");
 const LIVE_SOURCES = ["mail", "journal"];
 const MODULES = ["backup", "save", "review", "meaning"];
 const args = process.argv.slice(2);
@@ -74,7 +74,7 @@ if (command === "source") {
   }
   write();
 } else if (command === "viz-app") {
-  // The persistent app built with Hypervibe (/hyperbrain:brain-viz): where its
+  // The persistent app built with Hypervibe (/brain:viz): where its
   // repository is, and whether the evening save may push its data (each push
   // redeploys the app online: a permission, asked explicitly).
   if (!a1) fail("usage: viz-app <app folder> [--auto-push] | off");

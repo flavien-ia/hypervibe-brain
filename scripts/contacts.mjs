@@ -72,7 +72,7 @@ if (command === "search") {
   for (const c of dir.contacts) byTier[c.tier ?? 0] = (byTier[c.tier ?? 0] ?? 0) + 1;
   out({ ok: true, enabled: cfg.contacts?.enabled === true, file: directoryPath(cfg).replace(/\\/g, "/"), total: dir.contacts.length, byTier, withNote: dir.contacts.filter((c) => c.note).length, generated: dir.generated, rules: rules(cfg) });
 } else if (command === "enable" || command === "disable") {
-  const file = join(ROOT, "hyperbrain.json");
+  const file = join(ROOT, "brain.json");
   const raw = JSON.parse(readFileSync(file, "utf8"));
   raw.contacts = { ...(raw.contacts ?? {}), enabled: command === "enable" };
   if (opt("--core")) raw.contacts.core = Number(opt("--core"));

@@ -9,13 +9,13 @@
  */
 export function instructionsFor(name) {
   if (!name) {
-    return "Hyperbrain is installed but no second brain is set up on this computer yet. If the person talks about a second brain, notes to keep or ideas to remember, suggest /hyperbrain:start-hyperbrain (checks the prerequisites) then /hyperbrain:create-brain.";
+    return "Hypervibe Brain is installed but no second brain is set up on this computer yet. If the person talks about a second brain, notes to keep or ideas to remember, suggest /brain:start (checks the prerequisites) then /brain:create.";
   }
   return [
     `${name} has a second brain: their ideas, projects, the people who matter to them, their publications and decisions, as linked notes.`,
     `Query it WITHOUT BEING ASKED whenever an answer depends on what ${name} thinks, has already written or decided, or on who they know: before writing in their voice, summarising one of their positions, or talking about one of their projects. Search by words first, then by meaning (meaning: true) if nothing comes up.`,
     "Read it by its rules: a `trusted` note (`fiable` in a French brain) can be quoted as it is; a `seed` (`graine`) was written by a machine and not validated yet, handle it with care and say so; follow the `source` before asserting anything important.",
-    "Write to it ONLY through the /hyperbrain:brain skill (capture), never by writing a file by hand.",
+    "Write to it ONLY through the /brain:capture skill (capture), never by writing a file by hand.",
   ].join(" ");
 }
 

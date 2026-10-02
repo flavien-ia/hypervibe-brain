@@ -1,4 +1,4 @@
-# /add-meaning
+# /brain:add-meaning
 
 Active **la recherche par le sens** : votre brain retrouve une fiche même quand vous la cherchez avec d'autres mots que les siens. Cela demande une clé OpenAI et coûte quelques centimes pour des milliers de fiches. La clé ne passe jamais par la conversation.
 
@@ -25,7 +25,7 @@ Active **la recherche par le sens** : votre brain retrouve une fiche même quand
 
 ## Prérequis
 
-- Un brain déjà créé (`/create-brain`)
+- Un brain déjà créé (`/brain:create`)
 - Un compte OpenAI avec une clé et un petit crédit (Claude vous guide pour les créer)
 - Un autre service compatible avec OpenAI convient aussi : dites-le à Claude, il note son adresse et sa clé à la place
 

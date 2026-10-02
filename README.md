@@ -1,4 +1,4 @@
-# Hyperbrain
+# Hypervibe Brain
 
 **A second brain for Claude Code.** Your ideas, projects, the people who matter to you, what you have written and decided, as linked markdown notes. Claude consults them from any conversation, without being asked, and knows how to write to them properly.
 
@@ -22,13 +22,13 @@
 Requirements: Claude Code (desktop app or CLI). Node 22.13+ and git are checked, and installed if needed, by the first skill.
 
 ```
-/plugin marketplace add flavien-ia/hyperbrain-harness
-/plugin install hyperbrain@hyperbrain-harness
+/plugin marketplace add flavien-ia/hypervibe-brain
+/plugin install brain@hypervibe-brain
 ```
 
 **From a zip you received, in the Claude app (the simplest)**: without unzipping it, open **Customize > Plugins**, choose **Upload a plugin** and give it the zip file. No command to type. For an update, upload the new zip the same way.
 
-Then, in a new session: **`/hyperbrain:start-hyperbrain`**.
+Then, in a new session: **`/brain:start`**.
 
 ## The skills
 
@@ -36,36 +36,36 @@ Then, in a new session: **`/hyperbrain:start-hyperbrain`**.
 
 | Skill | What it does |
 |---|---|
-| `/hyperbrain:start-hyperbrain` | Checks this computer (Node, git, your git identity), installs what is missing, offers to create the brain. |
-| `/hyperbrain:create-brain` | The guided construction, like Hypervibe's `/bootstrap`: the decisions, the creation and first notes, the sources, then the modules you want. Resumes where you left off. |
-| `/hyperbrain:brain-sources` | What feeds the brain: your mail and calendar, the folders you work in, your work with Claude, your existing writings, and sources of your own, defined with you. |
-| `/hyperbrain:brain-contacts` | A directory of the people you exchange with by email, searchable in every conversation; only those who matter become notes. |
-| `/hyperbrain:brain-ingest` | Bring one of your writings in (notes, articles, documents), three trial notes first. |
-| `/hyperbrain:brain` | Capture a thought, classified right away (searches first, never duplicates). |
-| `/hyperbrain:brain-review` | The weekly review: what is new, what the sources brought, promotions, orphans, proposed links. |
-| `/hyperbrain:brain-status` | Where the brain stands, and the next useful step. |
+| `/brain:start` | Checks this computer (Node, git, your git identity), installs what is missing, offers to create the brain. |
+| `/brain:create` | The guided construction, like Hypervibe's `/bootstrap`: the decisions, the creation and first notes, the sources, then the modules you want. Resumes where you left off. |
+| `/brain:sources` | What feeds the brain: your mail and calendar, the folders you work in, your work with Claude, your existing writings, and sources of your own, defined with you. |
+| `/brain:contacts` | A directory of the people you exchange with by email, searchable in every conversation; only those who matter become notes. |
+| `/brain:ingest` | Bring one of your writings in (notes, articles, documents), three trial notes first. |
+| `/brain:capture` | Capture a thought, classified right away (searches first, never duplicates). |
+| `/brain:review` | The weekly review: what is new, what the sources brought, promotions, orphans, proposed links. |
+| `/brain:status` | Where the brain stands, and the next useful step. |
 
 **The modules**, proposed at the end of `create-brain`, or added whenever you want:
 
 | Family | Skill | What it does |
 |---|---|---|
-| Protect | `/hyperbrain:add-backup` | A private copy on GitHub, a weekly cold copy in a place you choose, or both. |
-| Make it live | `/hyperbrain:add-routines` | A save every evening (no AI, no cost), a review every week by Claude, and a letter by email that sums it up. |
-| Use | `/hyperbrain:add-meaning` | Search by meaning. |
-| | `/hyperbrain:brain-viz` | See the brain as a map: a page on your computer, or a private web app if Hypervibe is installed. |
-| Extend | `/hyperbrain:add-second-computer` | The same brain on a second computer, kept in sync through its private GitHub copy. |
-| | `/hyperbrain:add-cloud` | The brain readable from the cloud, read only, by the online agents you give a key to (your own Cloudflare account, in Europe). |
+| Protect | `/brain:add-backup` | A private copy on GitHub, a weekly cold copy in a place you choose, or both. |
+| Make it live | `/brain:add-routines` | A save every evening (no AI, no cost), a review every week by Claude, and a letter by email that sums it up. |
+| Use | `/brain:add-meaning` | Search by meaning. |
+| | `/brain:viz` | See the brain as a map: a page on your computer, or a private web app if Hypervibe is installed. |
+| Extend | `/brain:add-second-computer` | The same brain on a second computer, kept in sync through its private GitHub copy. |
+| | `/brain:add-cloud` | The brain readable from the cloud, read only, by the online agents you give a key to (your own Cloudflare account, in Europe). |
 
 ## How it is built
 
-- **The code lives in the plugin, the brain is only data**: a plugin update repairs every brain at once. The brain is found through `~/.hyperbrain/config.json`.
+- **The code lives in the plugin, the brain is only data**: a plugin update repairs every brain at once. The brain is found through `~/.hypervibe-brain/config.json`.
 - **Zero dependency**: the database is the SQLite built into Node, the MCP server speaks its protocol by hand. Nothing to install, nothing that breaks on install.
 - **The index is rebuilt from the notes**, by itself, whenever a note moved. The vectors of the search by meaning are versioned in git, one small file per note: a clone gets its semantic search back without a single paid call.
 - `tests/banc.mjs` plays the whole journey in a throwaway folder, with a fake home and a fake embeddings API; `tests/banc-sync.mjs` plays two computers around a local GitHub; `tests/banc-cloud.mjs` plays the cloud copy with a fake wrangler and the real Worker. Run all three after any change.
 
 ## Related
 
-**Hyperbrain entreprise** is a separate tool: mapping a company's data and building its business ontology.
+**Hypervibe Brain entreprise** is a separate tool: mapping a company's data and building its business ontology.
 
 ## License
 

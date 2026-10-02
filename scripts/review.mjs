@@ -10,15 +10,15 @@
 // types the person keeps for themselves (ideas by default). Every promotion is
 // listed in the report and kept in index/promotions.jsonl: the person can send
 // a note back to seed in one word.
-// What does not count as a link (hyperbrain.json, `promotion`):
+// What does not count as a link (brain.json, `promotion`):
 //   ignoreLinksFrom  types, or folders (ending with /), whose links are
 //                    plumbing: a domain note that lists everything, a directory
 //                    of people that names each one's company...
 //   a line marked ":auto"  written by a program, not by thought
 //   minDays          the age a seed must reach (14 by default)
 //
-// THE LIVE SOURCES it reports on, when the person chose them (hyperbrain.json):
-//   journal  the projects worked on with Claude this week (~/.hyperbrain/journal.jsonl),
+// THE LIVE SOURCES it reports on, when the person chose them (brain.json):
+//   journal  the projects worked on with Claude this week (~/.hypervibe-brain/journal.jsonl),
 //            with their commits, read from each project's own git history: no
 //            global git hook (that setting belongs to other tools, Hypervibe's
 //            secret scanner among them)
@@ -109,7 +109,7 @@ let journal = [];
 if (sources.journal) {
   const byProject = new Map();
   try {
-    for (const line of readFileSync(join(HOME, ".hyperbrain", "journal.jsonl"), "utf8").split("\n")) {
+    for (const line of readFileSync(join(HOME, ".hypervibe-brain", "journal.jsonl"), "utf8").split("\n")) {
       if (!line.trim()) continue;
       try {
         const e = JSON.parse(line);
