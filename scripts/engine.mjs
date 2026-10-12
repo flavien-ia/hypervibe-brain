@@ -53,14 +53,25 @@ function allVectors(db) {
 // Shared with the cloud Worker (pure.mjs): same ranking here and there.
 const nearest = (db, query, limit, exclude) => nearestRows(allVectors(db), query, limit, exclude);
 
-export async function search(db, q, { semantic = false, limit = 10, type, domain, includePrivate = false } = {}) {
-  const filter = (r) => (!type || r.type === type) && (!domain || r.domains.includes(domain));
+// FOLDERS HIDDEN FROM SEARCH. A brain can keep folders out of search and
+// neighbours unless asked (brain.json, search.hidden: ["people/directory/"]):
+// hundreds of near-identical notes of contacts would drown the ideas. They
+// stay readable by brain_get, and `everything` brings them back.
+const hiddenPrefixes = () => (config().search?.hidden ?? []).map((p) => String(p).replace(/\\/g, "/").replace(/^\/+/, ""));
+const isHidden = (rel) => {
+  const r = String(rel ?? "").replace(/\\/g, "/").replace(/^vault\//, "");
+  return hiddenPrefixes().some((p) => r.startsWith(p));
+};
+
+export async function search(db, q, { semantic = false, limit = 10, type, domain, includePrivate = false, everything = false } = {}) {
+  const filter = (r) => (!type || r.type === type) && (!domain || r.domains.includes(domain)) && (everything || !isHidden(r.rel));
+  const wide = hiddenPrefixes().length && !everything ? 10 : 3;
   if (semantic) {
     loadEnv();
     if (!embeddingsAvailable()) throw new Error("search by meaning needs an embeddings key in the brain's .env (see the brain's CLAUDE.md)");
     const [qv] = await embed([q], config());
     const get = db.prepare("SELECT * FROM fiche WHERE slug = ?");
-    return nearest(db, qv, limit * 3)
+    return nearest(db, qv, limit * wide)
       .map((n) => ({ ...row(get.get(n.slug)), score: Math.round(n.score * 1000) / 1000 }))
       .filter(filter)
       .slice(0, limit)
@@ -70,7 +81,7 @@ export async function search(db, q, { semantic = false, limit = 10, type, domain
   if (!words.length) return [];
   const rows = db
     .prepare("SELECT f.* FROM fts JOIN fiche f ON f.slug = fts.slug WHERE fts MATCH ? ORDER BY bm25(fts, 0, 8, 1) LIMIT ?")
-    .all(match, limit * 3)
+    .all(match, limit * wide)
     .map(row)
     .filter(filter)
     .slice(0, limit);
@@ -97,7 +108,7 @@ export function get(db, slug, { includePrivate = false } = {}) {
   };
 }
 
-export function neighbors(db, slug, { limit = 8 } = {}) {
+export function neighbors(db, slug, { limit = 8, everything = false } = {}) {
   const f = get(db, slug);
   if (!f) return null;
   const v = db.prepare("SELECT vec FROM vec WHERE slug = ?").get(slug);
@@ -105,8 +116,13 @@ export function neighbors(db, slug, { limit = 8 } = {}) {
   if (v) {
     const buf = Buffer.from(v.vec);
     const q = new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4);
-    const title = db.prepare("SELECT title, type FROM fiche WHERE slug = ?");
-    similar = nearest(db, q, limit, new Set([slug])).map((n) => ({ slug: n.slug, ...title.get(n.slug), score: Math.round(n.score * 1000) / 1000 }));
+    const title = db.prepare("SELECT title, type, rel FROM fiche WHERE slug = ?");
+    const keep = everything || isHidden(f.file);
+    similar = nearest(db, q, keep ? limit : limit * 10, new Set([slug]))
+      .map((n) => ({ slug: n.slug, ...title.get(n.slug), score: Math.round(n.score * 1000) / 1000 }))
+      .filter((n) => keep || !isHidden(n.rel))
+      .slice(0, limit)
+      .map(({ rel, ...n }) => n);
   }
   return { slug, title: f.title, links: f.links, backlinks: f.backlinks, similar };
 }

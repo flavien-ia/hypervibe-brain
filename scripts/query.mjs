@@ -3,6 +3,7 @@
 //
 //   query.mjs search "several words"          every word, anywhere, accents ignored
 //   query.mjs search --meaning "an idea"      by meaning (needs an embeddings key)
+//   query.mjs search ... --everything         also the folders hidden from search (search.hidden in brain.json)
 //   query.mjs get <slug>                      one note, its links and backlinks
 //   query.mjs neighbors <slug>                what surrounds a note
 //   query.mjs timeline [--since 2026-09]      in the order of time
@@ -29,14 +30,14 @@ const limit = opt("--limit") ? Number(opt("--limit")) : undefined;
 
 try {
   if (command === "search") {
-    const r = await search(db, text, { semantic: flag("--meaning") || flag("--semantic"), limit, type: opt("--type"), domain: opt("--domain"), includePrivate: flag("--local") });
+    const r = await search(db, text, { semantic: flag("--meaning") || flag("--semantic"), limit, type: opt("--type"), domain: opt("--domain"), includePrivate: flag("--local"), everything: flag("--everything") });
     if (flag("--json")) json(r);
     else {
       console.log(`\n${r.length} result(s) for "${text}"\n`);
       for (const x of r) console.log(`  ${x.score !== undefined ? `${x.score.toFixed(3)}  ` : ""}${x.slug}  [${x.type}]  ${x.title}\n      ${x.excerpt}`);
     }
   } else if (command === "get") {
-    const r = get(db, text, { includePrivate: flag("--local") });
+    const r = get(db, text, { includePrivate: flag("--local"), everything: flag("--everything") });
     if (!r) throw new Error(`no note named "${text}" (search for it first)`);
     if (flag("--json")) json(r);
     else {

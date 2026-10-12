@@ -31,6 +31,7 @@ export const TOOLS = [
         limit: { type: "number", description: "How many results (default 10)" },
         type: { type: "string", description: "Only this type (the brain's own types: brain_stats lists them)" },
         domain: { type: "string", description: "Only this domain" },
+        everything: { type: "boolean", description: "Also search the folders this brain keeps out of search by default (search.hidden in brain.json, for instance its contacts' notes)" },
       },
       required: ["query"],
     },
@@ -43,7 +44,7 @@ export const TOOLS = [
   {
     name: "brain_neighbors",
     description: "What surrounds a note: the notes it links to, the notes that link to it, and the closest notes by meaning. Use it to understand a context rather than a single fact.",
-    inputSchema: { type: "object", properties: { slug: { type: "string" }, limit: { type: "number" } }, required: ["slug"] },
+    inputSchema: { type: "object", properties: { slug: { type: "string" }, limit: { type: "number" }, everything: { type: "boolean", description: "Also the folders hidden from search by default" } }, required: ["slug"] },
   },
   {
     name: "brain_timeline",

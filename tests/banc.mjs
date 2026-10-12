@@ -647,6 +647,17 @@ try {
     writeFileSync(join(posts, "data.json"), JSON.stringify([{ id: "base:post/10", source: "base:post/10", slug: longName, title: "Nom long", body: "Un post.", status: "trusted", fields: { date_evenement: "2026-09-28" } }]), "utf8");
     r = node("sources.mjs", ["run", "fil"]);
     const longPost = join(BRAIN, "vault", "sources", `${longName}.md`);
+    // A folder hidden from search: out unless asked, still there.
+    {
+      const bj = join(BRAIN, "brain.json");
+      const before = readFileSync(bj, "utf8");
+      writeFileSync(bj, JSON.stringify({ ...JSON.parse(before), search: { hidden: ["sources/linkedin/"] } }, null, 2), "utf8");
+      node("build.mjs", ["--quiet"]);
+      const hidden = json(node("query.mjs", ["search", "Premier post", "--json"]).out);
+      const all = json(node("query.mjs", ["search", "Premier post", "--everything", "--json"]).out);
+      check("a folder hidden from search stays out of it, unless asked for everything", !hidden.some((x) => x.slug === "premier-post") && all.some((x) => x.slug === "premier-post"), `${JSON.stringify(hidden)} ${JSON.stringify(all)}`);
+      writeFileSync(bj, before, "utf8");
+    }
     check("a source's own name for a note is kept whole, and its dates stay bare", r.ok && existsSync(longPost) && readFileSync(longPost, "utf8").includes("\ndate_evenement: 2026-09-28\n"), `${r.out} ${existsSync(longPost) ? readFileSync(longPost, "utf8") : "absent"}`);
     // A machine zone: a source keeps its own marked lines up to date inside a validated note.
     node("sources.mjs", ["add", "compteurs", "--kind", "script", "--every", "day", "--type", "note", "--domains", "ecriture", "--zones", "chiffres"]);
