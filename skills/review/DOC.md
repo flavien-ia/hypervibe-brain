@@ -11,18 +11,20 @@ The weekly review of your second brain: what is new, the seeds that took root an
 
 ## How it goes
 
-1. **Checking the brain**: Claude checks the notes and the links. If it finds errors, it notes them for the report and makes no promotion this time; with you, it offers to fix them together.
-2. **The report and the promotions**: the report lists the new notes, the seeds that became trusted, the orphans, the broken links, the sources that no longer exist and the coverage of your domains. Depending on your sources, it adds the projects worked on with Claude and the files that moved in the watched folders.
-3. **Claude's thinking**: it reads the report and completes it.
+1. **Catching up**: if the evening save has not run for more than a day, Claude runs it first, so that the week is told whole.
+2. **Checking the brain**: Claude checks the notes and the links. If it finds errors, it notes them for the report and makes no promotion this time; with you, it offers to fix them together.
+3. **The report and the promotions**: the report lists the new notes, the seeds that became trusted, the orphans, the broken links, the sources that no longer exist or changed since their note, and the coverage of your domains. Depending on your sources, it adds the projects worked on with Claude, on all your computers and with each session's title, and the files that moved in the watched folders.
+4. **Claude's thinking**: it reads the report and completes it. Before creating a note, it asks three questions: will you still want it in six months, is it absent from the brain, does it make sense outside this week? One no, and it does not create it.
+  - Sources gone or changed: each becomes a proposal (archive, re-read), once.
   - Proposed links for the new notes and the orphans (ten at most), and the duplicates it suspects, each with its reason. These are proposals: it does not apply them.
   - Work with Claude: a note proposed for each project that has none; for the others, what moved.
   - Watched folders: the files that deserve a note.
   - Mail and calendar: a seed for each new person who matters, each meeting worth remembering and each decision taken, never copying the text of an email.
   - Contacts directory: the week's exchanges, and a note proposed for anyone who rose to the core.
   - Your own sources: the ones done by Claude are carried out; a source in trouble is flagged at the top of the report.
-4. **The letter**, if you chose to have one: a summary of the week, the new seeds, the proposals, the promotions and a "collision" (two notes close in meaning that nothing links), sometimes old notes that came back into the week's activity, and the brain's health in three sentences. Everything in it is numbered so that you can answer.
-5. **Saving**: the brain is saved.
-6. **With you, afterwards**: you go through the report together. The promotions first (a disagreement sends the note back to seed), then the proposals one by one. A link you accept is added in front of you.
+5. **The letter**, if you chose to have one: a summary of the week, the new seeds, the proposals, the promotions and a "collision" (two notes close in meaning that nothing links), sometimes old notes that came back into the week's activity, and the brain's health in three sentences. Everything in it is numbered so that you can answer.
+6. **Saving**: the brain is saved.
+7. **With you, afterwards**: you go through the report together. The promotions first (a disagreement sends the note back to seed), then the proposals one by one. A link you accept is added in front of you.
 
 ## What it creates for you
 

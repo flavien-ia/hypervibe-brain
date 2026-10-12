@@ -13,7 +13,7 @@ Sets up what happens without you asking: **the evening save** (no AI, no cost), 
 
 1. **The presentation**: Claude explains the two tasks, which are of different natures, before touching anything.
 2. **Where things stand**: in two lines, what is already set up, the next run and how the last one went. Then you choose: set both up (recommended), change a time, stop a task, or nothing.
-3. **The evening save**: Claude asks for the time if 9 pm does not suit you, then hands the task to your computer's scheduler. Every evening, the computer records the day's changes, rebuilds the search, and sends everything to your online copy if you have one.
+3. **The evening save**: Claude asks for the time if 9 pm does not suit you, then hands the task to your computer's scheduler. Every evening, the computer records the day's changes, rebuilds the search, and sends everything to your online copy if you have one. If a step fails, a short alert leaves the same evening by the letter's channel (Brevo or Resend); otherwise it waits for you in "/brain:status" and in the next letter.
 4. **The immediate trial**: Claude runs the save a first time, so that you see it work. If something fails, it reads the trace, explains it in plain words and fixes it.
 5. **The weekly review**: you choose the day and time (for instance Sunday 6 pm). Claude creates a scheduled task in the Claude app. If your setup does not allow it, it says so and offers the manual habit instead: once a week, you say "review my brain".
 6. **The weekly letter**: Claude offers to send you the review by email. It leaves from your own mailbox (Gmail or Outlook connected to Claude), or from a Brevo or Resend account you already have. Your explicit agreement is asked before anything is sent.

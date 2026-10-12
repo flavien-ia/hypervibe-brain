@@ -32,7 +32,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { basename, join } from "node:path";
 import { appendFileSync } from "node:fs";
 import { readJournals } from "./journal.mjs";
-import { HOME, ROOT, computerName, config, promotionsFile, readVault, readsFile, requireBrain, requireRunner, today, validate, vocab } from "./lib.mjs";
+import { HOME, ROOT, computerName, config, userConfig, promotionsFile, readVault, readsFile, requireBrain, requireRunner, today, validate, vocab } from "./lib.mjs";
 import { brainLang, t } from "./i18n.mjs";
 import { readDirectory } from "./directory.mjs";
 
@@ -96,14 +96,52 @@ const orphans = fiches.filter((f) => f.fm.status !== "archived" && !f.links.leng
 const noSource = fiches.filter((f) => !f.fm.source);
 const broken = warnings.filter((w) => w.msg.startsWith("link to a note"));
 
-// A source that is a path on this computer, and that is gone.
+// A note's source on this computer: a path, or a scheme the person declared
+// for this computer in ~/.hypervibe-brain/config.json, "sourceRoots"
+// ({"dropbox": "C:/Users/me/Dropbox"} makes "dropbox://Work/a.docx" a file).
+// The folders differ from one computer to the other: never in brain.json.
 const LOCAL_PATH = /^(?:file:\/\/)?(?:[A-Za-z]:[\\/]|\/|~[\\/])/;
-const dead = fiches.filter((f) => {
-  const s = String(f.fm.source ?? "").trim();
-  if (!LOCAL_PATH.test(s)) return false;
-  const p = s.replace(/^file:\/\//, "").replace(/^~(?=[\\/])/, HOME);
-  return !existsSync(p);
-});
+const roots = userConfig().sourceRoots ?? {};
+function localPath(s) {
+  if (LOCAL_PATH.test(s)) return s.replace(/^file:\/\//, "").replace(/^~(?=[\\/])/, HOME);
+  const m = s.match(/^([a-z][\w+.-]*):\/\/(.+)$/i);
+  return m && roots[m[1]] ? join(roots[m[1]], ...m[2].split("/")) : null;
+}
+// The sources that are gone, and the ones modified after their note was last
+// touched: the note may be out of date. Types listed in brain.json,
+// review.changedIgnore, are left out of the second list (a finished record,
+// such as a published post, does not follow its file).
+const dead = [];
+const changed = [];
+const changedIgnore = new Set(cfg.review?.changedIgnore ?? []);
+for (const f of fiches) {
+  const p = localPath(String(f.fm.source ?? "").trim());
+  if (!p) continue;
+  if (!existsSync(p)) {
+    dead.push(f);
+    continue;
+  }
+  if (changedIgnore.has(f.fm.type) || !f.fm.updated) continue;
+  try {
+    const d = new Date(statSync(p).mtimeMs);
+    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (day > String(f.fm.updated)) changed.push({ f, day });
+  } catch {
+    // unreadable: said nowhere
+  }
+}
+changed.sort((a, b) => (a.f.fm.status === "trusted" ? 0 : 1) - (b.f.fm.status === "trusted" ? 0 : 1) || b.day.localeCompare(a.day));
+// What the review has already shown: an entry is "new" the first week it
+// appears, so that the letter proposes it once and not every week after.
+const SIGNALS = join(ROOT, "index", "signals.json");
+let signals = {};
+try {
+  signals = JSON.parse(readFileSync(SIGNALS, "utf8"));
+} catch {
+  signals = {};
+}
+const isNew = (key) => !signals[key] || signals[key] === today();
+const signalKeys = [...dead.map((f) => `dead:${f.slug}`), ...changed.map((c) => `changed:${c.f.slug}:${c.day}`)];
 
 // The work journal: sessions of Claude Code, by project, this week, on every
 // computer of the person (journal.mjs), with the titles of the sessions.
@@ -215,7 +253,7 @@ const line = (f) => `- [[${f.slug}]] (${f.fm.type}, ${f.fm.created}) ${f.fm.titl
 const nErr = errors.length + parseErrors.length;
 const out = [];
 out.push(L.title(cfg.name || "?", today()), "", L.summary(fiches.length, fresh.length, DAYS), "");
-out.push(L.health, "", nErr ? L.errors(nErr) : L.noError, L.broken(broken.length), L.noSource(noSource.length), L.orphansCount(orphans.length), L.deadSources(dead.length), "");
+out.push(L.health, "", nErr ? L.errors(nErr) : L.noError, L.broken(broken.length), L.noSource(noSource.length), L.orphansCount(orphans.length), L.deadSources(dead.length), L.changedSources(changed.length), "");
 out.push(L.domains, "", ...cfg.domains.map((d) => `- ${d}: ${byDomain[d] ?? 0}`), "");
 out.push(L.fresh(fresh.length), "", ...(fresh.length ? fresh.slice(0, 60).map(line) : [L.nothingNew]), "");
 const promoList = APPLY ? promoted : promotable;
@@ -223,7 +261,8 @@ out.push(APPLY ? L.promoted(promoted.length) : L.promotable(promotable.length), 
 if (APPLY && promoted.length) out.push("", L.disagree);
 out.push("", L.orphans(orphans.length), "", ...(orphans.length ? orphans.slice(0, 40).map(line) : [L.none]));
 if (broken.length) out.push("", L.brokenTitle, "", ...broken.slice(0, 40).map((w) => `- ${w.rel}: ${w.msg}`));
-if (dead.length) out.push("", L.deadTitle, "", ...dead.slice(0, 40).map((f) => `- [[${f.slug}]]: ${f.fm.source}`));
+if (dead.length) out.push("", L.deadTitle, "", ...dead.slice(0, 40).map((f) => `- [[${f.slug}]]: ${f.fm.source}${isNew(`dead:${f.slug}`) ? L.newMark : ""}`));
+if (changed.length) out.push("", L.changedTitle(changed.length), "", ...changed.slice(0, 40).map((c) => L.changedLine(c.f.slug, c.f.fm.status, c.day, c.f.fm.updated) + (isNew(`changed:${c.f.slug}:${c.day}`) ? L.newMark : "")));
 if (sources.journal) {
   out.push("", L.journal(journal.length), "");
   if (!journal.length) out.push(L.none);
@@ -249,5 +288,13 @@ out.push("");
 
 mkdirSync(join(ROOT, "reviews"), { recursive: true });
 writeFileSync(join(ROOT, "reviews", `${today()}.md`), out.join("\n"), "utf8");
-const summary = { report: `reviews/${today()}.md`, fresh: fresh.length, promoted: promoted.length, promotable: promotable.length, orphans: orphans.length, errors: nErr, deadSources: dead.length, journal: journal.length, moved: moved.length };
+// The real weekly run stamps what it showed, with the day it first appeared.
+if (APPLY) {
+  const next = {};
+  for (const k of signalKeys) next[k] = signals[k] ?? today();
+  mkdirSync(join(ROOT, "index"), { recursive: true });
+  writeFileSync(SIGNALS, `${JSON.stringify(next, null, 2)}
+`, "utf8");
+}
+const summary = { report: `reviews/${today()}.md`, fresh: fresh.length, promoted: promoted.length, promotable: promotable.length, orphans: orphans.length, errors: nErr, deadSources: dead.length, changedSources: changed.length, journal: journal.length, moved: moved.length };
 console.log(args.includes("--json") ? JSON.stringify(summary) : `review written: ${summary.report} (${fresh.length} new, ${APPLY ? `${promoted.length} promoted` : `${promotable.length} promotable`}, ${orphans.length} orphans, ${nErr} errors)`);

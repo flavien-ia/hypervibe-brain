@@ -205,9 +205,9 @@ export function isRunner(cfg = config()) {
 }
 
 /** What only the runner writes and commits. Everything else in the brain is canon. */
-export const DERIVED = [/^index\/embeddings\//, /^index\/(annuaire|directory)\.json$/, /^index\/promotions\.jsonl$/, /^reviews\//, /^sources\/[^/]+\/(seen|state)\.json$/];
+export const DERIVED = [/^index\/embeddings\//, /^index\/(annuaire|directory)\.json$/, /^index\/promotions\.jsonl$/, /^index\/signals\.json$/, /^reviews\//, /^sources\/[^/]+\/(seen|state)\.json$/];
 /** What the saves commit at all: anything else in the folder stays out of git. */
-export const OWNED = [/^vault\//, /^journal\/[^/]+\.jsonl$/, /^index\/embeddings\//, /^reviews\//, /^sources\//, /^index\/(annuaire|directory)\.json$/, /^index\/promotions\.jsonl$/, /^(BRAIN|SOURCES)\.md$/, /^brain\.json$/, /^hyperbrain\.json$/];
+export const OWNED = [/^vault\//, /^journal\/[^/]+\.jsonl$/, /^index\/embeddings\//, /^reviews\//, /^sources\//, /^index\/(annuaire|directory)\.json$/, /^index\/promotions\.jsonl$/, /^index\/signals\.json$/, /^(BRAIN|SOURCES)\.md$/, /^brain\.json$/, /^hyperbrain\.json$/];
 
 // A brain may add its own rules in brain.json, `ownership`:
 //   "canon":   files any computer commits (settings kept by hand...)

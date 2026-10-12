@@ -32,6 +32,21 @@ try {
 } catch {
   // no alert
 }
+// The last evening save on this computer, from its logs: the weekly review
+// runs one first when it is more than a day old.
+let lastSave = null;
+try {
+  const logs = join(HOME, ".hypervibe-brain", "logs");
+  for (const f of readdirSync(logs).filter((n) => /^nightly-\d{4}-\d{2}-\d{2}\.log$/.test(n)).sort().reverse()) {
+    const l = readFileSync(join(logs, f), "utf8").split("\n").filter((x) => x.includes("save.mjs exit")).at(-1);
+    if (l) {
+      lastSave = l.slice(0, 24);
+      break;
+    }
+  }
+} catch {
+  // no routine yet
+}
 const sources = existsSync(join(ROOT, "SOURCES.md")) ? readFileSync(join(ROOT, "SOURCES.md"), "utf8") : "";
 const s = {
   name: cfg.name,
@@ -58,6 +73,7 @@ const s = {
   sourcesPlanned: (sources.match(/^\s*- \[[ x]\]/gim) ?? []).length,
   lastReview: reviews.at(-1)?.slice(0, 10) ?? null,
   lastAlert,
+  lastSave,
 };
 
 if (process.argv.includes("--json")) console.log(JSON.stringify(s, null, 2));

@@ -302,6 +302,19 @@ try {
   check("the hook never fails, even on nonsense", r.ok);
 
   // A source that points to a file that is gone.
+  // A scheme of this computer: "atelier://" is a folder here (sourceRoots, in
+  // the computer's own settings). One source modified since its note, one gone.
+  {
+    const ATELIER = join(BASE, "atelier");
+    mkdirSync(ATELIER, { recursive: true });
+    const settings = join(HOME, ".hypervibe-brain", "config.json");
+    writeFileSync(settings, JSON.stringify({ ...JSON.parse(readFileSync(settings, "utf8")), sourceRoots: { atelier: ATELIER } }), "utf8");
+    writeFileSync(join(ATELIER, "plan.md"), "Le plan, revu depuis.\n", "utf8");
+    cap("Le plan du roman.", ["--title", "Plan du roman", "--type", "note", "--domains", "ecriture", "--source", "atelier://plan.md"]);
+    cap("Une esquisse.", ["--title", "Esquisse perdue", "--type", "note", "--domains", "ecriture", "--source", "atelier://esquisse.md"]);
+    const tomorrow = new Date(Date.now() + 86400_000);
+    utimesSync(join(ATELIER, "plan.md"), tomorrow, tomorrow);
+  }
   r = cap("Tiré d'un brouillon disparu.", ["--title", "Brouillon perdu", "--type", "note", "--domains", "ecriture", "--source", join(BASE, "n-existe-plus.docx")]);
   check("capture with a local source", r.ok, r.out);
 
@@ -332,14 +345,16 @@ try {
   check("an idea is never promoted by the machine", readFileSync(idPath, "utf8").includes("status: seed"));
   const report = readFileSync(join(BRAIN, "reviews", `${localDay()}.md`), "utf8");
   check("the report is in the brain's language", report.startsWith("# Review of Camille's brain"), report.slice(0, 80));
-  check("the report lists the dead source", report.includes("[[brouillon-perdu]]") && report.includes("1 source(s) pointing to a file"), report);
+  check("the report lists the dead source", report.includes("[[brouillon-perdu]]") && report.includes("2 source(s) pointing to a file"), report);
+  check("a source under a scheme of this computer is followed: gone, or modified since its note, marked new the first time", report.includes("[[esquisse-perdue]]: atelier://esquisse.md **(new)**") && /\[\[plan-du-roman\]\] \(seed\): source modified on [0-9-]+, note touched on [0-9-]+ \*\*\(new\)\*\*/.test(report), report);
+  check("what the review showed is stamped with the day it first appeared", JSON.parse(readFileSync(join(BRAIN, "index", "signals.json"), "utf8"))["dead:esquisse-perdue"] === localDay());
   check("the report tells what was worked on", report.includes("projet-roman: 1 session(s)") && report.includes("site-web"), report);
   check("with the titles of the sessions, and the work of the other computer", report.includes(`session "Refaire la page d'accueil"`) && report.includes("atelier-photo (portable)") && report.includes(`session "Trier les photos de Lisbonne"`) && !report.includes("never read"), report);
   check("with the commits of the week, read from the project's own history", /- brain: 1 session\(s\), last on [0-9-]+, [0-9]+ commit\(s\)/.test(report) && report.includes("  - capture: "), report);
   check("the report lists what moved in the watched folders", report.includes("chapitre-1.md"), report);
   r = node("status.mjs", ["--json"]);
   const st = json(r.out);
-  check("status reads the brain and its components", r.ok && st.notes === 7 && st.git === true && st.remote === false && st.dir === BRAIN.replace(/\\/g, "/") && st.sources.journal === true, r.out);
+  check("status reads the brain and its components", r.ok && st.notes === 9 && st.git === true && st.remote === false && st.dir === BRAIN.replace(/\\/g, "/") && st.sources.journal === true, r.out);
 
   // ---- the cold copy
   node("save.mjs", ["--now"]);
