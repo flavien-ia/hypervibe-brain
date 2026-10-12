@@ -263,7 +263,9 @@ export const today = () => {
 
 export const toPosix = (p) => p.split(sep).join("/");
 
-export function slugify(title) {
+// A name proposed by a source is kept whole (max = Infinity): cutting it would
+// name a note differently from the source's own rules.
+export function slugify(title, max = 60) {
   const s = String(title)
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
@@ -271,9 +273,9 @@ export function slugify(title) {
     .replace(/['’]/g, "-")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  if (s.length <= 60) return s || "note";
-  const cut = s.slice(0, 60);
-  return cut.slice(0, cut.lastIndexOf("-") > 30 ? cut.lastIndexOf("-") : 60);
+  if (s.length <= max) return s || "note";
+  const cut = s.slice(0, max);
+  return cut.slice(0, cut.lastIndexOf("-") > 30 ? cut.lastIndexOf("-") : max);
 }
 
 /** Every note of the vault, as absolute paths. */

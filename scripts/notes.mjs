@@ -62,6 +62,8 @@ function subfolder(folder) {
 function fieldValue(v) {
   if (Array.isArray(v)) return `[${v.map((x) => (/^[\w-]+$/.test(String(x)) ? String(x) : q(x))).join(", ")}]`;
   if (typeof v === "number" || typeof v === "boolean") return String(v);
+  // A date stays a bare date, as every other date of the frontmatter.
+  if (DATE.test(String(v))) return String(v);
   return q(v);
 }
 
@@ -110,7 +112,7 @@ function render(n, cfg, slugs, { keepCreated } = {}) {
     ...(links.length && !links.every((l) => body.includes(`[[${l}]]`)) ? ["", links.filter((l) => !body.includes(`[[${l}]]`)).map((l) => `[[${l}]]`).join(" ")] : []),
     "",
   ].join("\n");
-  return { slug: slugify(n.slug ?? n.title), dir: join(VAULT, cfg.types[type], ...subfolder(n.folder)), text };
+  return { slug: n.slug ? slugify(n.slug, Infinity) : slugify(n.title), dir: join(VAULT, cfg.types[type], ...subfolder(n.folder)), text };
 }
 
 /** Checks a note without writing anything: what a source's test shows. */

@@ -606,6 +606,12 @@ try {
     writeFileSync(join(brouillons, "data.json"), JSON.stringify([{ id: "b2", title: "Pensee vide", body: "" }]), "utf8");
     const r2 = node("sources.mjs", ["run", "brouillons"]);
     check("a finished record may have no text; a thought without text is refused", json(r.out).runs[0].created === 1 && existsSync(join(BRAIN, "vault", "sources", "video-sans-texte.md")) && json(r2.out).runs[0].created === 0 && json(r2.out).runs[0].refused.some((x) => x.includes("the body is empty")), `${r.out} ${r2.out}`);
+    // The name a source proposes is kept whole, and a date field stays a bare date.
+    const longName = "post-2026-09-28-un-nom-propose-par-la-source-plus-long-que-soixante-signes";
+    writeFileSync(join(posts, "data.json"), JSON.stringify([{ id: "base:post/10", source: "base:post/10", slug: longName, title: "Nom long", body: "Un post.", status: "trusted", fields: { date_evenement: "2026-09-28" } }]), "utf8");
+    r = node("sources.mjs", ["run", "fil"]);
+    const longPost = join(BRAIN, "vault", "sources", `${longName}.md`);
+    check("a source's own name for a note is kept whole, and its dates stay bare", r.ok && existsSync(longPost) && readFileSync(longPost, "utf8").includes("\ndate_evenement: 2026-09-28\n"), `${r.out} ${existsSync(longPost) ? readFileSync(longPost, "utf8") : "absent"}`);
     // A machine zone: a source keeps its own marked lines up to date inside a validated note.
     node("sources.mjs", ["add", "compteurs", "--kind", "script", "--every", "day", "--type", "note", "--domains", "ecriture", "--zones", "chiffres"]);
     const compteurs = join(BRAIN, "sources", "compteurs");
