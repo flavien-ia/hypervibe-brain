@@ -450,6 +450,15 @@ export function validate(fiches, cfg) {
 }
 
 /** Reads the whole vault; a note that cannot even be parsed is an error. */
+// The text sent for a note's vector: its title, then its type and domains,
+// which say what kind of thing it is (search by meaning then groups an idea
+// with ideas, a person with people), then its body. Cut at 8,000 characters:
+// the beginning carries the meaning, and the API caps an input anyway.
+export const embText = (f) => {
+  const domains = asList(f.fm.domains);
+  return `${f.fm.title ?? f.slug} (${f.fm.type}, ${domains.join(", ")})\n\n${f.body}`.slice(0, 8000);
+};
+
 export function readVault() {
   const fiches = [];
   const errors = [];

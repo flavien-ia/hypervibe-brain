@@ -16,7 +16,7 @@ import { DatabaseSync } from "node:sqlite";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DB_PATH, EMB_DIR, INDEX, config, isRunner, loadEnv, readVault, requireBrain, sha256, validate, vaultFingerprint } from "./lib.mjs";
+import { DB_PATH, EMB_DIR, INDEX, config, embText, isRunner, loadEnv, readVault, requireBrain, sha256, validate, vaultFingerprint } from "./lib.mjs";
 import { embed, embeddingsAvailable } from "./embeddings.mjs";
 
 const SCHEMA = `
@@ -45,7 +45,6 @@ const meta = (db, k) => db.prepare("SELECT v FROM meta WHERE k = ?").get(k)?.v;
 const setMeta = (db, k, v) => db.prepare("INSERT INTO meta (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").run(k, String(v));
 
 /** What a vector depends on: the model, its size, and the text. Nothing else. */
-const embText = (f) => `${f.fm.title}\n\n${f.body}`;
 const embHash = (f, cfg) => sha256(`${cfg.embeddings.model}|${cfg.embeddings.dims}|${embText(f)}`);
 
 const toBlob = (arr) => Buffer.from(new Float32Array(arr).buffer);
