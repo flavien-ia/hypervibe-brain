@@ -262,7 +262,7 @@ if (APPLY && promoted.length) out.push("", L.disagree);
 out.push("", L.orphans(orphans.length), "", ...(orphans.length ? orphans.slice(0, 40).map(line) : [L.none]));
 if (broken.length) out.push("", L.brokenTitle, "", ...broken.slice(0, 40).map((w) => `- ${w.rel}: ${w.msg}`));
 if (dead.length) out.push("", L.deadTitle, "", ...dead.slice(0, 40).map((f) => `- [[${f.slug}]]: ${f.fm.source}${isNew(`dead:${f.slug}`) ? L.newMark : ""}`));
-if (changed.length) out.push("", L.changedTitle(changed.length), "", ...changed.slice(0, 40).map((c) => L.changedLine(c.f.slug, c.f.fm.status, c.day, c.f.fm.updated) + (isNew(`changed:${c.f.slug}:${c.day}`) ? L.newMark : "")));
+if (changed.length) out.push("", L.changedTitle(changed.length), "", ...changed.slice(0, 40).map((c) => L.changedLine(c.f.slug, vocab(cfg).status[c.f.fm.status] ?? c.f.fm.status, c.day, c.f.fm.updated) + (isNew(`changed:${c.f.slug}:${c.day}`) ? L.newMark : "")));
 if (sources.journal) {
   out.push("", L.journal(journal.length), "");
   if (!journal.length) out.push(L.none);
