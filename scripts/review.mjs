@@ -195,7 +195,19 @@ if (existsSync(SRC)) {
 let people = null;
 if (cfg.contacts?.enabled) {
   const dir = readDirectory(cfg);
-  people = { total: dir.contacts.length, core: dir.contacts.filter((c) => c.tier === 2).length, coreWithoutNote: dir.contacts.filter((c) => c.tier === 2 && !c.note).slice(0, 15) };
+  // A person of the core may have a note that no address points to (written
+  // by hand, or from another source): their name is then the title of a note
+  // of the people type. And a person with several addresses is one person.
+  const fold = (x) => String(x ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  const personType = cfg.contacts?.personType ?? ["person", "personne", "people", "personnes"].find((t) => cfg.types[t]);
+  const named = new Set(fiches.filter((f) => f.fm.type === personType).map((f) => fold(f.fm.title)));
+  const seen = new Set();
+  const coreWithoutNote = dir.contacts.filter((c) => {
+    if (c.tier !== 2 || c.note || !c.name || named.has(fold(c.name)) || seen.has(fold(c.name))) return false;
+    seen.add(fold(c.name));
+    return true;
+  });
+  people = { total: dir.contacts.length, core: dir.contacts.filter((c) => c.tier === 2).length, coreWithoutNote: coreWithoutNote.slice(0, 15) };
 }
 
 // The watched folders: what moved this week, newest first.

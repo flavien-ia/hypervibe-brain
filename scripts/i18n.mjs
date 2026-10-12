@@ -97,7 +97,7 @@ const T = {
       people: (n, core) => `## Contacts (${n} in the directory, ${core} in the core)`,
       peopleNoNote: "In the core, without a note yet (to decide):",
       own: (n) => `## Your own sources (${n})`,
-      ownLine: (name, kind, on, last, created, error) => `- ${name} (${kind === "script" ? "read automatically" : "done by Claude"}${on ? "" : ", off"}): ${last ? `last success ${last}, ${created} new note(s)` : "never succeeded yet"}${error ? `. **Problem**: ${error}` : ""}`,
+      ownLine: (name, kind, on, last, created, error) => `- ${name} (${kind === "script" ? "read automatically" : kind === "step" ? "a program, writes no note" : "done by Claude"}${on ? "" : ", off"}): ${last ? `last success ${last}${kind === "step" ? "" : `, ${created} new note(s)`}` : "never succeeded yet"}${error ? `. **Problem**: ${error}` : ""}`,
     },
   },
   fr: {
@@ -139,7 +139,7 @@ const T = {
       people: (n, core) => `## Contacts (${n} dans l'annuaire, ${core} au cœur)`,
       peopleNoNote: "Au cœur, sans fiche pour l'instant (à décider) :",
       own: (n) => `## Vos propres sources (${n})`,
-      ownLine: (name, kind, on, last, created, error) => `- ${name} (${kind === "script" ? "lue automatiquement" : "faite par Claude"}${on ? "" : ", arrêtée"}) : ${last ? `dernier succès le ${last}, ${created} fiche(s) nouvelle(s)` : "jamais réussie pour l'instant"}${error ? `. **Problème** : ${error}` : ""}`,
+      ownLine: (name, kind, on, last, created, error) => `- ${name} (${kind === "script" ? "lue automatiquement" : kind === "step" ? "un programme, sans fiche" : "faite par Claude"}${on ? "" : ", arrêtée"}) : ${last ? `dernier succès le ${last}${kind === "step" ? "" : `, ${created} fiche(s) nouvelle(s)`}` : "jamais réussie pour l'instant"}${error ? `. **Problème** : ${error}` : ""}`,
     },
   },
 };
