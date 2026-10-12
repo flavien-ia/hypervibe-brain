@@ -238,9 +238,19 @@ function arm() {
     r = ps([
       `$a = New-ScheduledTaskAction -Execute 'wscript.exe' -Argument ${psq(`"${VBS}"`)}`,
       `$t = New-ScheduledTaskTrigger -Daily -At ${psq(time)}`,
-      // Missed because the computer was asleep or off: runs at the next wake-up.
+      // THE CATCH-UP. StartWhenAvailable should run an evening missed while
+      // the computer slept or was off at the next wake-up; in practice Windows
+      // does not always do it (seen on the brain this plugin grew from: two
+      // evenings lost in a row). A second trigger every 30 minutes starts the
+      // launcher, which ends at once when this evening's save is done (or not
+      // due yet) and catches up otherwise.
+      `$r = New-ScheduledTaskTrigger -Once -At ${psq(time)} -RepetitionInterval (New-TimeSpan -Minutes 30)`,
       "$s = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 30) -MultipleInstances IgnoreNew",
-      `Register-ScheduledTask -TaskName ${psq(TASK)} -Action $a -Trigger $t -Settings $s -Description ${psq(WORDS.taskDescription)} -Force | Out-Null`,
+      `Register-ScheduledTask -TaskName ${psq(TASK)} -Action $a -Trigger @($t, $r) -Settings $s -Description ${psq(WORDS.taskDescription)} -Force | Out-Null`,
+      // LOCAL TIME, WHEREVER THE COMPUTER IS. Windows writes the start with the
+      // time zone of the day (+02:00): a person who travels would see the save
+      // run at 11 pm local time. Without a zone, the time follows the computer.
+      `$k = Get-ScheduledTask -TaskName ${psq(TASK)}; foreach ($x in $k.Triggers) { $x.StartBoundary = $x.StartBoundary.Substring(0, 19) }; Set-ScheduledTask -InputObject $k | Out-Null`,
       "'ok'",
     ].join("; "));
   } else if (OS === "mac") {
