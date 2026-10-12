@@ -683,6 +683,19 @@ try {
   r = letter([], { RESEND_API_KEY: "test-resend", HVBRAIN_RESEND_URL: `http://127.0.0.1:${port}` });
   const resendMail = await (await fetch(`http://127.0.0.1:${port}/mail`)).json();
   check("Resend works the same way", r.ok && json(r.out).sent === true && resendMail?.headers.authorization === "Bearer test-resend" && resendMail.body.to[0] === "camille@exemple.fr", JSON.stringify(resendMail).slice(0, 300));
+  // The alert of an evening that went wrong, by the same channel.
+  const mailEnv = { RESEND_API_KEY: "test-resend", HVBRAIN_RESEND_URL: `http://127.0.0.1:${port}` };
+  const startedAt = new Date().toISOString();
+  r = node("letter.mjs", ["alert", "--since", startedAt], { input: JSON.stringify({ failed: [] }), env: mailEnv });
+  check("an evening without a problem sends no alert", r.ok && json(r.out).alert === false, r.out);
+  mkdirSync(join(BRAIN, "sources", "panne"), { recursive: true });
+  writeFileSync(join(BRAIN, "sources", "panne", "state.json"), JSON.stringify({ lastRun: new Date().toISOString(), lastError: "the mailbox did not answer" }), "utf8");
+  r = node("letter.mjs", ["alert", "--since", startedAt], { input: JSON.stringify({ failed: [{ step: "cold-copy.mjs", message: "the drive is full" }] }), env: mailEnv });
+  const alertMail = await (await fetch(`http://127.0.0.1:${port}/mail`)).json();
+  check("a failed step or source sends a short alert the same evening, by the letter's channel", r.ok && json(r.out).sent === true && /evening save has a problem/.test(alertMail?.body.subject ?? "") && alertMail.body.text.includes("the drive is full") && alertMail.body.text.includes("the mailbox did not answer"), `${r.out} ${JSON.stringify(alertMail).slice(0, 300)}`);
+  r = node("status.mjs", ["--json"]);
+  check("and the status shows it", r.ok && json(r.out).lastAlert?.problems.length === 2, r.out);
+  rmSync(join(BRAIN, "sources", "panne"), { recursive: true, force: true });
   node("letter.mjs", ["setup", "--channel", "none"]);
   r = letter([]);
   check("with no channel, the letter stays in the brain", r.ok && json(r.out).sent === false, r.out);

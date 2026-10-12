@@ -189,13 +189,22 @@ const steps = [
   // The brain's own steps that come after the save (a mirror, a publication...).
   ...(runner ? [["sources.mjs", ["run", "--due", "--phase", "after"]]] : []),
 ];
+const started = new Date().toISOString();
+const failed = [];
 for (const [script, extra] of steps) {
   // The command first (viz.mjs reads it as its first argument), the brain after.
   // The scripts read the same settings as this launcher (approvals of sources included).
   const r = spawnSync(process.execPath, [join(root, "scripts", script), ...extra, "--brain", cfg.brain], { encoding: "utf8", windowsHide: true, timeout: 15 * 60_000, env: { ...process.env, HVBRAIN_HOME: HOME } });
   const text = ((r.stdout ?? "") + (r.stderr ?? "")).split("\\n").filter((l) => l.trim() && !/ExperimentalWarning|trace-warnings/.test(l)).join(" | ");
   log(script + " exit " + r.status + (text ? ": " + text.slice(0, 600) : ""));
+  if (r.status !== 0) failed.push({ step: script + (extra[0] && !extra[0].startsWith("--") ? " " + extra[0] : ""), message: text.slice(0, 300) || "exit " + r.status });
 }
+// THE ALERT. A step that failed, or a source that ended in an error this
+// evening: a short email by the letter's channel, the same evening, rather
+// than a line in Sunday's letter. letter.mjs decides whether there is anything
+// to say (it also reads the sources' states) and how to say it.
+const a = spawnSync(process.execPath, [join(root, "scripts", "letter.mjs"), "alert", "--since", started, "--brain", cfg.brain], { input: JSON.stringify({ failed }), encoding: "utf8", windowsHide: true, timeout: 2 * 60_000, env: { ...process.env, HVBRAIN_HOME: HOME } });
+log("alert exit " + a.status + ": " + String(a.stdout ?? "").trim().slice(0, 300) + String(a.stderr ?? "").trim().slice(0, 200));
 `;
 
 function writeLauncher() {

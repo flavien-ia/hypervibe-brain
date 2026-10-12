@@ -7,7 +7,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { DB_PATH, EMB_DIR, ROOT, config, loadEnv, readVault, requireBrain, validate } from "./lib.mjs";
+import { DB_PATH, EMB_DIR, HOME, ROOT, config, loadEnv, readVault, requireBrain, validate } from "./lib.mjs";
 
 requireBrain();
 import { embeddingsAvailable } from "./embeddings.mjs";
@@ -24,6 +24,14 @@ for (const f of fiches) {
   for (const d of [].concat(f.fm.domains)) byDomain[d] = (byDomain[d] ?? 0) + 1;
 }
 const reviews = existsSync(join(ROOT, "reviews")) ? readdirSync(join(ROOT, "reviews")).filter((n) => /^\d{4}-\d{2}-\d{2}\.md$/.test(n)).sort() : [];
+// The last alert of an evening save on this computer, if it is less than a week old.
+let lastAlert = null;
+try {
+  const a = JSON.parse(readFileSync(join(HOME, ".hypervibe-brain", "alert.json"), "utf8"));
+  if (Date.now() - Date.parse(a.date) < 7 * 86400_000) lastAlert = a;
+} catch {
+  // no alert
+}
 const sources = existsSync(join(ROOT, "SOURCES.md")) ? readFileSync(join(ROOT, "SOURCES.md"), "utf8") : "";
 const s = {
   name: cfg.name,
@@ -49,6 +57,7 @@ const s = {
   sourcesDone: (sources.match(/^\s*- \[x\]/gim) ?? []).length,
   sourcesPlanned: (sources.match(/^\s*- \[[ x]\]/gim) ?? []).length,
   lastReview: reviews.at(-1)?.slice(0, 10) ?? null,
+  lastAlert,
 };
 
 if (process.argv.includes("--json")) console.log(JSON.stringify(s, null, 2));
@@ -57,5 +66,7 @@ else {
   console.log(`  domains: ${Object.entries(s.byDomain).map(([d, n]) => `${d} ${n}`).join(", ")}`);
   console.log(`  ${s.errors} error(s), ${s.warnings} warning(s); index ${s.indexBuilt ? "built" : "NOT built"}; search by meaning ${s.searchByMeaning ? `on (${s.vectorFiles} vectors)` : "off"}`);
   console.log(`  git: ${s.git ? `yes, ${s.remote ? "backed up online" : "local only"}${s.autoPush ? ", automatic push" : ""}; last commit ${s.lastCommit}; ${s.uncommitted} file(s) not committed` : "no"}`);
-  console.log(`  sources: ${s.sourcesDone}/${s.sourcesPlanned} ingested; last review: ${s.lastReview ?? "never"}\n`);
+  console.log(`  sources: ${s.sourcesDone}/${s.sourcesPlanned} ingested; last review: ${s.lastReview ?? "never"}`);
+  if (s.lastAlert) console.log(`  ALERT of ${s.lastAlert.date.slice(0, 10)}: ${s.lastAlert.problems.join(" ; ")}`);
+  console.log("");
 }

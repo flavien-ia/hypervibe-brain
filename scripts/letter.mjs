@@ -21,13 +21,20 @@
 //
 //   node scripts/letter.mjs setup --channel connector|brevo|resend|none [--to <address>] [--from <address>] [--from-name "<name>"]
 //   cat letter.md | node scripts/letter.mjs send [--dry] [--html <file>] [--week N]
+//   echo '{"failed":[...]}' | node scripts/letter.mjs alert --since <ISO date> [--dry]
+//
+// The alert: the evening save calls it when a step or a source failed, so that
+// a failure on Monday is not learnt from Sunday's letter. A short email by the
+// letter's own channel (Brevo or Resend: a script can send it alone); with the
+// connector or no channel, it is only kept in ~/.hypervibe-brain/alert.json,
+// which status.mjs and the weekly review show.
 //
 // Brevo and Resend read their key from the brain's .env (BREVO_API_KEY,
 // RESEND_API_KEY), pasted there by the person, never through the conversation.
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, config, loadEnv, requireBrain, today } from "./lib.mjs";
+import { HOME, ROOT, config, loadEnv, requireBrain, today } from "./lib.mjs";
 import { brainLang } from "./i18n.mjs";
 
 requireBrain();
@@ -42,9 +49,31 @@ const fail = (error) => {
 const cfg = config();
 const lang = brainLang(ROOT);
 const WORDS = {
-  fr: { brand: "Le brain", week: "semaine", subject: (n, name) => `Revue du brain de ${name}, semaine ${n}` },
-  en: { brand: "The brain", week: "week", subject: (n, name) => `${name}'s brain review, week ${n}` },
-}[lang] ?? { brand: "The brain", week: "week", subject: (n, name) => `${name}'s brain review, week ${n}` };
+  fr: {
+    brand: "Le brain",
+    week: "semaine",
+    subject: (n, name) => `Revue du brain de ${name}, semaine ${n}`,
+    alertSubject: (name) => `Brain de ${name} : la sauvegarde du soir a un problème`,
+    alertTitle: "La sauvegarde du soir a un problème",
+    alertIntro: (n) => `${n} problème(s) ce soir. Le reste de la sauvegarde a tourné, et ce qui a échoué sera repris au prochain passage s'il le peut.`,
+    step: "Étape",
+    colon: " : ",
+    source: "Source",
+    alertFoot: (f) => `^ Le détail est dans ${f}. Pour en parler : « /brain:status » dans une conversation Claude.`,
+  },
+  en: {
+    brand: "The brain",
+    week: "week",
+    subject: (n, name) => `${name}'s brain review, week ${n}`,
+    alertSubject: (name) => `${name}'s brain: the evening save has a problem`,
+    alertTitle: "The evening save has a problem",
+    alertIntro: (n) => `${n} problem(s) this evening. The rest of the save ran, and what failed is taken up again next time if it can be.`,
+    step: "Step",
+    colon: ": ",
+    source: "Source",
+    alertFoot: (f) => `^ The details are in ${f}. To talk about it: "/brain:status" in a Claude conversation.`,
+  },
+}[lang === "fr" ? "fr" : "en"];
 
 function isoWeek(d = new Date()) {
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -202,6 +231,30 @@ const writeConfig = (patch) => {
   return raw.letter;
 };
 
+/** Sends by Brevo or Resend, the channels a script can use alone; null for the others. */
+async function deliver(letter, subject, html, text) {
+  if (letter.channel !== "brevo" && letter.channel !== "resend") return null;
+  loadEnv();
+  const key = letter.channel === "brevo" ? process.env.BREVO_API_KEY : process.env.RESEND_API_KEY;
+  if (!key) fail(`no ${letter.channel === "brevo" ? "BREVO_API_KEY" : "RESEND_API_KEY"} in the brain's .env`);
+  const res =
+    letter.channel === "brevo"
+      ? await fetch(`${process.env.HVBRAIN_BREVO_URL ?? "https://api.brevo.com/v3"}/smtp/email`, {
+        method: "POST",
+        headers: { "api-key": key, "Content-Type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ sender: { name: letter.fromName ?? WORDS.brand, email: letter.from }, to: [{ email: letter.to }], subject, htmlContent: html, textContent: text }),
+        signal: AbortSignal.timeout(60_000),
+      })
+      : await fetch(`${process.env.HVBRAIN_RESEND_URL ?? "https://api.resend.com"}/emails`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: `${letter.fromName ?? WORDS.brand} <${letter.from}>`, to: [letter.to], subject, html, text }),
+        signal: AbortSignal.timeout(60_000),
+      });
+  if (!res.ok) fail(`the mail was refused by ${letter.channel} (HTTP ${res.status}): ${(await res.text()).slice(0, 250)}`);
+  return true;
+}
+
 if (command === "setup") {
   const channel = opt("--channel");
   if (!["connector", "brevo", "resend", "none"].includes(channel)) fail("--channel connector, brevo, resend or none");
@@ -238,26 +291,43 @@ if (command === "setup") {
     out({ ok: true, sent: false, sendWithConnector: true, ...base });
     process.exit(0);
   }
-  loadEnv();
-  const key = letter.channel === "brevo" ? process.env.BREVO_API_KEY : process.env.RESEND_API_KEY;
-  if (!key) fail(`no ${letter.channel === "brevo" ? "BREVO_API_KEY" : "RESEND_API_KEY"} in the brain's .env`);
-  const res =
-    letter.channel === "brevo"
-      ? await fetch(`${process.env.HVBRAIN_BREVO_URL ?? "https://api.brevo.com/v3"}/smtp/email`, {
-        method: "POST",
-        headers: { "api-key": key, "Content-Type": "application/json", accept: "application/json" },
-        body: JSON.stringify({ sender: { name: letter.fromName ?? WORDS.brand, email: letter.from }, to: [{ email: letter.to }], subject, htmlContent: html, textContent: md }),
-        signal: AbortSignal.timeout(60_000),
-      })
-      : await fetch(`${process.env.HVBRAIN_RESEND_URL ?? "https://api.resend.com"}/emails`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: `${letter.fromName ?? WORDS.brand} <${letter.from}>`, to: [letter.to], subject, html, text: md }),
-        signal: AbortSignal.timeout(60_000),
-      });
-  if (!res.ok) fail(`the letter was refused by ${letter.channel} (HTTP ${res.status}): ${(await res.text()).slice(0, 250)}`);
+  await deliver(letter, subject, html, md);
   out({ ok: true, sent: true, channel: letter.channel, ...base });
+} else if (command === "alert") {
+  // What failed this evening: the steps the launcher saw fail (on stdin), and
+  // the sources whose run since the start of the evening ended in an error.
+  let failed = [];
+  try {
+    failed = JSON.parse(readFileSync(0, "utf8") || "{}").failed ?? [];
+  } catch {
+    failed = [];
+  }
+  const since = opt("--since") ?? new Date(Date.now() - 6 * 3600_000).toISOString();
+  const problems = failed.map((f) => `${WORDS.step} ${f.step}${WORDS.colon}${String(f.message ?? "").slice(0, 300)}`);
+  const sourcesDir = join(ROOT, "sources");
+  if (existsSync(sourcesDir)) {
+    for (const n of readdirSync(sourcesDir)) {
+      try {
+        const st = JSON.parse(readFileSync(join(sourcesDir, n, "state.json"), "utf8"));
+        if (st.lastError && st.lastRun && st.lastRun >= since) problems.push(`${WORDS.source} ${n}${WORDS.colon}${String(st.lastError).slice(0, 300)}`);
+      } catch {
+        // no state yet
+      }
+    }
+  }
+  if (!problems.length) {
+    out({ ok: true, alert: false });
+    process.exit(0);
+  }
+  const md = [`# ${WORDS.alertTitle}`, WORDS.alertIntro(problems.length), ...problems.map((p, i) => `${i + 1}. ${p}`), WORDS.alertFoot(`~/.hypervibe-brain/logs/nightly-${today()}.log`)].join("\n");
+  const subject = WORDS.alertSubject(cfg.name ?? "");
+  const letter = cfg.letter ?? { channel: "none" };
+  const sent = args.includes("--dry") ? null : await deliver(letter, subject, toHtml(md, isoWeek()), md);
+  // Kept on this computer either way: status.mjs and the weekly review show it.
+  mkdirSync(join(HOME, ".hypervibe-brain"), { recursive: true });
+  writeFileSync(join(HOME, ".hypervibe-brain", "alert.json"), `${JSON.stringify({ date: new Date().toISOString(), problems, sent: Boolean(sent) }, null, 2)}\n`, "utf8");
+  out({ ok: true, alert: true, sent: Boolean(sent), channel: letter.channel ?? "none", subject, problems });
 } else {
-  console.log("usage: letter.mjs setup | send (see the top of scripts/letter.mjs)");
+  console.log("usage: letter.mjs setup | send | alert (see the top of scripts/letter.mjs)");
   process.exitCode = 2;
 }
