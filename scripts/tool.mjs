@@ -9,7 +9,8 @@
 //
 //   node scripts/tool.mjs <tool name>     (arguments as JSON on stdin; result as JSON on stdout)
 
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { hasBrain, readsFile } from "./lib.mjs";
 import { freshDb, get, neighbors, search, stats, timeline } from "./engine.mjs";
 import { readDirectory, searchDirectory } from "./directory.mjs";
@@ -50,6 +51,7 @@ try {
       if (read.length) {
         try {
           const at = new Date().toISOString();
+          mkdirSync(dirname(readsFile()), { recursive: true });
           appendFileSync(readsFile(), read.map((slug) => JSON.stringify({ at, tool: name, slug })).join("\n") + "\n", "utf8");
         } catch {
           // a comfort, not a guarantee

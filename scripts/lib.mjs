@@ -82,8 +82,34 @@ export function requireBrain() {
 export const ROOT = BRAIN ?? join(HOME, ".hypervibe-brain", "no-brain");
 export const VAULT = join(ROOT, "vault");
 export const INDEX = join(ROOT, "index");
-/** Which notes Claude read through the tools: a promotion signal, local to each computer, never in git. */
-export const readsFile = (cfg = config()) => join(INDEX, cfg.format === "fr" ? "mcp-journal.jsonl" : "reads.jsonl");
+/**
+ * Which notes Claude read through the tools: a promotion signal, and the
+ * brain's own record of what serves. One file per computer, written by it
+ * alone (index/reads/<computer>.jsonl, index/mcp-journal/ for a French
+ * brain): kept in git, so every copy has it and two computers never conflict.
+ * The single file of before (index/reads.jsonl) is still read.
+ */
+const readsDir = (cfg = config()) => join(INDEX, cfg.format === "fr" ? "mcp-journal" : "reads");
+const legacyReads = (cfg = config()) => join(INDEX, cfg.format === "fr" ? "mcp-journal.jsonl" : "reads.jsonl");
+export const readsFile = (cfg = config()) => join(readsDir(cfg), `${computerName()}.jsonl`);
+/** Every read, from every computer. */
+export function readAllReads(cfg = config()) {
+  const files = [legacyReads(cfg)];
+  if (existsSync(readsDir(cfg))) for (const n of readdirSync(readsDir(cfg)).filter((x) => x.endsWith(".jsonl"))) files.push(join(readsDir(cfg), n));
+  const out = [];
+  for (const f of files) {
+    if (!existsSync(f)) continue;
+    for (const l of readFileSync(f, "utf8").split("\n")) {
+      try {
+        const e = JSON.parse(l);
+        if (e.slug) out.push(e);
+      } catch {
+        // a damaged line does not count
+      }
+    }
+  }
+  return out;
+}
 // WHAT THE SOURCES JUST WROTE. The evening save holds back a note modified
 // less than 30 minutes ago (a person may be editing it). A note a source wrote
 // a minute ago is not being edited: the sources record what they wrote, with
@@ -208,7 +234,7 @@ export function isRunner(cfg = config()) {
 /** What only the runner writes and commits. Everything else in the brain is canon. */
 export const DERIVED = [/^index\/embeddings\//, /^index\/(annuaire|directory)\.json$/, /^index\/promotions\.jsonl$/, /^index\/signals\.json$/, /^reviews\//, /^sources\/[^/]+\/(seen|state)\.json$/];
 /** What the saves commit at all: anything else in the folder stays out of git. */
-export const OWNED = [/^vault\//, /^journal\/[^/]+\.jsonl$/, /^index\/embeddings\//, /^reviews\//, /^sources\//, /^index\/(annuaire|directory)\.json$/, /^index\/promotions\.jsonl$/, /^index\/signals\.json$/, /^(BRAIN|SOURCES)\.md$/, /^brain\.json$/, /^hyperbrain\.json$/];
+export const OWNED = [/^vault\//, /^journal\/[^/]+\.jsonl$/, /^index\/(reads|mcp-journal)\/[^/]+\.jsonl$/, /^index\/embeddings\//, /^reviews\//, /^sources\//, /^index\/(annuaire|directory)\.json$/, /^index\/promotions\.jsonl$/, /^index\/signals\.json$/, /^(BRAIN|SOURCES)\.md$/, /^brain\.json$/, /^hyperbrain\.json$/];
 
 // A brain may add its own rules in brain.json, `ownership`:
 //   "canon":   files any computer commits (settings kept by hand...)

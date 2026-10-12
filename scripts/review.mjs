@@ -32,7 +32,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { basename, join } from "node:path";
 import { appendFileSync } from "node:fs";
 import { readJournals } from "./journal.mjs";
-import { HOME, ROOT, computerName, config, userConfig, promotionsFile, readVault, readsFile, requireBrain, requireRunner, today, validate, vocab } from "./lib.mjs";
+import { HOME, ROOT, computerName, config, userConfig, promotionsFile, readAllReads, readVault, requireBrain, requireRunner, today, validate, vocab } from "./lib.mjs";
 import { brainLang, t } from "./i18n.mjs";
 import { readDirectory } from "./directory.mjs";
 
@@ -69,18 +69,7 @@ const byHand = (body, slug) => {
   return lines.length > 0 && lines.some((l) => !l.includes(":auto"));
 };
 const reads = new Map();
-try {
-  for (const l of readFileSync(readsFile(cfg), "utf8").split("\n")) {
-    try {
-      const e = JSON.parse(l);
-      if (e.slug) reads.set(e.slug, (reads.get(e.slug) ?? 0) + 1);
-    } catch {
-      // a damaged line does not count
-    }
-  }
-} catch {
-  // no reads yet
-}
+for (const e of readAllReads(cfg)) reads.set(e.slug, (reads.get(e.slug) ?? 0) + 1);
 const why = new Map();
 const promotable = fiches.filter((f) => {
   // neverPromoted holds types, or folders (ending with /): a directory of people is data, not knowledge.

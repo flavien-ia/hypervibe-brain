@@ -335,11 +335,17 @@ try {
     await mc.ask("tools/call", { name: "brain_get", arguments: { slug: "note-lue" } });
     mc.close();
   }
-  check("what Claude reads is journaled, locally", existsSync(join(BRAIN, "index", "reads.jsonl")) && readFileSync(join(BRAIN, "index", "reads.jsonl"), "utf8").includes('"slug":"note-lue"'));
+  {
+    const readsDirPath = join(BRAIN, "index", "reads");
+    const files = existsSync(readsDirPath) ? readdirSync(readsDirPath) : [];
+    check("what Claude reads is journaled, in this computer's own file", files.length === 1 && files[0].endsWith(".jsonl") && readFileSync(join(readsDirPath, files[0]), "utf8").includes('"slug":"note-lue"'), JSON.stringify(files));
+    // Another computer's reads, arrived by the synchronisation, count too.
+    writeFileSync(join(readsDirPath, "portable.jsonl"), `${JSON.stringify({ at: new Date().toISOString(), tool: "brain_get", slug: "note-lue" })}\n`, "utf8");
+  }
   r = node("review.mjs", ["--apply"]);
   check("a seed Claude read is promoted; one linked only by a program's line is not", readFileSync(join(BRAIN, "vault", "notes", "note-lue.md"), "utf8").includes("status: trusted") && readFileSync(join(BRAIN, "vault", "notes", "note-plomberie.md"), "utf8").includes("status: seed"));
   const promoLog = readFileSync(join(BRAIN, "index", "promotions.jsonl"), "utf8");
-  check("every promotion is kept with its reason", promoLog.includes('"slug":"vieille-note"') && promoLog.includes('"links":["le-travail-se-deplace"]') && /"slug":"note-lue".*"reads":1/.test(promoLog), promoLog);
+  check("every promotion is kept with its reason", promoLog.includes('"slug":"vieille-note"') && promoLog.includes('"links":["le-travail-se-deplace"]') && /"slug":"note-lue".*"reads":2/.test(promoLog), promoLog);
   check("the review writes its report", r.ok && existsSync(join(BRAIN, "reviews", `${localDay()}.md`)), r.out);
   check("an old seed linked from another day is promoted", readFileSync(notePath, "utf8").includes("status: trusted"), readFileSync(notePath, "utf8"));
   check("an idea is never promoted by the machine", readFileSync(idPath, "utf8").includes("status: seed"));
@@ -364,6 +370,7 @@ try {
     check("the save folds this computer's journal into the brain, titles resolved, and commits it", mine.length === 1 && folded.includes("Refaire la page d'accueil") && !folded.includes("transcript") && git("status", "--porcelain", "journal").trim() === "", `${mine} ${folded.slice(0, 300)}`);
     node("save.mjs", ["--now"]);
     check("folded once, never twice", readFileSync(join(BRAIN, "journal", mine[0]), "utf8") === folded);
+    check("the reads of each computer are kept in git too", git("status", "--porcelain", "index/reads").trim() === "" && git("ls-files", "index/reads").includes(".jsonl"), git("status", "--porcelain"));
   }
   r = node("cold-copy.mjs");
   const cold = json(r.out);
