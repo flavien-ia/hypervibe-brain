@@ -236,7 +236,13 @@ if (command === "setup") {
   }
 
   // What the Worker needs to speak like the computer.
-  const metaRows = { name: cfg.name ?? "", format: cfg.format, types: JSON.stringify(cfg.types), domains: JSON.stringify(cfg.domains), generated: new Date().toISOString() };
+  // The notes hidden from search (search.hidden in brain.json), by slug: the
+  // cloud tables do not keep a note's folder, the Worker filters by this list.
+  const hiddenPrefixes = (cfg.search?.hidden ?? []).map((p) => String(p).replace(/\\/g, "/").replace(/^\/+/, ""));
+  const hidden = hiddenPrefixes.length
+    ? db.prepare("SELECT slug, rel FROM fiche").all().filter((x) => hiddenPrefixes.some((p) => String(x.rel ?? "").replace(/\\/g, "/").replace(/^vault\//, "").startsWith(p))).map((x) => x.slug).sort()
+    : [];
+  const metaRows = { name: cfg.name ?? "", format: cfg.format, types: JSON.stringify(cfg.types), domains: JSON.stringify(cfg.domains), hidden: JSON.stringify(hidden), generated: new Date().toISOString() };
   stmts.push(...Object.entries(metaRows).map(([k, v]) => `INSERT OR REPLACE INTO meta (k, v) VALUES (${lit(k)}, ${lit(v)});`));
 
   // The vectors: one binary matrix and its list, sent only when they changed.

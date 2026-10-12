@@ -44,7 +44,7 @@ async function meta(env) {
   const rows = (await env.DB.prepare("SELECT k, v FROM meta").all()).results ?? [];
   const m = Object.fromEntries(rows.map((r) => [r.k, r.v]));
   const voc = VOCAB[m.format] ?? VOCAB.en;
-  return { name: m.name ?? null, format: m.format ?? "en", voc, types: JSON.parse(m.types ?? "{}"), domains: JSON.parse(m.domains ?? "[]"), generated: m.generated ?? null };
+  return { name: m.name ?? null, format: m.format ?? "en", voc, types: JSON.parse(m.types ?? "{}"), domains: JSON.parse(m.domains ?? "[]"), hidden: new Set(JSON.parse(m.hidden ?? "[]")), generated: m.generated ?? null };
 }
 
 const say = (voc, kind, v) => voc[kind]?.[v] ?? v;
@@ -86,15 +86,18 @@ async function fullBody(env, table, slug, first) {
   return first + more.map((m) => m.part).join("");
 }
 
-async function search(env, rights, a) {
+async function search(env, rights, a, m0) {
   const limit = a.limit ?? 10;
-  const filter = (r) => (!a.type || r.type === a.type) && (!a.domain || r.domains.includes(a.domain));
+  // The notes the brain keeps out of search unless asked (search.hidden), as on the computer.
+  const hidden = a.everything ? new Set() : m0.hidden;
+  const wide = hidden.size ? 10 : 3;
+  const filter = (r) => (!a.type || r.type === a.type) && (!a.domain || r.domains.includes(a.domain)) && !hidden.has(r.slug);
   if (a.meaning) {
     if (!env.OPENAI_API_KEY) throw new Error("search by meaning is not available in this cloud copy");
     const m = await vectors(env);
     const qv = await embedQuery(env, a.query, m);
     const out = [];
-    for (const n of nearest(m.rows, qv, limit * 3)) {
+    for (const n of nearest(m.rows, qv, limit * wide)) {
       const r = await env.DB.prepare("SELECT * FROM note WHERE slug = ?").bind(n.slug).first();
       if (!r || !filter(row(r))) continue;
       out.push({ slug: r.slug, type: r.type, title: r.title, score: Math.round(n.score * 1000) / 1000, excerpt: snippet(r.body, []) });
@@ -106,7 +109,7 @@ async function search(env, rights, a) {
   if (!words.length) return [];
   // Private notes are found by their title (their text is not in this index);
   // with the right, their text is searched too.
-  const rows = (await env.DB.prepare(`SELECT n.* FROM fts JOIN (${ALL}) n ON n.slug = fts.slug WHERE fts MATCH ? ORDER BY bm25(fts, 0, 8, 1) LIMIT ?`).bind(match, limit * 3).all()).results ?? [];
+  const rows = (await env.DB.prepare(`SELECT n.* FROM fts JOIN (${ALL}) n ON n.slug = fts.slug WHERE fts MATCH ? ORDER BY bm25(fts, 0, 8, 1) LIMIT ?`).bind(match, limit * wide).all()).results ?? [];
   let found = rows.map(row);
   if (rights.private) {
     const extra = (await env.DB.prepare("SELECT n.* FROM private_fts JOIN private_note n ON n.slug = private_fts.slug WHERE private_fts MATCH ? ORDER BY bm25(private_fts, 0, 8, 1) LIMIT ?").bind(match, limit * 3).all()).results ?? [];
@@ -148,16 +151,20 @@ async function get(env, rights, slug, voc) {
   };
 }
 
-async function neighbors(env, rights, a, voc) {
+async function neighbors(env, rights, a, voc, hiddenAll = new Set()) {
   const f = await get(env, rights, a.slug, voc);
   if (!f) return null;
   const m = await vectors(env);
   const self = m.rows.find((r) => r.slug === a.slug);
   let similar = [];
   if (self) {
-    for (const n of nearest(m.rows, self.v, a.limit ?? 8, new Set([a.slug]))) {
+    // Hidden notes stay out of the neighbours, unless asked or the note is one of them.
+    const hidden = a.everything || hiddenAll.has(a.slug) ? new Set() : hiddenAll;
+    for (const n of nearest(m.rows, self.v, (a.limit ?? 8) * (hidden.size ? 10 : 1), new Set([a.slug]))) {
+      if (hidden.has(n.slug)) continue;
       const t = await env.DB.prepare("SELECT title, type FROM note WHERE slug = ?").bind(n.slug).first();
       similar.push({ slug: n.slug, ...t, score: Math.round(n.score * 1000) / 1000 });
+      if (similar.length === (a.limit ?? 8)) break;
     }
   }
   return { slug: a.slug, title: f.title, links: f.links, backlinks: f.backlinks, similar };
@@ -205,9 +212,9 @@ async function contact(env, rights, a) {
 
 async function call(env, rights, name, a) {
   const m = await meta(env);
-  if (name === "brain_search") return search(env, rights, a);
+  if (name === "brain_search") return search(env, rights, a, m);
   if (name === "brain_get") return (await get(env, rights, a.slug, m.voc)) ?? { error: `no note named "${a.slug}": search for it with brain_search` };
-  if (name === "brain_neighbors") return (await neighbors(env, rights, a, m.voc)) ?? { error: `no note named "${a.slug}"` };
+  if (name === "brain_neighbors") return (await neighbors(env, rights, a, m.voc, m.hidden)) ?? { error: `no note named "${a.slug}"` };
   if (name === "brain_timeline") return timeline(env, a, m.voc);
   if (name === "brain_stats") return stats(env, m);
   if (name === "brain_contact") return contact(env, rights, a);

@@ -189,6 +189,27 @@ try {
   const pick = (o) => ({ notes: o.notes, types: o.types, format: o.format, byType: o.byType, byStatus: o.byStatus, byVisibility: o.byVisibility, byDomain: o.byDomain, links: o.links, vectors: o.vectors });
   check("parity, stats", same(pick(ws), pick(ls)), `worker ${JSON.stringify(pick(ws))}\n        local  ${JSON.stringify(pick(ls))}`);
 
+  // PARITY WITH A NOTE HIDDEN FROM SEARCH (search.hidden): out of the search
+  // and of the neighbours, back with everything, on both sides.
+  {
+    const bj = join(BRAIN, "brain.json");
+    const before = readFileSync(bj, "utf8");
+    writeFileSync(bj, JSON.stringify({ ...JSON.parse(before), search: { hidden: ["notes/novel-project"] } }, null, 2), "utf8");
+    run("cloud.mjs", ["sync"]);
+    const cases = [["brain_search", { query: "city dreams" }], ["brain_search", { query: "city dreams", everything: true }], ["brain_search", { query: "automation of work", meaning: true }], ["brain_neighbors", { slug: "work-moves" }], ["brain_neighbors", { slug: "work-moves", everything: true }]];
+    let hiddenOut = true;
+    for (const [name, args] of cases) {
+      const w = await tool(readerValue, name, args);
+      const l = local(name, args);
+      check(`parity with a hidden note, ${name} ${JSON.stringify(args)}`, same(w, l), `worker ${JSON.stringify(w)}\n        local  ${JSON.stringify(l)}`);
+      const list = Array.isArray(w) ? w : w.similar ?? [];
+      if (!args.everything && list.some((x) => x.slug === "novel-project")) hiddenOut = false;
+    }
+    check("the hidden note stays out unless asked, and comes back with everything", hiddenOut && (await tool(readerValue, "brain_search", { query: "city dreams", everything: true })).some((x) => x.slug === "novel-project"));
+    writeFileSync(bj, before, "utf8");
+    run("cloud.mjs", ["sync"]);
+  }
+
   // RIGHTS.
   check("a private note's text never leaves without the right", (await tool(readerValue, "brain_get", { slug: "health-file" })).body.includes("never shown"));
   check("nor is it searchable by its text", !(await tool(readerValue, "brain_search", { query: "blood" })).some((x) => x.slug === "health-file"));
