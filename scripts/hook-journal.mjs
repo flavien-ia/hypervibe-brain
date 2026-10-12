@@ -43,7 +43,7 @@ try {
     mkdirSync(dirname(file), { recursive: true });
     // The same event as the sensors of the brain this plugin grew from
     // (type "session"): one format for every journal.
-    appendFileSync(file, `${JSON.stringify({ t: new Date(now).toISOString(), type: "session", cwd, project: basename(cwd), session })}\n`, "utf8");
+    appendFileSync(file, `${JSON.stringify({ t: new Date(now).toISOString(), type: "session", cwd, project: basename(cwd), session, transcript: input.transcript_path || undefined })}\n`, "utf8");
   }
   // Now and then, forget what is older than 90 days.
   if (lines.length > 2000) {

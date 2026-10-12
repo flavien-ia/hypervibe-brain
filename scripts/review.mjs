@@ -31,7 +31,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { appendFileSync } from "node:fs";
-import { HOME, ROOT, config, promotionsFile, readVault, readsFile, requireBrain, requireRunner, today, validate, vocab } from "./lib.mjs";
+import { readJournals } from "./journal.mjs";
+import { HOME, ROOT, computerName, config, promotionsFile, readVault, readsFile, requireBrain, requireRunner, today, validate, vocab } from "./lib.mjs";
 import { brainLang, t } from "./i18n.mjs";
 import { readDirectory } from "./directory.mjs";
 
@@ -104,30 +105,24 @@ const dead = fiches.filter((f) => {
   return !existsSync(p);
 });
 
-// The work journal: sessions of Claude Code, by project, this week.
+// The work journal: sessions of Claude Code, by project, this week, on every
+// computer of the person (journal.mjs), with the titles of the sessions.
 let journal = [];
 if (sources.journal) {
   const byProject = new Map();
-  try {
-    for (const line of readFileSync(join(HOME, ".hypervibe-brain", "journal.jsonl"), "utf8").split("\n")) {
-      if (!line.trim()) continue;
-      try {
-        const e = JSON.parse(line);
-        if (String(e.t).slice(0, 10) < since) continue;
-        const k = e.project ?? basename(String(e.cwd ?? ""));
-        const cur = byProject.get(k) ?? { project: k, cwd: String(e.cwd ?? ""), sessions: 0, last: "" };
-        cur.sessions++;
-        if (e.t > cur.last) cur.last = e.t;
-        byProject.set(k, cur);
-      } catch {
-        // an unreadable line is skipped
-      }
-    }
-  } catch {
-    // no journal yet
+  const me = computerName();
+  for (const e of readJournals(since)) {
+    const name = e.project ?? basename(String(e.cwd ?? ""));
+    const k = e.computer === me ? name : `${name} (${e.computer})`;
+    const cur = byProject.get(k) ?? { project: k, cwd: String(e.cwd ?? ""), here: e.computer === me, sessions: 0, last: "", titles: [] };
+    cur.sessions++;
+    if (e.t > cur.last) cur.last = e.t;
+    if (e.title && !cur.titles.includes(e.title)) cur.titles.push(e.title);
+    byProject.set(k, cur);
   }
   journal = [...byProject.values()].sort((a, b) => b.last.localeCompare(a.last));
-  // Their commits of the week, from each project's own history.
+  // Their commits of the week, from each project's own history (on this
+  // computer; another computer's project may not be cloned here).
   for (const j of journal) {
     try {
       const log = execFileSync("git", ["-C", j.cwd, "log", `--since=${since}`, "--no-merges", "--format=%s"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 15_000, windowsHide: true }).trim();
@@ -234,6 +229,7 @@ if (sources.journal) {
   if (!journal.length) out.push(L.none);
   for (const j of journal) {
     out.push(L.journalLine(j.project, j.sessions, j.last.slice(0, 10)) + (j.commits.length ? L.journalCommits(j.commits.length) : ""));
+    for (const ti of j.titles.slice(0, 5)) out.push(L.journalTitle(ti));
     for (const c of j.commits.slice(0, 5)) out.push(`  - ${c}`);
   }
 }

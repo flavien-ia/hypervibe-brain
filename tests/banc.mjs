@@ -287,7 +287,13 @@ try {
   r = hook({ session_id: "s1", cwd: join(BASE, "projet-roman") });
   check("the hook is silent", r.ok && r.out.trim() === "", r.out);
   hook({ session_id: "s1", cwd: join(BASE, "projet-roman") });
-  hook({ session_id: "s2", cwd: join(BASE, "site-web") });
+  // A session whose transcript carries the title Claude gave it.
+  const transcript = join(BASE, "s2.jsonl");
+  writeFileSync(transcript, `${JSON.stringify({ type: "summary" })}\n${JSON.stringify({ aiTitle: "Refaire la page d'accueil" })}\n${JSON.stringify({ message: "never read" })}\n`, "utf8");
+  hook({ session_id: "s2", cwd: join(BASE, "site-web"), transcript_path: transcript });
+  // The other computer's journal, arrived by the synchronisation.
+  mkdirSync(join(BRAIN, "journal"), { recursive: true });
+  writeFileSync(join(BRAIN, "journal", "portable.jsonl"), `${JSON.stringify({ t: new Date().toISOString(), type: "session", project: "atelier-photo", cwd: "/elsewhere/atelier-photo", session: "p1", title: "Trier les photos de Lisbonne" })}\n`, "utf8");
   // A session in a real repository: its commits of the week come with it.
   hook({ session_id: "s3", cwd: BRAIN });
   const jl = readFileSync(JOURNAL, "utf8").trim().split("\n");
@@ -328,6 +334,7 @@ try {
   check("the report is in the brain's language", report.startsWith("# Review of Camille's brain"), report.slice(0, 80));
   check("the report lists the dead source", report.includes("[[brouillon-perdu]]") && report.includes("1 source(s) pointing to a file"), report);
   check("the report tells what was worked on", report.includes("projet-roman: 1 session(s)") && report.includes("site-web"), report);
+  check("with the titles of the sessions, and the work of the other computer", report.includes(`session "Refaire la page d'accueil"`) && report.includes("atelier-photo (portable)") && report.includes(`session "Trier les photos de Lisbonne"`) && !report.includes("never read"), report);
   check("with the commits of the week, read from the project's own history", /- brain: 1 session\(s\), last on [0-9-]+, [0-9]+ commit\(s\)/.test(report) && report.includes("  - capture: "), report);
   check("the report lists what moved in the watched folders", report.includes("chapitre-1.md"), report);
   r = node("status.mjs", ["--json"]);
@@ -336,6 +343,13 @@ try {
 
   // ---- the cold copy
   node("save.mjs", ["--now"]);
+  {
+    const mine = readdirSync(join(BRAIN, "journal")).filter((n) => n !== "portable.jsonl");
+    const folded = mine.length === 1 ? readFileSync(join(BRAIN, "journal", mine[0]), "utf8") : "";
+    check("the save folds this computer's journal into the brain, titles resolved, and commits it", mine.length === 1 && folded.includes("Refaire la page d'accueil") && !folded.includes("transcript") && git("status", "--porcelain", "journal").trim() === "", `${mine} ${folded.slice(0, 300)}`);
+    node("save.mjs", ["--now"]);
+    check("folded once, never twice", readFileSync(join(BRAIN, "journal", mine[0]), "utf8") === folded);
+  }
   r = node("cold-copy.mjs");
   const cold = json(r.out);
   check("the cold copy writes a verified archive", r.ok && cold.ok && existsSync(cold.archive ?? "") && cold.commits > 3, r.out);

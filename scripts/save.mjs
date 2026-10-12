@@ -18,6 +18,7 @@ import { ROOT, config, isDerived, isOwned, isRunner, readVault, readWritten, req
 
 requireBrain();
 import { commitPaths, isRepo, pushIfAgreed, tryGit } from "./git.mjs";
+import { foldJournal } from "./journal.mjs";
 import { brainLang, t } from "./i18n.mjs";
 
 const REST_MS = process.argv.includes("--now") ? 0 : 30 * 60_000;
@@ -30,6 +31,10 @@ if (!isRepo()) {
   console.log("not a git repository: nothing to save");
   process.exit(0);
 }
+
+// The work journal of this computer joins the brain (journal/<computer>.jsonl),
+// for the weekly review to see the work of every computer.
+if (cfgNow.sources?.journal) foldJournal();
 
 const status = tryGit(["status", "--porcelain", "-z", "--untracked-files=all"], { raw: true }).out.split("\0").filter(Boolean);
 const paths = [];
