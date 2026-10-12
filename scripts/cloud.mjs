@@ -32,7 +32,7 @@ import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { HOME, PLUGIN_ROOT, ROOT, config, loadEnv, requireBrain, requireRunner, slugify } from "./lib.mjs";
+import { HOME, PLUGIN_ROOT, ROOT, config, hypervibeVault, loadEnv, requireBrain, requireRunner, slugify } from "./lib.mjs";
 import { buildIndex, openDb } from "./build.mjs";
 import { readDirectory } from "./directory.mjs";
 
@@ -50,6 +50,27 @@ const cloud = cfg.cloud ?? {};
 const TMP = join(HOME, ".hypervibe-brain", "cloud-work");
 mkdirSync(TMP, { recursive: true });
 const PART = 20_000;
+
+// THE PERSON'S CLOUDFLARE ACCESS. Their `wrangler login` by default. A
+// person who keeps a Cloudflare token in the Hypervibe vault (item CLOUDFLARE,
+// field api_token) and has no login: wrangler gets the token in its
+// environment, never on its command line, with the account it opens (a token
+// may see several accounts, and wrangler then asks which one).
+if (!process.env.CLOUDFLARE_API_TOKEN && !process.env.HVBRAIN_WRANGLER) {
+  const token = hypervibeVault("CLOUDFLARE", "api_token");
+  if (token) {
+    process.env.CLOUDFLARE_API_TOKEN = token;
+    if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
+      try {
+        const res = await fetch("https://api.cloudflare.com/client/v4/accounts", { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(30_000) });
+        const id = (await res.json()).result?.[0]?.id;
+        if (id) process.env.CLOUDFLARE_ACCOUNT_ID = id;
+      } catch {
+        // wrangler will say what it lacks
+      }
+    }
+  }
+}
 
 // ---------------------------------------------------------------- wrangler
 /**

@@ -32,10 +32,9 @@
 // Brevo and Resend read their key from the brain's .env (BREVO_API_KEY,
 // RESEND_API_KEY), pasted there by the person, never through the conversation.
 
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { HOME, ROOT, config, loadEnv, requireBrain, today } from "./lib.mjs";
+import { HOME, ROOT, config, hypervibeVault, loadEnv, requireBrain, today } from "./lib.mjs";
 import { brainLang } from "./i18n.mjs";
 
 requireBrain();
@@ -241,22 +240,7 @@ function serviceKey(channel) {
   loadEnv();
   const fromEnv = channel === "brevo" ? process.env.BREVO_API_KEY : process.env.RESEND_API_KEY;
   if (fromEnv) return fromEnv;
-  const vaults = [];
-  const walk = (dir, depth) => {
-    if (depth > 6 || !existsSync(dir)) return;
-    for (const e of readdirSync(dir, { withFileTypes: true })) {
-      if (!e.isDirectory() || e.name === "node_modules" || e.name.startsWith(".git")) continue;
-      const p = join(dir, e.name);
-      if (existsSync(join(p, "scripts", "vault", "vault.mjs"))) vaults.push(join(p, "scripts", "vault", "vault.mjs"));
-      else walk(p, depth + 1);
-    }
-  };
-  if (process.env.HVBRAIN_VAULT !== "off") walk(join(HOME, ".claude", "plugins"), 0);
-  for (const v of vaults) {
-    const r = spawnSync(process.execPath, [v, "get", channel === "brevo" ? "BREVO" : "RESEND", "api_key"], { encoding: "utf8", windowsHide: true, timeout: 60_000 });
-    if (r.status === 0 && r.stdout.trim()) return r.stdout.trim();
-  }
-  return null;
+  return hypervibeVault(channel === "brevo" ? "BREVO" : "RESEND", "api_key");
 }
 
 /** Sends by Brevo or Resend, the channels a script can use alone; null for the others. */

@@ -5,6 +5,7 @@
 // is a small fixed format read below, and the MCP server speaks its protocol
 // by hand. Nothing to install means nothing that breaks on a new computer.
 
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { homedir, hostname } from "node:os";
@@ -458,6 +459,32 @@ export const embText = (f) => {
   const domains = asList(f.fm.domains);
   return `${f.fm.title ?? f.slug} (${f.fm.type}, ${domains.join(", ")})\n\n${f.body}`.slice(0, 8000);
 };
+
+/**
+ * A key kept in the Hypervibe vault (Bitwarden, the plugin Hypervibe's own
+ * tool), for a person who keeps their keys there rather than in the brain's
+ * .env. Read silently, never printed nor written; null when there is no such
+ * vault on this computer, when it is locked, or with HVBRAIN_VAULT=off.
+ */
+export function hypervibeVault(item, field) {
+  if (process.env.HVBRAIN_VAULT === "off") return null;
+  const vaults = [];
+  const walk = (dir, depth) => {
+    if (depth > 6 || !existsSync(dir)) return;
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (!e.isDirectory() || e.name === "node_modules" || e.name.startsWith(".git")) continue;
+      const p = join(dir, e.name);
+      if (existsSync(join(p, "scripts", "vault", "vault.mjs"))) vaults.push(join(p, "scripts", "vault", "vault.mjs"));
+      else walk(p, depth + 1);
+    }
+  };
+  walk(join(HOME, ".claude", "plugins"), 0);
+  for (const v of vaults) {
+    const r = spawnSync(process.execPath, [v, "get", item, field], { encoding: "utf8", windowsHide: true, timeout: 60_000 });
+    if (r.status === 0 && r.stdout.trim()) return r.stdout.trim();
+  }
+  return null;
+}
 
 export function readVault() {
   const fiches = [];
