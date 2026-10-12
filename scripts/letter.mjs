@@ -32,6 +32,7 @@
 // Brevo and Resend read their key from the brain's .env (BREVO_API_KEY,
 // RESEND_API_KEY), pasted there by the person, never through the conversation.
 
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { HOME, ROOT, config, loadEnv, requireBrain, today } from "./lib.mjs";
@@ -231,12 +232,38 @@ const writeConfig = (patch) => {
   return raw.letter;
 };
 
+/**
+ * The key of the mail service: the brain's .env first; otherwise, for a person
+ * who keeps their keys in the Hypervibe vault (Bitwarden, item BREVO or RESEND,
+ * field api_key), read from it, silently, never printed nor written anywhere.
+ */
+function serviceKey(channel) {
+  loadEnv();
+  const fromEnv = channel === "brevo" ? process.env.BREVO_API_KEY : process.env.RESEND_API_KEY;
+  if (fromEnv) return fromEnv;
+  const vaults = [];
+  const walk = (dir, depth) => {
+    if (depth > 6 || !existsSync(dir)) return;
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (!e.isDirectory() || e.name === "node_modules" || e.name.startsWith(".git")) continue;
+      const p = join(dir, e.name);
+      if (existsSync(join(p, "scripts", "vault", "vault.mjs"))) vaults.push(join(p, "scripts", "vault", "vault.mjs"));
+      else walk(p, depth + 1);
+    }
+  };
+  if (process.env.HVBRAIN_VAULT !== "off") walk(join(HOME, ".claude", "plugins"), 0);
+  for (const v of vaults) {
+    const r = spawnSync(process.execPath, [v, "get", channel === "brevo" ? "BREVO" : "RESEND", "api_key"], { encoding: "utf8", windowsHide: true, timeout: 60_000 });
+    if (r.status === 0 && r.stdout.trim()) return r.stdout.trim();
+  }
+  return null;
+}
+
 /** Sends by Brevo or Resend, the channels a script can use alone; null for the others. */
 async function deliver(letter, subject, html, text) {
   if (letter.channel !== "brevo" && letter.channel !== "resend") return null;
-  loadEnv();
-  const key = letter.channel === "brevo" ? process.env.BREVO_API_KEY : process.env.RESEND_API_KEY;
-  if (!key) fail(`no ${letter.channel === "brevo" ? "BREVO_API_KEY" : "RESEND_API_KEY"} in the brain's .env`);
+  const key = serviceKey(letter.channel);
+  if (!key) fail(`no ${letter.channel === "brevo" ? "BREVO_API_KEY" : "RESEND_API_KEY"} in the brain's .env (nor in an open Hypervibe vault)`);
   const res =
     letter.channel === "brevo"
       ? await fetch(`${process.env.HVBRAIN_BREVO_URL ?? "https://api.brevo.com/v3"}/smtp/email`, {
