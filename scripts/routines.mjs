@@ -92,7 +92,7 @@ const psq = (s) => `'${String(s).replace(/'/g, "''")}'`;
 const LAUNCHER_CODE = `// Written by Hypervibe Brain (scripts/routines.mjs). The evening save of the brain:
 // rebuild the index, then commit what is at rest and push if agreed.
 // It looks up the plugin at run time: an update of the plugin can move it.
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
@@ -189,6 +189,75 @@ const steps = [
   // The brain's own steps that come after the save (a mirror, a publication...).
   ...(runner ? [["sources.mjs", ["run", "--due", "--phase", "after"]]] : []),
 ];
+const fr = brainCfg.lang === "fr";
+const W = fr
+  ? { title: "Brain, sauvegarde du soir", ask: "Le coffre Hypervibe est fermé : une fenêtre demande son mot de passe. Sans réponse en 6 minutes, ce qui en a besoin passera son tour.", closed: "coffre Hypervibe fermé : ce qui en a besoin (clés des sources, copie cloud, email d'alerte) est sauté ce soir, et repris au prochain passage où il sera ouvert", problems: (n) => n + " problème(s) ce soir" + (vaultLocked ? ", coffre Hypervibe fermé" : "") + ". Détail : /brain:status dans Claude." }
+  : { title: "Brain, evening save", ask: "The Hypervibe vault is locked: a window asks for its password. Without an answer in 6 minutes, what needs it waits for the next run.", closed: "Hypervibe vault locked: what needs it (keys of sources, cloud copy, alert email) is skipped tonight, and taken up at the next run where it is open", problems: (n) => n + " problem(s) this evening" + (vaultLocked ? ", Hypervibe vault locked" : "") + ". Details: /brain:status in Claude." };
+
+// A NOTICE ON THE COMPUTER, the channel that needs no key: the alert email
+// needs one, and the most common failure (a locked vault) takes it away.
+// Never makes the save fail.
+function notify(title, text) {
+  try {
+    if (process.platform === "win32") {
+      // PowerShell reads the typographic apostrophes as quotes too: each is doubled.
+      const q = (s) => "'" + String(s).replace(/['‘’‚‛]/g, "$&$&") + "'";
+      const ps = "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null; " +
+        "$t = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); " +
+        "$x = $t.GetElementsByTagName('text'); $x.Item(0).AppendChild($t.CreateTextNode(" + q(title) + ")) > $null; $x.Item(1).AppendChild($t.CreateTextNode(" + q(text) + ")) > $null; " +
+        "[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe').Show([Windows.UI.Notifications.ToastNotification]::new($t))";
+      // Encoded (UTF-16): accents survive the way to PowerShell whatever the code page.
+      spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-EncodedCommand", Buffer.from(ps, "utf16le").toString("base64")], { windowsHide: true, timeout: 30000 });
+    } else if (process.platform === "darwin") {
+      spawnSync("osascript", ["-e", "display notification " + JSON.stringify(text) + " with title " + JSON.stringify(title)], { timeout: 30000 });
+    } else {
+      spawnSync("notify-send", [title, text], { timeout: 30000 });
+    }
+  } catch {
+    // no graphical session: the log and the alert email remain
+  }
+}
+
+// THE HYPERVIBE VAULT, asked for rather than failed. A person who keeps their
+// keys in it (the plugin Hypervibe's Bitwarden) and finds it locked at the
+// time of the save: a notice, the vault's own password window, and up to six
+// minutes of patience. Then the save goes on either way. Only on the runner
+// (its sources, cloud copy and alert read keys), and only for a vault set up
+// on this computer: a person without one is never asked anything.
+let vaultLocked = false;
+const vaultScript = (() => {
+  const found = [];
+  const walk = (dir, depth) => {
+    if (depth > 6 || !existsSync(dir)) return;
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (!e.isDirectory() || e.name === "node_modules" || e.name.startsWith(".git")) continue;
+      const p = join(dir, e.name);
+      if (existsSync(join(p, "scripts", "vault", "vault.mjs")) && existsSync(join(p, "scripts", "vault", "launch.mjs"))) found.push(join(p, "scripts", "vault"));
+      else walk(p, depth + 1);
+    }
+  };
+  if (process.env.HVBRAIN_VAULT !== "off") walk(join(HOME, ".claude", "plugins"), 0);
+  return found.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0] ?? null;
+})();
+const vaultState = () => String(spawnSync(process.execPath, [join(vaultScript, "vault.mjs"), "status"], { encoding: "utf8", windowsHide: true, timeout: 60000 }).stdout ?? "").trim();
+if (runner && vaultScript && vaultState() !== "unlocked") {
+  let signedIn = false;
+  try {
+    signedIn = JSON.parse(spawnSync(process.execPath, [join(vaultScript, "vault.mjs"), "account"], { encoding: "utf8", windowsHide: true, timeout: 60000 }).stdout).signedIn === true;
+  } catch {
+    signedIn = false;
+  }
+  if (signedIn) {
+    notify(W.title, W.ask);
+    const w = spawn(process.execPath, [join(vaultScript, "launch.mjs"), "unlock", "--lang", fr ? "fr" : "en"], { stdio: "ignore", detached: true, windowsHide: false });
+    w.unref();
+    const until = Date.now() + 6 * 60000;
+    while (Date.now() < until && vaultState() !== "unlocked") Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5000);
+    vaultLocked = vaultState() !== "unlocked";
+    log(vaultLocked ? W.closed : "Hypervibe vault: opened for the save");
+  }
+}
+
 const started = new Date().toISOString();
 const failed = [];
 for (const [script, extra] of steps) {
@@ -203,8 +272,19 @@ for (const [script, extra] of steps) {
 // evening: a short email by the letter's channel, the same evening, rather
 // than a line in Sunday's letter. letter.mjs decides whether there is anything
 // to say (it also reads the sources' states) and how to say it.
-const a = spawnSync(process.execPath, [join(root, "scripts", "letter.mjs"), "alert", "--since", started, "--brain", cfg.brain], { input: JSON.stringify({ failed }), encoding: "utf8", windowsHide: true, timeout: 2 * 60_000, env: { ...process.env, HVBRAIN_HOME: HOME } });
+const a = spawnSync(process.execPath, [join(root, "scripts", "letter.mjs"), "alert", "--since", started, "--brain", cfg.brain], { input: JSON.stringify({ failed, vaultLocked }), encoding: "utf8", windowsHide: true, timeout: 2 * 60_000, env: { ...process.env, HVBRAIN_HOME: HOME } });
 log("alert exit " + a.status + ": " + String(a.stdout ?? "").trim().slice(0, 300) + String(a.stderr ?? "").trim().slice(0, 200));
+// The notice on the computer, whenever there is something to say, whether the
+// email left or not (without the alert's answer: at least the failed steps).
+let problems = failed.length;
+try {
+  // The alert keeps its record before it tries to send: it is there even when the mail could not leave.
+  const r = JSON.parse(readFileSync(join(HOME, ".hypervibe-brain", "alert.json"), "utf8"));
+  if (r.date >= started && Array.isArray(r.problems)) problems = r.problems.length;
+} catch {
+  // the alert could not say: the steps seen failing here remain
+}
+if (problems || vaultLocked) notify(W.title, W.problems(problems));
 `;
 
 function writeLauncher() {

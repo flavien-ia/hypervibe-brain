@@ -60,6 +60,7 @@ const WORDS = {
     colon: " : ",
     source: "Source",
     alertFoot: (f) => `^ Le détail est dans ${f}. Pour en parler : « /brain:status » dans une conversation Claude.`,
+    vaultLocked: "Le coffre Hypervibe était fermé et personne ne l'a ouvert dans les 6 minutes : ce qui en a besoin (clés des sources, copie cloud) a été sauté ce soir, et sera repris au prochain passage où il sera ouvert.",
   },
   en: {
     brand: "The brain",
@@ -72,6 +73,7 @@ const WORDS = {
     colon: ": ",
     source: "Source",
     alertFoot: (f) => `^ The details are in ${f}. To talk about it: "/brain:status" in a Claude conversation.`,
+    vaultLocked: "The Hypervibe vault was locked and nobody opened it within 6 minutes: what needs it (keys of sources, cloud copy) was skipped tonight, and will be taken up at the next run where it is open.",
   },
 }[lang === "fr" ? "fr" : "en"];
 
@@ -308,8 +310,11 @@ if (command === "setup") {
   // What failed this evening: the steps the launcher saw fail (on stdin), and
   // the sources whose run since the start of the evening ended in an error.
   let failed = [];
+  let vaultLocked = false;
   try {
-    failed = JSON.parse(readFileSync(0, "utf8") || "{}").failed ?? [];
+    const input = JSON.parse(readFileSync(0, "utf8") || "{}");
+    failed = input.failed ?? [];
+    vaultLocked = input.vaultLocked === true;
   } catch {
     failed = [];
   }
@@ -326,6 +331,9 @@ if (command === "setup") {
       }
     }
   }
+  // The cause first when it explains the rest: a locked vault takes the keys
+  // of several steps at once, and their own messages rarely say so.
+  if (vaultLocked) problems.unshift(WORDS.vaultLocked);
   if (!problems.length) {
     out({ ok: true, alert: false });
     process.exit(0);
@@ -333,10 +341,22 @@ if (command === "setup") {
   const md = [`# ${WORDS.alertTitle}`, WORDS.alertIntro(problems.length), ...problems.map((p, i) => `${i + 1}. ${p}`), WORDS.alertFoot(`~/.hypervibe-brain/logs/nightly-${today()}.log`)].join("\n");
   const subject = WORDS.alertSubject(cfg.name ?? "");
   const letter = cfg.letter ?? { channel: "none" };
-  const sent = args.includes("--dry") ? null : await deliver(letter, subject, toHtml(md, isoWeek()), md);
-  // Kept on this computer either way: status.mjs and the weekly review show it.
-  mkdirSync(join(HOME, ".hypervibe-brain"), { recursive: true });
-  writeFileSync(join(HOME, ".hypervibe-brain", "alert.json"), `${JSON.stringify({ date: new Date().toISOString(), problems, sent: Boolean(sent) }, null, 2)}\n`, "utf8");
+  // Kept on this computer either way, BEFORE sending: status.mjs and the weekly
+  // review show it, and a mail that cannot leave (its key in a locked vault)
+  // must not take the record with it.
+  const keep = (sent) => {
+    mkdirSync(join(HOME, ".hypervibe-brain"), { recursive: true });
+    writeFileSync(join(HOME, ".hypervibe-brain", "alert.json"), `${JSON.stringify({ date: new Date().toISOString(), problems, sent: Boolean(sent) }, null, 2)}\n`, "utf8");
+  };
+  keep(false);
+  let sent = null;
+  try {
+    sent = args.includes("--dry") ? null : await deliver(letter, subject, toHtml(md, isoWeek()), md);
+  } catch (e) {
+    out({ ok: false, alert: true, sent: false, error: String(e.message ?? e).slice(0, 300), problems });
+    process.exit(1);
+  }
+  keep(sent);
   out({ ok: true, alert: true, sent: Boolean(sent), channel: letter.channel ?? "none", subject, problems });
 } else {
   console.log("usage: letter.mjs setup | send | alert (see the top of scripts/letter.mjs)");

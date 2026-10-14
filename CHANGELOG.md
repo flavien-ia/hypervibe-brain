@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0 (2026-10-14)
+
+- **The evening save warns you, even without a key**: when something fails, a notice appears on the computer (Windows, macOS, Linux), whether the alert email could leave or not. The alert is kept on the computer before it is sent, so `/brain:status` shows it even when the mail could not go.
+- **A locked Hypervibe vault is asked for, not failed on**: if your keys live in the Hypervibe vault and it is locked at the time of the save, a notice and the vault's password window appear, with six minutes to open it. Otherwise the save goes on, and the alert says plainly that the vault was locked and that what needs it is taken up at the next run. A computer without a vault is never asked anything.
+- **An alert the same evening** when a step or a source fails, by the letter's channel.
+- **The work journal is shared by your computers**, one file per computer in git, with the titles of the Claude sessions; the reads of the brain by Claude too.
+- **The weekly review catches up a missed evening**, follows every living source, and ends on three questions.
+- **The Hypervibe vault serves the keys** of the letter, the alert and the cloud copy, for those who keep them there rather than in the brain's `.env`.
+- **Windows**: the evening save catches up every 30 minutes when the computer was asleep, at local time.
+- **Search**: a brain may keep folders out of search unless asked (a directory of contacts, for instance), on the computer and in the cloud copy alike.
+- **Vectors** carry a note's type and domains with its title: search by meaning groups an idea with ideas, a person with people. The vectors are recomputed once, at the first evening.
+- A source's own name for a note is kept whole, and its date fields are written bare.
+- To install: upload this zip in place of the previous one.
+
 ## 0.4.0 (2026-10-03)
 
 - **The plugin is now Hypervibe Brain, and its commands start with `brain`**: `/brain:start`, `/brain:create`, `/brain:capture`, `/brain:review`, `/brain:status`, `/brain:sources`, `/brain:ingest`, `/brain:contacts`, `/brain:viz`, and the `/brain:add-...` modules.
