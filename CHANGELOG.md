@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0 (2026-10-14)
+
+- **The plugin is open source**: its repository, `flavien-ia/hypervibe-brain`, is public, and every version is published there as a release carrying the plugin as a zip.
+- **`/brain:update` updates the plugin**: it reads the latest release, downloads the zip, checks it against the fingerprint GitHub computed when it was published, and swaps it in place, keeping the previous version aside. Installed from the repository, it runs Claude Code's own update commands instead. Either way, it then arms the evening save again so that it runs the new version.
+- **The published zip is the plugin only**: the tests and the CI stay in the repository.
+- To update: `/brain:update` (from 0.6.0 on), or upload the new zip in place of the previous one.
+
 ## 0.5.0 (2026-10-14)
 
 - **The evening save warns you, even without a key**: when something fails, a notice appears on the computer (Windows, macOS, Linux), whether the alert email could leave or not. The alert is kept on the computer before it is sent, so `/brain:status` shows it even when the mail could not go.
