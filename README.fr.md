@@ -26,7 +26,9 @@ Il faut Claude Code (l'app de bureau ou la ligne de commande). Node 22.13+ et gi
 /plugin install brain@hypervibe-brain
 ```
 
-**Depuis un zip reçu, dans l'app Claude (le plus simple)** : sans le décompresser, ouvrez **Personnalisation > Plugins**, choisissez **Téléverser un plugin** et donnez-lui le fichier zip. Aucune commande à taper. Pour une mise à jour, téléversez le nouveau zip de la même façon.
+**Depuis un zip, dans l'app Claude (le plus simple)** : prenez le fichier `hypervibe-brain-<version>.zip` de la [dernière version publiée](https://github.com/flavien-ia/hypervibe-brain/releases/latest). Sans le décompresser, ouvrez **Personnalisation > Plugins**, choisissez **Téléverser un plugin** et donnez-lui le fichier zip. Aucune commande à taper.
+
+**Pour mettre à jour**, quelle que soit l'installation : **`/brain:update`**.
 
 Puis, dans une nouvelle session : **`/brain:start`**.
 
@@ -44,6 +46,7 @@ Puis, dans une nouvelle session : **`/brain:start`**.
 | `/brain:capture` | Capturer une pensée, classée tout de suite (cherche d'abord, ne duplique jamais). |
 | `/brain:review` | La revue de la semaine : les nouveautés, ce que les sources ont apporté, les promotions, les orphelines, des liens proposés. |
 | `/brain:status` | Où en est le brain, et la prochaine étape utile. |
+| `/brain:update` | Met le plugin à jour avec la dernière version publiée, et la sauvegarde du soir avec lui. |
 
 **Les modules**, proposés à la fin de `create-brain`, ou ajoutés quand vous voulez :
 

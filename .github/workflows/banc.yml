@@ -30,3 +30,5 @@ jobs:
         run: node tests/banc-sync.mjs
       - name: The cloud copy, without Cloudflare
         run: node tests/banc-cloud.mjs
+      - name: The update of the plugin
+        run: node tests/banc-update.mjs

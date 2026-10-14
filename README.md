@@ -26,7 +26,9 @@ Requirements: Claude Code (desktop app or CLI). Node 22.13+ and git are checked,
 /plugin install brain@hypervibe-brain
 ```
 
-**From a zip you received, in the Claude app (the simplest)**: without unzipping it, open **Customize > Plugins**, choose **Upload a plugin** and give it the zip file. No command to type. For an update, upload the new zip the same way.
+**From a zip, in the Claude app (the simplest)**: take the file `hypervibe-brain-<version>.zip` from the [latest release](https://github.com/flavien-ia/hypervibe-brain/releases/latest). Without unzipping it, open **Customize > Plugins**, choose **Upload a plugin** and give it the zip file. No command to type.
+
+**To update**, whatever the install: **`/brain:update`**.
 
 Then, in a new session: **`/brain:start`**.
 
@@ -44,6 +46,7 @@ Then, in a new session: **`/brain:start`**.
 | `/brain:capture` | Capture a thought, classified right away (searches first, never duplicates). |
 | `/brain:review` | The weekly review: what is new, what the sources brought, promotions, orphans, proposed links. |
 | `/brain:status` | Where the brain stands, and the next useful step. |
+| `/brain:update` | Brings the plugin to its latest published version, and the evening save with it. |
 
 **The modules**, proposed at the end of `create-brain`, or added whenever you want:
 
