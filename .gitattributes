@@ -1,0 +1,6 @@
+# What `git archive` leaves out of the published zip (the plugin a person installs).
+# The tests and the CI stay in the repository, for those who work on it.
+/.github export-ignore
+/tests export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
