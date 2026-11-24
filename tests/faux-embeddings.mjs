@@ -1,0 +1,46 @@
+// faux-embeddings.mjs - A fake OpenAI-compatible embeddings API for the bench.
+// Its own process: the bench calls the brain's scripts synchronously, which
+// would freeze a server living in the bench's own event loop.
+//
+// The vector of a text is a stable function of its words, so texts sharing
+// words are close. GET /count says how many calls it has answered.
+
+import { createServer } from "node:http";
+
+let calls = 0;
+const mails = [];
+const server = createServer((req, res) => {
+  if (req.method === "GET") {
+    res.end(req.url === "/mail" ? JSON.stringify(mails.at(-1) ?? null) : String(calls));
+    return;
+  }
+  let body = "";
+  req.on("data", (c) => (body += c));
+  req.on("end", () => {
+    // A fake mail service too (Brevo and Resend): it keeps what it was asked to send.
+    if (/smtp\/email|\/emails/.test(req.url)) {
+      mails.push({ url: req.url, headers: req.headers, body: JSON.parse(body) });
+      res.writeHead(201, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ messageId: "fake-1" }));
+      return;
+    }
+    calls++;
+    const { input, dimensions } = JSON.parse(body);
+    const data = input.map((t, index) => {
+      const v = new Array(dimensions).fill(0);
+      for (const w of t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").match(/[a-z]+/g) ?? []) {
+        let h = 0;
+        for (const ch of w) h = (h * 31 + ch.charCodeAt(0)) % dimensions;
+        v[h] += 1;
+      }
+      return { index, embedding: v };
+    });
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ data }));
+  });
+});
+// An idle connection is never closed from this side (2026-11-16): the bench
+// blocks for seconds in the scripts it runs, and when that pause met Node's
+// five seconds of keep-alive, its next request died on a connection reset.
+server.keepAliveTimeout = 0;
+server.listen(0, "127.0.0.1", () => console.log(server.address().port));

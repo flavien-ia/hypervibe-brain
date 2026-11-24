@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- The history of a tool, in its own window (history.html?id=<tool>). Its
+       texts come from the dictionary, like those of the main page; its colours
+       and its tooltip from base.css. -->
+  <title data-i18n="history">History</title>
+  <link rel="stylesheet" href="base.css" />
+  <link rel="stylesheet" href="theme-hypervibe.css" />
+  <script src="theme-early.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 "Segoe UI", system-ui, sans-serif; }
+    main { max-width: 900px; margin: 0 auto; padding: 28px 16px 60px; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .meta { color: var(--muted); margin: 0 0 18px; }
+    .sources { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 16px; }
+    .sources button { border: 1px solid var(--border); background: var(--panel); color: var(--muted); border-radius: 6px; padding: 4px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+    .sources button.active { color: var(--text); border-color: rgba(255, 255, 255, 0.35); }
+    .day { margin: 22px 0 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+    ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    li { background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--green); border-radius: 8px; padding: 10px 12px; }
+    li.failed { border-left-color: var(--red); }
+    li.nothing { border-left-color: rgba(255, 255, 255, 0.18); }
+    .line { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+    .time { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 44px; }
+    .source { font-weight: 600; }
+    .why, .detail { color: var(--muted); font-size: 13px; }
+    .notes { margin-top: 6px; font-size: 13px; color: var(--muted); }
+    .empty { color: var(--muted); }
+    .see-change { border: 0; background: none; padding: 0; color: var(--text); font: inherit; text-decoration: underline dotted; cursor: pointer; }
+    .see-change:hover { color: #fff; }
+    .undo { margin-left: 2px; border: 1px solid var(--border); background: none; color: var(--muted); border-radius: 6px; padding: 0 7px; font: inherit; font-size: 12px; line-height: 1.35; cursor: pointer; }
+    .undo:hover, .undo:focus-visible { color: var(--text); border-color: rgba(255, 255, 255, 0.35); }
+    .refusal { margin: 6px 0 0; font-size: 12px; color: var(--red); }
+    .diff { margin: 8px 0 0; padding: 10px 12px; background: #0e0f1e; border: 1px solid var(--border); border-radius: 6px; font: 12px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; max-height: 420px; overflow: auto; }
+    .diff .plus { color: #9be89b; background: rgba(126, 227, 107, 0.08); display: block; }
+    .diff .minus { color: #ff9e9e; background: rgba(255, 138, 138, 0.08); display: block; }
+    .diff .hunk { color: var(--muted); display: block; }
+    .diff-head { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  </style>
+</head>
+<body class="history-page">
+  <main>
+    <h1 id="title" data-i18n="history">History</h1>
+    <p class="meta" id="meta" data-i18n="loadingShort">Loading…</p>
+    <div class="sources" id="sources"></div>
+    <div id="runs"></div>
+  </main>
+  <script type="module" src="history.js"></script>
+</body>
+</html>

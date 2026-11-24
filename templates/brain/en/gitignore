@@ -1,0 +1,13 @@
+# The index is rebuilt from the notes in a second: never in git.
+index/*.sqlite
+index/*.sqlite-*
+# The vectors ARE in git (index/embeddings/): a clone gets semantic search back without paying for it.
+.env
+node_modules/
+# Never read, never indexed, never copied anywhere, not even to a backup.
+vault/danger-zone/
+# The viewer is rebuilt from the notes.
+viz/
+# What Claude read on this computer: a promotion signal, never shared.
+index/reads.jsonl
+index/mcp-journal.jsonl

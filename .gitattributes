@@ -1,0 +1,14 @@
+# What `git archive` leaves out of the published zip (the plugin a person installs).
+# The tests and the CI stay in the repository, for those who work on it.
+/.github export-ignore
+/tests export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+# The live view's type check is a developer's tool (live/README.md): nothing
+# at runtime needs it, and a person's plugin does not carry it.
+/live/README.md export-ignore
+/live/contract.d.ts export-ignore
+/live/package.json export-ignore
+/live/pnpm-lock.yaml export-ignore
+/live/tsconfig.json export-ignore
+/live/page/tsconfig.json export-ignore

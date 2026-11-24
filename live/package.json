@@ -1,0 +1,16 @@
+{
+  "name": "hypervibe-brain-live",
+  "private": true,
+  "type": "module",
+  "description": "Development only: the type check of the live view (pnpm check). Nothing at runtime needs it, and it is left out of the published plugin.",
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "tsc -p . && tsc -p page",
+    "check:server": "tsc -p .",
+    "check:page": "tsc -p page"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2"
+  }
+}

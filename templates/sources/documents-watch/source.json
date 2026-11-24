@@ -1,0 +1,26 @@
+{
+  "name": "documents-watch",
+  "description": {
+    "en": "Finds the documents that changed in the watched folders. Each one, left alone for a quarter of an hour, is given to the judge to read the same day.",
+    "fr": "Repère les documents modifiés dans les dossiers suivis. Chacun, une fois laissé tranquille un quart d'heure, est donné à lire au juge le jour même."
+  },
+  "kind": "step",
+  "tools": [
+    "folders"
+  ],
+  "every": "30m",
+  "when": "before",
+  "judge": "documents",
+  "settle": 15,
+  "cap": 25,
+  "extensions": [
+    ".docx",
+    ".pptx",
+    ".xlsx",
+    ".md",
+    ".txt",
+    ".pdf"
+  ],
+  "enabled": true,
+  "timeoutMin": 5
+}

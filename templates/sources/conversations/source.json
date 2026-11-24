@@ -1,0 +1,30 @@
+{
+  "name": "conversations",
+  "description": {
+    "en": "The judge of the conversations with Claude Code: what is decided, settled or thought there enters the brain the same day, as sourced facts and seeds.",
+    "fr": "Le juge des conversations avec Claude Code : ce qui s'y décide, s'y règle ou s'y pense entre dans le brain le jour même, en faits sourcés et en graines."
+  },
+  "kind": "claude",
+  "tools": [
+    "claude-code"
+  ],
+  "live": true,
+  "gather": "0",
+  "proof": true,
+  "batch": 5,
+  "dailyTokens": 5000000,
+  "every": "week",
+  "needs": [
+    "CLAUDE_CODE"
+  ],
+  "allowedTools": [
+    "mcp__plugin_brain_brain__brain_search",
+    "mcp__plugin_brain_brain__brain_get",
+    "mcp__plugin_brain_brain__brain_neighbors",
+    "Bash(node {plugin}/scripts/readers/conversation.mjs:*)",
+    "Bash(node {plugin}/scripts/fact.mjs:*)",
+    "Bash(node {plugin}/scripts/capture.mjs:*)",
+    "Bash(printf:*)"
+  ],
+  "enabled": true
+}

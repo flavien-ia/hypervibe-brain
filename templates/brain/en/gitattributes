@@ -1,0 +1,3 @@
+* text=auto
+# One small JSON file per vector: neither a diff to read nor a line ending to convert.
+index/embeddings/** -text -diff

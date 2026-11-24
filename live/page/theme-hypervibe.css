@@ -1,0 +1,571 @@
+/* theme-hypervibe.css: the Hypervibe design of the page (theme.js).
+
+   Every rule here applies under data-theme="hypervibe" only: without it, the
+   page keeps its own design (base.css, style.css), untouched, and loads no
+   font. The tokens are those of the design system of Hypervibe
+   (src/lib/design/tokens.ts and src/app/globals.css of the app), in its
+   night, laid on the GROUNDS OF THE NIGHT DESIGN (2026-11-24; it was first
+   drawn on the cream, then on the warm black of the design system's
+   scenes): the night blue of the page and of its panels, as base.css and
+   style.css paint them, under cream text and the grey of the night for what
+   is secondary (5.9:1 at least, on the lightest panel), panels drawn by a
+   border of cream at 20 %, each colour written in its vivid value (the blue
+   and the violet a quarter lighter, to stay above 4.5:1 on the panels), what
+   is chosen in blue with a dark text, the yellow for the one main action, the
+   secondary buttons as the site's night buttons. One rainbow band at the very
+   top of every page of the view.
+
+   The cards are those of carte.tsx: drawn at rest by a thin border of cream
+   at 20 % on their surface, no shadow, the rainbow edge lit on hover. Never a
+   coloured border all round a tinted card, never a coloured rule down one
+   side: a state lives in a tint (the design system's Encart), a dot or an
+   icon.
+
+   The icons are those of the design system (icones-hypervibe.js puts them
+   beside the night's ones, hidden here).
+
+   The fonts are those of the site, carried by the view (fonts/, licences in
+   fonts/LICENSE.md): Archivo for the titles and the labels in capitals,
+   Geist for the text, Geist Mono for code and figures. Nothing comes from
+   the network; until they are read, the system's fonts stand in
+   (font-display: swap). */
+
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("fonts/geist-variable.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("fonts/geist-mono-variable.woff2") format("woff2");
+}
+/* Archivo, variable in weight and width, in two subsets (the ranges of the site's own build). */
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url("fonts/archivo-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url("fonts/archivo-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root[data-theme="hypervibe"] {
+  /* The grounds: those of the night design, value for value (base.css, style.css). */
+  --hv-night: #0b0c18;
+  --hv-panel: rgba(16, 17, 32, 0.9);
+  --hv-surface: #10111f;
+  --hv-card: rgba(12, 13, 26, 0.96);
+  --hv-raised: #1b1c33;
+  --hv-modal: #16172d;
+  --hv-field: #0e0f1e;
+  --hv-disc: #15162a;
+  /* The design system's night: its texts, its borders, its veils. */
+  --hv-cream: #FAF8F5;
+  --hv-grey: #A39A90;
+  --hv-border: rgba(250, 248, 245, 0.2);
+  --hv-border-hover: rgba(250, 248, 245, 0.4);
+  --hv-border-strong: rgba(250, 248, 245, 0.5);
+  --hv-hover: rgba(250, 248, 245, 0.08);
+  --hv-veil: rgba(250, 248, 245, 0.06);
+  --hv-coral: #FF6040; --hv-coral-light: #FE866D;
+  --hv-yellow: #FFE500; --hv-yellow-light: #FEEA3D;
+  --hv-teal: #00C896; --hv-teal-light: #3FD4AE;
+  --hv-blue: #4B7BFF; --hv-blue-light: #779AFD;
+  --hv-violet: #8B5CF6; --hv-violet-light: #A783F6;
+  --hv-rose: #FF4D6D;
+  --hv-rainbow: linear-gradient(90deg, #FF6040 0% 20%, #FFE500 20% 40%, #00C896 40% 60%, #4B7BFF 60% 80%, #8B5CF6 80% 100%);
+  --hv-rainbow-soft: linear-gradient(90deg, #FF6040, #FFE500, #00C896, #4B7BFF, #8B5CF6, #FF4D6D);
+  --hv-shadow-float: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --hv-curve: cubic-bezier(0.22, 1, 0.36, 1);
+  --hv-text-font: "Geist", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --hv-display-font: "Archivo", "Geist", "Segoe UI", system-ui, sans-serif;
+  --hv-mono-font: "Geist Mono", ui-monospace, Consolas, monospace;
+  /* Three icons of the design system drawn inside the fields (2026-11-24), as backgrounds since a field holds no
+     element: succes (the mark of a ticked box, in cream), bas (the arrow of a list) and rechercher (the magnifier),
+     both in the grey of the night with their background at 20 %. Paths of the app (src/lib/design/icones.ts), as in
+     icones-hypervibe.js. */
+  --hv-mark-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath fill='%23FAF8F5' d='M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z'/%3E%3C/svg%3E");
+  --hv-mark-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23A39A90'%3E%3Cpath opacity='0.2' d='M208,96l-80,80L48,96Z'/%3E%3Cpath d='M215.39,92.94A8,8,0,0,0,208,88H48a8,8,0,0,0-5.66,13.66l80,80a8,8,0,0,0,11.32,0l80-80A8,8,0,0,0,215.39,92.94ZM128,164.69,67.31,104H188.69Z'/%3E%3C/svg%3E");
+  --hv-mark-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23A39A90'%3E%3Cpath opacity='0.2' d='M192,112a80,80,0,1,1-80-80A80,80,0,0,1,192,112Z'/%3E%3Cpath d='M229.66,218.34,179.6,168.28a88.21,88.21,0,1,0-11.32,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z'/%3E%3C/svg%3E");
+  /* The variables the page already reads (base.css); --bg and --panel keep the night's. */
+  --border: var(--hv-border);
+  --text: var(--hv-cream);
+  --muted: var(--hv-grey);
+  --selection: var(--hv-yellow);
+  --green: var(--hv-teal);
+  --red: var(--hv-coral);
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------- the page, the fonts, the band */
+
+:root[data-theme="hypervibe"],
+:root[data-theme="hypervibe"] body { font-family: var(--hv-text-font); -webkit-font-smoothing: antialiased; }
+/* The rainbow band (the design system's rainbow-stripe, 5 px): at the very top of every page of the view, above everything, even a dialog. */
+:root[data-theme="hypervibe"] body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; z-index: 2147483000; height: 5px; background: var(--hv-rainbow); pointer-events: none; }
+:root[data-theme="hypervibe"] code,
+:root[data-theme="hypervibe"] kbd,
+:root[data-theme="hypervibe"] pre,
+:root[data-theme="hypervibe"] .exclude-chip code { font-family: var(--hv-mono-font); }
+/* Titles in the voice (Archivo, heavy and tight). */
+:root[data-theme="hypervibe"] #panel h2,
+:root[data-theme="hypervibe"] #settings-head h2,
+:root[data-theme="hypervibe"] #legend-head h2,
+:root[data-theme="hypervibe"] #index-head h2,
+:root[data-theme="hypervibe"] .usage-title,
+:root[data-theme="hypervibe"] .modal h3,
+:root[data-theme="hypervibe"] .setting-card h3,
+:root[data-theme="hypervibe"] .card-head h3,
+:root[data-theme="hypervibe"] .judge-card h4,
+:root[data-theme="hypervibe"] #legend-body .item h3,
+:root[data-theme="hypervibe"] .history-page h1,
+:root[data-theme="hypervibe"] main > h1 { font-family: var(--hv-display-font); font-weight: 800; letter-spacing: -0.01em; }
+:root[data-theme="hypervibe"] #panel h2,
+:root[data-theme="hypervibe"] #settings-head h2,
+:root[data-theme="hypervibe"] #legend-head h2,
+:root[data-theme="hypervibe"] #index-head h2,
+:root[data-theme="hypervibe"] .usage-title,
+:root[data-theme="hypervibe"] .history-page h1,
+:root[data-theme="hypervibe"] main > h1 { letter-spacing: -0.02em; }
+/* The small labels: its stretched capitals (the design system's .etiquette). */
+:root[data-theme="hypervibe"] .filter-title,
+:root[data-theme="hypervibe"] #activity h3,
+:root[data-theme="hypervibe"] #panel h3,
+:root[data-theme="hypervibe"] #legend-body h2,
+:root[data-theme="hypervibe"] .exec-kind,
+:root[data-theme="hypervibe"] .history-page .day,
+:root[data-theme="hypervibe"] .table th,
+:root[data-theme="hypervibe"] .kpi span,
+:root[data-theme="hypervibe"] .hero-label,
+:root[data-theme="hypervibe"] .judge-chart-title { font-family: var(--hv-display-font); font-weight: 700; font-stretch: 125%; font-variation-settings: "wdth" 125; letter-spacing: 0.06em; text-transform: uppercase; }
+/* Figures and axes in Geist Mono, aligned. */
+:root[data-theme="hypervibe"] .table td.num,
+:root[data-theme="hypervibe"] .chart-axis,
+:root[data-theme="hypervibe"] .chart-x,
+:root[data-theme="hypervibe"] .share-percent,
+:root[data-theme="hypervibe"] #activity-list time,
+:root[data-theme="hypervibe"] .history-page .time,
+:root[data-theme="hypervibe"] .runs .run-when,
+:root[data-theme="hypervibe"] #period-count,
+:root[data-theme="hypervibe"] #seeds-count,
+:root[data-theme="hypervibe"] .build-count { font-family: var(--hv-mono-font); font-variant-numeric: tabular-nums; }
+
+/* Keyboard focus: the blue ring of the site, on everything that is clicked. */
+:root[data-theme="hypervibe"] :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
+:root[data-theme="hypervibe"] #panel a:focus-visible,
+:root[data-theme="hypervibe"] #results li:focus-visible,
+:root[data-theme="hypervibe"] #index-list [tabindex]:focus-visible,
+:root[data-theme="hypervibe"] #activity-list [tabindex]:focus-visible,
+:root[data-theme="hypervibe"] .modal-actions button:focus-visible,
+:root[data-theme="hypervibe"] .design-choices button:focus-visible { outline: 2px solid var(--hv-blue-light); outline-offset: 2px; }
+/* A field lights up in the rainbow when one writes in it, as on the site. */
+:root[data-theme="hypervibe"] :is(#search, #index-search, #usage-log-search, .exclude-add input, .modal-input, .setting-card input[type="number"]):focus,
+:root[data-theme="hypervibe"] :is(#search, #index-search, #usage-log-search, .exclude-add input, .modal-input, .setting-card input[type="number"]):focus-visible {
+  outline: none; border-color: transparent;
+  box-shadow: 0 0 0 1px var(--hv-coral), 0 0 0 2px var(--hv-yellow), 0 0 0 3px var(--hv-teal), 0 0 0 4px var(--hv-blue), 0 0 0 5px var(--hv-violet);
+}
+
+/* ---------------------------------------------------------------- the icons (icones-hypervibe.js) */
+
+/* The night's icon stays in the page, hidden; the design system's one stands beside it. */
+:root[data-theme="hypervibe"] .hv-night-icon,
+:root[data-theme="hypervibe"] .hv-glyph-text { display: none !important; }
+/* Phosphor duotone: filled, never stroked, whatever the night's rules said of its place. */
+:root[data-theme="hypervibe"] svg.hv-icone { flex: none; fill: currentColor !important; stroke: none !important; stroke-width: 0 !important; overflow: visible; }
+:root[data-theme="hypervibe"] svg.hv-icone .hv-fond { transition: opacity 300ms var(--hv-curve); }
+/* A clicked icon takes the rainbow in its background on hover, its stroke does not move. */
+@media (hover: hover) {
+  :root[data-theme="hypervibe"] :is(button, a, [role="button"], .help-mark):hover svg.hv-icone .hv-fond { fill: url(#hv-icone-arc-en-ciel); opacity: 1; }
+}
+:root[data-theme="hypervibe"] :is(button, a, [role="button"], .help-mark):focus-visible svg.hv-icone .hv-fond { fill: url(#hv-icone-arc-en-ciel); opacity: 1; }
+/* An arrow of a text, become an icon: glued to its words, on their line. */
+:root[data-theme="hypervibe"] .hv-glyph { display: inline-flex; align-items: center; vertical-align: -0.2em; white-space: nowrap; }
+:root[data-theme="hypervibe"] .hv-glyph svg.hv-icone { width: 1.15em; height: 1.15em; }
+:root[data-theme="hypervibe"] .hv-glyph.hv-up svg.hv-icone { transform: rotate(180deg); }
+:root[data-theme="hypervibe"] .hv-glyph.hv-alone { vertical-align: middle; }
+:root[data-theme="hypervibe"] .hv-glyph.hv-alone svg.hv-icone { width: 0.9em; height: 0.9em; }
+/* The sizes of the design system: 20 in a button, 16 beside a small text. */
+:root[data-theme="hypervibe"] :is(#open-settings, #recenter, #open-index, #floors-reset, #floors-tools) svg.hv-icone,
+:root[data-theme="hypervibe"] svg.hv-icone.activity-icon { width: 20px; height: 20px; }
+:root[data-theme="hypervibe"] #redo-territories svg.hv-icone,
+:root[data-theme="hypervibe"] .help-mark .hv-glyph.hv-alone svg.hv-icone,
+:root[data-theme="hypervibe"] .filter-title svg.hv-icone { width: 16px; height: 16px; }
+:root[data-theme="hypervibe"] svg.hv-icone.key-icon { width: 15px; height: 15px; vertical-align: -3px; color: var(--hv-yellow); }
+:root[data-theme="hypervibe"] svg.hv-icone.chevron { width: 14px !important; height: 14px !important; margin: 0 !important; border: 0 !important; transform: none !important; color: var(--hv-grey); transition: transform 150ms var(--hv-curve); }
+:root[data-theme="hypervibe"] #activity.folded svg.hv-icone.chevron,
+:root[data-theme="hypervibe"] #build.folded svg.hv-icone.chevron { transform: rotate(180deg) !important; }
+:root[data-theme="hypervibe"] svg.hv-icone.activity-icon { color: var(--hv-cream); }
+:root[data-theme="hypervibe"] #activity.is-live svg.hv-icone.activity-icon { color: var(--hv-teal); filter: drop-shadow(0 0 4px var(--hv-teal)); }
+:root[data-theme="hypervibe"] #activity.is-live svg.hv-icone.activity-icon .hv-fond { opacity: 0.45; }
+/* A close button: the design system's one of a Fenetre (2026-11-24), a square of 36 px with a radius of 12 on the
+   night's veil, its icon in grey; on hover the veil thickens and the icon turns cream. */
+:root[data-theme="hypervibe"] #panel-close,
+:root[data-theme="hypervibe"] .modal-read-close { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 12px; background: var(--hv-veil); color: var(--hv-grey); cursor: pointer; }
+:root[data-theme="hypervibe"] #panel-close:hover,
+:root[data-theme="hypervibe"] .modal-read-close:hover { background: rgba(250, 248, 245, 0.14); color: var(--hv-cream); }
+:root[data-theme="hypervibe"] #panel-close { top: 12px; right: 12px; }
+
+/* ---------------------------------------------------------------- the bar at the top, the filters */
+
+:root[data-theme="hypervibe"] #bar { top: 16px; }
+/* One choice among a few (the views, the period, the design, the model of a judge, the periods of the usage, the
+   sources of the history): the design system's SelecteurSegmente on the night (2026-11-24). A pill drawn by the
+   night's border on its veil, the options in pills inside it, all in semi-bold so that choosing changes no width;
+   the chosen one in cream with a dark text, the others in grey. */
+:root[data-theme="hypervibe"] :is(.group, .period-choices, .design-choices, .model-choice, #usage-periods, .history-page .sources) { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 3px; border: 1px solid var(--hv-border); border-radius: 999px; background: var(--hv-veil); box-shadow: none; }
+:root[data-theme="hypervibe"] :is(.group, .period-choices, .design-choices, .model-choice, #usage-periods, .history-page .sources) button { min-height: 30px; padding: 0 14px; border: 0; border-radius: 999px; background: none; color: var(--hv-grey); font-weight: 600; box-shadow: none; cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+:root[data-theme="hypervibe"] :is(.group, .period-choices, .design-choices, .model-choice, #usage-periods, .history-page .sources) button:hover { background: var(--hv-hover); color: var(--hv-cream); }
+:root[data-theme="hypervibe"] :is(.group, .period-choices, .design-choices, .model-choice, #usage-periods, .history-page .sources) button.active,
+:root[data-theme="hypervibe"] .period-choices button[data-v=""].active { background: var(--hv-cream); color: #1A1410; }
+/* In the filters box, the same in its small size: the box is narrow and its lines are short. (#filters, #settings:
+   the rule above weighs an id, through #usage-periods.) */
+:root[data-theme="hypervibe"] #filters :is(.period-choices, .design-choices) { padding: 2px; gap: 2px; }
+:root[data-theme="hypervibe"] #filters :is(.period-choices, .design-choices) button { min-height: 22px; padding: 0 8px; }
+:root[data-theme="hypervibe"] #filters .period-choices { display: flex; flex-wrap: nowrap; }
+:root[data-theme="hypervibe"] #filters .period-choices button { flex: 1 1 auto; min-width: 0; padding: 0 3px; }
+:root[data-theme="hypervibe"] #settings .model-choice button { min-height: 28px; }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="hypervibe"] :is(.group, .period-choices, .design-choices, .model-choice, #usage-periods, .history-page .sources) button { transition: none; }
+}
+/* The fields: the design system's Champ in its app density, a strong border, a radius of 8, 40 px high (38 in the bar
+   at the top, the height of the views beside it); a search carries its magnifier, a list its arrow, a number no
+   spinner (the arrows of the keyboard still count). The rainbow when one writes in it is set above. */
+:root[data-theme="hypervibe"] :is(#search, #index-search, #usage-log-search, #usage-log-tool, #usage-log-who, .setting-card select, .setting-card input[type="number"], .exclude-add input, .modal-input) { box-sizing: border-box; min-height: 40px; padding: 8px 12px; border: 1px solid var(--hv-border-strong); border-radius: 8px; background-color: var(--hv-field); color: var(--hv-cream); font-family: var(--hv-text-font); font-size: 14px; line-height: 1.4; }
+:root[data-theme="hypervibe"] #search { min-height: 38px; height: 38px; background-color: var(--hv-panel); }
+:root[data-theme="hypervibe"] :is(#search, #index-search, #usage-log-search) { padding-left: 36px; background-image: var(--hv-mark-search); background-repeat: no-repeat; background-position: 12px 50%; background-size: 16px 16px; }
+:root[data-theme="hypervibe"] :is(#usage-log-tool, #usage-log-who, .setting-card select) { appearance: none; -webkit-appearance: none; padding-right: 40px; background-image: var(--hv-mark-down); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px 16px; cursor: pointer; }
+:root[data-theme="hypervibe"] :is(#usage-log-tool, #usage-log-who, .setting-card select) option { background: var(--hv-modal); color: var(--hv-cream); }
+:root[data-theme="hypervibe"] #settings .setting-card input[type="number"] { width: 72px; appearance: textfield; -moz-appearance: textfield; font-family: var(--hv-mono-font); font-variant-numeric: tabular-nums; }
+:root[data-theme="hypervibe"] .setting-card input[type="number"]::-webkit-inner-spin-button,
+:root[data-theme="hypervibe"] .setting-card input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+:root[data-theme="hypervibe"] :is(#search, #index-search, #usage-log-search, .setting-card input[type="number"], .exclude-add input, .modal-input):disabled,
+:root[data-theme="hypervibe"] :is(#usage-log-tool, #usage-log-who, .setting-card select):disabled { cursor: not-allowed; opacity: 0.5; }
+:root[data-theme="hypervibe"] #open-index { width: 38px; height: 38px; }
+:root[data-theme="hypervibe"] #search::placeholder,
+:root[data-theme="hypervibe"] #index-search::placeholder,
+:root[data-theme="hypervibe"] #usage-log-search::placeholder,
+:root[data-theme="hypervibe"] .exclude-add input::placeholder { color: var(--hv-grey); }
+/* The search's results: the design system's menu (ListeMenu, 2026-11-24), floating on the night with its border,
+   a radius of 12, lines of 8 that light up in the night's hover; the line the keyboard is on, in blue (a choice). */
+:root[data-theme="hypervibe"] #results { padding: 8px; border: 1px solid var(--hv-border); border-radius: 12px; background: var(--hv-raised); box-shadow: var(--hv-shadow-float); }
+:root[data-theme="hypervibe"] #results li { border-radius: 8px; cursor: pointer; }
+:root[data-theme="hypervibe"] #results li:hover { background: var(--hv-hover); }
+:root[data-theme="hypervibe"] #results li.active { background: rgba(75, 123, 255, 0.18); }
+/* The one main action of the screen: yellow, dark text, the rainbow passing under it on hover. */
+:root[data-theme="hypervibe"] #install,
+:root[data-theme="hypervibe"] .modal-yes { position: relative; overflow: hidden; isolation: isolate; border: 0; border-radius: 12px; background: var(--hv-yellow); color: var(--hv-night); font-weight: 600; }
+:root[data-theme="hypervibe"] #install::after,
+:root[data-theme="hypervibe"] .modal-yes::after { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--hv-rainbow); transform: translateX(-100%); transition: transform 0.4s ease; }
+:root[data-theme="hypervibe"] #install:hover,
+:root[data-theme="hypervibe"] .modal-yes:hover { background: var(--hv-yellow); }
+:root[data-theme="hypervibe"] #install:hover::after,
+:root[data-theme="hypervibe"] .modal-yes:hover::after { transform: translateX(0); }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="hypervibe"] #install::after,
+  :root[data-theme="hypervibe"] .modal-yes::after,
+  :root[data-theme="hypervibe"] svg.hv-icone .hv-fond,
+  :root[data-theme="hypervibe"] svg.hv-icone.chevron { transition: none; }
+}
+
+:root[data-theme="hypervibe"] #filters { border-radius: 12px; }
+:root[data-theme="hypervibe"] #filters-head { color: var(--hv-cream); font-weight: 600; }
+:root[data-theme="hypervibe"] #filters-head:hover { background: var(--hv-hover); }
+:root[data-theme="hypervibe"] #filters-arrow { display: inline-flex; color: var(--hv-grey); }
+:root[data-theme="hypervibe"] .filter-group { border-color: var(--hv-border); border-radius: 8px; background: var(--hv-veil); }
+:root[data-theme="hypervibe"] .filter-title { color: var(--hv-grey); }
+:root[data-theme="hypervibe"] .check { background: none; color: var(--hv-cream); }
+:root[data-theme="hypervibe"] .check:hover { color: var(--hv-cream); background: var(--hv-hover); }
+/* The boxes to tick: the design system's Case (2026-11-24), drawn in its small size for the narrow filters box (16 px
+   instead of 22, the same proportions): a strong border of 2 px, a radius of 6, the field's ground; ticked, the box
+   fills in blue with its mark (the icon succes) in cream. */
+:root[data-theme="hypervibe"] .check input[type="checkbox"] { appearance: none; -webkit-appearance: none; flex: none; box-sizing: border-box; width: 16px; height: 16px; margin: 0; border: 2px solid var(--hv-border-strong); border-radius: 6px; background: var(--hv-field) no-repeat center / 11px 11px; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease; }
+:root[data-theme="hypervibe"] .check input[type="checkbox"]:checked { border-color: var(--hv-blue); background-color: var(--hv-blue); background-image: var(--hv-mark-check); }
+:root[data-theme="hypervibe"] .check input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.5; }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="hypervibe"] .check input[type="checkbox"] { transition: none; }
+}
+:root[data-theme="hypervibe"] .check-error { color: var(--hv-coral); }
+/* The bullets of the natures, in the colours the map paints them (theme.js). */
+:root[data-theme="hypervibe"] [data-nature="lesson"] ~ .bullet { --c: var(--hv-rose); }
+:root[data-theme="hypervibe"] [data-nature="decision"] ~ .bullet { --c: var(--hv-yellow); }
+:root[data-theme="hypervibe"] #filter-seeds ~ .bullet { --c: var(--hv-teal-light); }
+:root[data-theme="hypervibe"] .design-row,
+:root[data-theme="hypervibe"] .period-head { color: var(--hv-grey); }
+/* The secondary actions: the site's buttons on the night, a veil of cream and its border. */
+:root[data-theme="hypervibe"] :is(#open-legend, .next-seed, .validate-note, .now, #panel .health-action, .open-row a, .open-row button, .exclude-add button, .more-button, #index-more, .held-action, #settings-close, #legend-close, #index-close, #usage-close, .history-page .undo, .exec-actions button) { border: 1px solid var(--hv-border); border-radius: 12px; background: var(--hv-veil); color: var(--hv-cream); text-decoration: none; transition: background-color 150ms ease, border-color 150ms ease; }
+:root[data-theme="hypervibe"] :is(#open-legend, .next-seed, .validate-note, .now, #panel .health-action, .open-row a, .open-row button, .exclude-add button, .more-button, #index-more, .held-action, #settings-close, #legend-close, #index-close, #usage-close, .history-page .undo, .exec-actions button):hover:not(:disabled) { border-color: var(--hv-border-hover); background: rgba(250, 248, 245, 0.14); color: var(--hv-cream); }
+:root[data-theme="hypervibe"] :is(#settings-close, #legend-close, #index-close, #usage-close, .open-row a, #open-legend) { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; }
+:root[data-theme="hypervibe"] #open-legend { display: flex; width: 100%; }
+/* The button that reads a skill was the browser's own: the same secondary button (2026-11-24). */
+:root[data-theme="hypervibe"] .exec-actions button { min-height: 32px; padding: 0 14px; font: inherit; font-weight: 600; cursor: pointer; }
+/* The dangerous action, discreet: the coral of the problem, its tint on hover. */
+:root[data-theme="hypervibe"] #panel .health-action.danger { border-color: var(--hv-coral); background: none; color: var(--hv-coral-light); }
+:root[data-theme="hypervibe"] #panel .health-action.danger:hover:not(:disabled) { border-color: var(--hv-coral); background: rgba(255, 96, 64, 0.15); color: var(--hv-coral-light); }
+
+/* The round buttons on the map. */
+:root[data-theme="hypervibe"] :is(#recenter, #open-settings, #open-index, #redo-territories, #floors-reset, #floors-tools) { border-color: var(--hv-border); background: var(--hv-panel); color: var(--hv-cream); }
+:root[data-theme="hypervibe"] :is(#recenter, #open-index, #floors-reset, #floors-tools) { border-radius: 12px; }
+:root[data-theme="hypervibe"] :is(#recenter, #open-settings, #open-index, #redo-territories, #floors-reset, #floors-tools):hover { border-color: var(--hv-border-strong); background: var(--hv-raised); }
+/* The pad that turns the floors: its violet in its ground and its dot, never in a coloured border around the tint
+   (2026-11-24); the night's border, stronger while it is held. */
+:root[data-theme="hypervibe"] #floors-pad { border-color: var(--hv-border); background: radial-gradient(circle at 50% 40%, rgba(139, 92, 246, 0.22), rgba(139, 92, 246, 0.05)); }
+:root[data-theme="hypervibe"] #floors-pad.held { border-color: var(--hv-border-strong); }
+:root[data-theme="hypervibe"] #floors-pad::before,
+:root[data-theme="hypervibe"] #floors-pad::after { background: rgba(167, 131, 246, 0.25); }
+:root[data-theme="hypervibe"] #floors-dot { background: var(--hv-violet-light); box-shadow: 0 0 8px var(--hv-violet); }
+
+/* ---------------------------------------------------------------- the panels on the map */
+
+:root[data-theme="hypervibe"] #activity,
+:root[data-theme="hypervibe"] #build { border-radius: 20px; }
+:root[data-theme="hypervibe"] #activity { padding: 12px 16px; }
+:root[data-theme="hypervibe"] #activity.folded { border-radius: 999px; padding: 0; }
+:root[data-theme="hypervibe"] #activity.folded:hover,
+:root[data-theme="hypervibe"] #activity.folded:focus-within,
+:root[data-theme="hypervibe"] #build:hover { border-color: var(--hv-border-strong); }
+:root[data-theme="hypervibe"] #activity h3 { color: var(--hv-grey); }
+:root[data-theme="hypervibe"] #activity-list li { border-radius: 8px; }
+:root[data-theme="hypervibe"] #activity-list li:hover { background: var(--hv-hover); }
+:root[data-theme="hypervibe"] #activity-list .skill-mark { color: var(--hv-violet-light); }
+/* A link in a text: cream, underlined, the underline turning yellow on hover (the site's links on the night). */
+:root[data-theme="hypervibe"] .usage-link,
+:root[data-theme="hypervibe"] #panel a:not(.open-row a),
+:root[data-theme="hypervibe"] #panel .link { color: var(--hv-cream); font-weight: 600; text-decoration: underline; text-decoration-color: rgba(250, 248, 245, 0.4); text-underline-offset: 4px; }
+:root[data-theme="hypervibe"] .usage-link:hover,
+:root[data-theme="hypervibe"] #panel a:not(.open-row a):hover,
+:root[data-theme="hypervibe"] #panel .link:hover { text-decoration-color: var(--hv-yellow); text-decoration-thickness: 2px; }
+/* Waiting: in yellow, which reads on the night. */
+:root[data-theme="hypervibe"] #activity-alert,
+:root[data-theme="hypervibe"] .judge-status,
+:root[data-theme="hypervibe"] .setting-card .cap-note.warn { color: var(--hv-yellow); }
+:root[data-theme="hypervibe"] .waits-vault { color: var(--hv-yellow-light); }
+:root[data-theme="hypervibe"] .key-icon:not(.hv-icone) { stroke: var(--hv-yellow); }
+/* A pill that says a judge waits (the design system's PastilleNuit). */
+:root[data-theme="hypervibe"] #activity.folded.has-held { border-color: rgba(255, 229, 0, 0.55); background: linear-gradient(rgba(255, 229, 0, 0.12), rgba(255, 229, 0, 0.12)), var(--hv-panel); }
+/* A state inside a page: the design system's Encart, a tint of its colour at 15 %, no border. */
+:root[data-theme="hypervibe"] .notice { border-color: transparent; border-radius: 12px; background: var(--hv-veil); }
+:root[data-theme="hypervibe"] .notice.warn,
+:root[data-theme="hypervibe"] .held-box { border-color: transparent; border-radius: 12px; background: rgba(255, 229, 0, 0.15); }
+/* What floats over the map: the design system's Notification, the night with its border, the colour of its state in a halo. */
+:root[data-theme="hypervibe"] #welcome .notice { border-color: var(--hv-border); border-radius: 20px; background: rgba(12, 13, 26, 0.85); }
+:root[data-theme="hypervibe"] #alerts .notice { border-color: var(--hv-border); border-radius: 20px; background-color: rgba(27, 28, 51, 0.97); box-shadow: var(--hv-shadow-float); }
+:root[data-theme="hypervibe"] #alerts .notice.warn,
+:root[data-theme="hypervibe"] #welcome .notice.warn { background-image: radial-gradient(circle at 0 0, rgba(255, 229, 0, 0.28), rgba(255, 229, 0, 0) 60%); }
+:root[data-theme="hypervibe"] .held-note,
+:root[data-theme="hypervibe"] .exclude-note,
+:root[data-theme="hypervibe"] .setting-card .saved { color: var(--hv-teal); }
+:root[data-theme="hypervibe"] .held-note.failed,
+:root[data-theme="hypervibe"] .exclude-note.failed,
+:root[data-theme="hypervibe"] #panel .error { color: var(--hv-coral); }
+
+/* The building of the brain. */
+:root[data-theme="hypervibe"] #build { padding: 12px 16px; }
+:root[data-theme="hypervibe"] #build-hide { border-radius: 999px; }
+:root[data-theme="hypervibe"] #build-hide:hover { background: var(--hv-hover); color: var(--hv-cream); }
+:root[data-theme="hypervibe"] .build-now { border-color: transparent; border-radius: 8px; background: rgba(255, 229, 0, 0.15); }
+:root[data-theme="hypervibe"] .build-now b,
+:root[data-theme="hypervibe"] .build-block.is-now .build-name,
+:root[data-theme="hypervibe"] .build-part.is-now > .build-state,
+:root[data-theme="hypervibe"] .build-part.is-running > .build-state { color: var(--hv-yellow); }
+:root[data-theme="hypervibe"] .build-mark { border-color: var(--hv-border-strong); }
+:root[data-theme="hypervibe"] .build-part.is-done .build-mark,
+:root[data-theme="hypervibe"] .build-part.is-na .build-mark { border-color: var(--hv-teal); background: var(--hv-teal); }
+:root[data-theme="hypervibe"] .build-part.is-now .build-mark,
+:root[data-theme="hypervibe"] .build-part.is-running .build-mark { border-color: var(--hv-yellow); box-shadow: 0 0 0 3px rgba(255, 229, 0, 0.2); }
+:root[data-theme="hypervibe"] .build-part.is-done > .build-state { color: var(--hv-teal); }
+:root[data-theme="hypervibe"] .build-bar i { background: var(--hv-teal); }
+
+/* ---------------------------------------------------------------- the card on the right */
+
+:root[data-theme="hypervibe"] #panel { padding: 24px; }
+/* A pill of the card: the design system's PastilleNeutre on the night (2026-11-24), the night's hollow, the word in
+   grey; a nature is its Etiquette, a tint of its colour at 15 % with a dot of it, never a coloured border. */
+:root[data-theme="hypervibe"] #panel .tag { padding: 4px 12px; border: 0; border-radius: 999px; background: rgba(250, 248, 245, 0.12); color: var(--hv-grey); font-weight: 500; }
+:root[data-theme="hypervibe"] #panel .tag.nature-tag { display: inline-flex; align-items: center; gap: 8px; border: 0 !important; background: color-mix(in srgb, var(--c, var(--hv-grey)) 15%, transparent); color: var(--hv-cream); font-family: var(--hv-display-font); font-size: 11px; font-weight: 700; font-stretch: 125%; font-variation-settings: "wdth" 125; letter-spacing: 0.06em; text-transform: uppercase; }
+:root[data-theme="hypervibe"] #panel .tag.nature-tag::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--hv-grey)); }
+/* A status pill: a tint of its colour, the word in its light value. */
+:root[data-theme="hypervibe"] #panel .tag.validated { display: inline-flex; align-items: center; gap: 6px; border: 0; background: rgba(0, 200, 150, 0.15); color: var(--hv-teal-light); }
+:root[data-theme="hypervibe"] #panel .tag.validated::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--hv-teal); }
+:root[data-theme="hypervibe"] #panel .problem { border-color: transparent; background: rgba(255, 96, 64, 0.15); }
+:root[data-theme="hypervibe"] #panel .box { border-color: var(--hv-border); border-radius: 12px; background: var(--hv-veil); }
+/* The runs of a tool: no rule down their side, a dot before each. */
+:root[data-theme="hypervibe"] .runs li { position: relative; padding-left: 16px; border-left: 0; }
+:root[data-theme="hypervibe"] .runs li::before { content: ""; position: absolute; left: 2px; top: 0.55em; width: 6px; height: 6px; border-radius: 50%; background: var(--hv-grey); }
+:root[data-theme="hypervibe"] .exec-kind { color: var(--hv-cream); }
+:root[data-theme="hypervibe"] .history-link { font-weight: 600; }
+
+/* ---------------------------------------------------------------- what floats: tooltip, box under the pointer, dialogs, toast */
+
+:root[data-theme="hypervibe"] .tooltip { border: 1px solid var(--hv-border); border-radius: 8px; background: var(--hv-raised); box-shadow: var(--hv-shadow-float); }
+:root[data-theme="hypervibe"] .tooltip::after { border-color: var(--hv-border); background: var(--hv-raised); }
+:root[data-theme="hypervibe"] #hover { border-color: var(--hv-border); border-radius: 8px; background: var(--hv-raised); box-shadow: var(--hv-shadow-float); }
+:root[data-theme="hypervibe"] .modal-backdrop { background: rgba(5, 6, 14, 0.66); }
+/* A dialog: the design system's Fenetre on the night (2026-11-24), a radius of 20, its border, the rainbow band of
+   4 px at its top and a halo of violet in its corner, both painted in its own ground (nothing added around it). */
+:root[data-theme="hypervibe"] .modal { border-color: var(--hv-border); border-radius: 20px; background: var(--hv-rainbow) top / 100% 4px no-repeat, radial-gradient(circle at 100% 0, rgba(139, 92, 246, 0.22), rgba(139, 92, 246, 0) 45%), var(--hv-modal); box-shadow: var(--hv-shadow-float); }
+:root[data-theme="hypervibe"] .modal h3 { font-weight: 900; letter-spacing: -0.03em; }
+:root[data-theme="hypervibe"] .modal-actions button { border-radius: 12px; }
+:root[data-theme="hypervibe"] .modal-no { border-color: var(--hv-border); background: var(--hv-veil); color: var(--hv-cream); }
+:root[data-theme="hypervibe"] .modal-no:hover { border-color: var(--hv-border-hover); background: rgba(250, 248, 245, 0.14); color: var(--hv-cream); }
+:root[data-theme="hypervibe"] .modal-input { border-color: var(--hv-border-strong); border-radius: 8px; background: var(--hv-field); }
+:root[data-theme="hypervibe"] .modal-read-head { border-bottom-color: var(--hv-border); }
+:root[data-theme="hypervibe"] .modal-read-body pre { background: var(--hv-veil); }
+/* The short message of what the page could not do: the night, its border, a halo of coral. */
+:root[data-theme="hypervibe"] .toast { border-color: var(--hv-border); border-radius: 12px; background: radial-gradient(circle at 0 0, rgba(255, 96, 64, 0.3), rgba(255, 96, 64, 0) 60%), var(--hv-raised); box-shadow: var(--hv-shadow-float); }
+
+/* ---------------------------------------------------------------- the cards (carte.tsx) */
+
+/* At rest: a thin border of cream at 20 % on their surface, no shadow. */
+:root[data-theme="hypervibe"] :is(.card, .kpi, .judge-card, #legend-body .item, .history-page li, .setting-card) { position: relative; border: 1px solid var(--hv-border); background: var(--hv-surface); }
+:root[data-theme="hypervibe"] :is(.card, #legend-body .item, .setting-card) { border-radius: 20px; }
+:root[data-theme="hypervibe"] :is(.kpi, .judge-card, .history-page li) { border-radius: 12px; }
+:root[data-theme="hypervibe"] .card { padding: 24px; }
+:root[data-theme="hypervibe"] .setting-card { padding: 16px 24px; }
+:root[data-theme="hypervibe"] #legend-body .item { padding: 16px; }
+:root[data-theme="hypervibe"] .kpi { padding: 16px; }
+:root[data-theme="hypervibe"] .judge-card { padding: 16px; background: var(--hv-veil); }
+/* On hover, a card lights its rainbow edge: a gradient cut by a mask, that follows its radius. A form (a setting) stays still. */
+:root[data-theme="hypervibe"] :is(.card, .kpi, .judge-card, #legend-body .item, .history-page li)::before { content: ""; position: absolute; inset: -1px; z-index: 1; padding: 2px; border-radius: inherit; background: var(--hv-rainbow-soft); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); opacity: 0; pointer-events: none; transition: opacity 300ms var(--hv-curve); }
+@media (hover: hover) {
+  :root[data-theme="hypervibe"] :is(.card, .kpi, .judge-card, #legend-body .item, .history-page li):hover::before { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="hypervibe"] :is(.card, .kpi, .judge-card, #legend-body .item, .history-page li)::before { transition: none; }
+}
+/* A card that holds a table is the design system's framed Tableau, not a Carte: it does not react (2026-11-24). It is
+   also the box that scrolls when its table is too wide (style.css), and the edge, drawn 1 px outside its box, made it
+   scroll by 1 px both ways: two scroll bars that the system showed under the pointer. Without the edge, nothing
+   leaves the box. (#usage: the rule above weighs an id, through #legend-body.) */
+:root[data-theme="hypervibe"] #usage .card:has(> .table)::before { content: none; }
+/* Its table takes the width of the frame, as in the Tableau (cells of 16 px from its edge): the card keeps 16 px on its
+   sides, where the night kept 18, so that a table that fits on the night fits here too (2026-11-24). The small
+   words under a figure are words, in the text's font. */
+:root[data-theme="hypervibe"] #usage .card:has(> .table) { padding: 24px 16px; }
+:root[data-theme="hypervibe"] .table td.num small { font-family: var(--hv-text-font); }
+
+/* ---------------------------------------------------------------- the full pages: settings, legend, index, usage */
+
+:root[data-theme="hypervibe"] #settings,
+:root[data-theme="hypervibe"] #legend,
+:root[data-theme="hypervibe"] #index,
+:root[data-theme="hypervibe"] #usage { padding-top: 40px; }
+:root[data-theme="hypervibe"] .loading-rings span { border-color: var(--hv-coral); }
+:root[data-theme="hypervibe"] .loading-rings span:nth-child(2) { border-color: var(--hv-teal); }
+:root[data-theme="hypervibe"] .loading-rings span:nth-child(3) { border-color: var(--hv-violet-light); }
+:root[data-theme="hypervibe"] #settings-head,
+:root[data-theme="hypervibe"] #legend-head,
+:root[data-theme="hypervibe"] #index-head { margin-bottom: 8px; }
+:root[data-theme="hypervibe"] #settings-head h2,
+:root[data-theme="hypervibe"] #legend-head h2,
+:root[data-theme="hypervibe"] #index-head h2,
+:root[data-theme="hypervibe"] .usage-title { font-size: 26px; }
+:root[data-theme="hypervibe"] .meta,
+:root[data-theme="hypervibe"] #legend-body .intro,
+:root[data-theme="hypervibe"] #legend-body .item p { color: var(--hv-grey); }
+:root[data-theme="hypervibe"] #legend-body h2 { margin: 32px 0 12px; color: var(--hv-grey); font-size: 12px; }
+/* The usage page: the key figure in the voice, the others in cards of figures. */
+:root[data-theme="hypervibe"] .hero-label,
+:root[data-theme="hypervibe"] .kpi span { color: var(--hv-grey); font-size: 11px; }
+:root[data-theme="hypervibe"] .hero-number { font-family: var(--hv-display-font); font-weight: 900; letter-spacing: -0.04em; color: var(--hv-violet-light); font-variant-numeric: tabular-nums; }
+:root[data-theme="hypervibe"] .kpi b { font-family: var(--hv-display-font); font-weight: 900; font-size: 26px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+:root[data-theme="hypervibe"] .hero-who b { font-family: var(--hv-display-font); font-weight: 800; }
+:root[data-theme="hypervibe"] .kpi small,
+:root[data-theme="hypervibe"] .chart-axis,
+:root[data-theme="hypervibe"] .chart-x,
+:root[data-theme="hypervibe"] .table .what small,
+:root[data-theme="hypervibe"] .table .mode,
+:root[data-theme="hypervibe"] .subtitle,
+:root[data-theme="hypervibe"] .hero-who small,
+:root[data-theme="hypervibe"] .card-note,
+:root[data-theme="hypervibe"] .card-meta,
+:root[data-theme="hypervibe"] .judge-chart-title,
+:root[data-theme="hypervibe"] #usage-heaviest .when small { color: var(--hv-grey); }
+:root[data-theme="hypervibe"] .hero-delta { border-top-color: var(--hv-border); }
+:root[data-theme="hypervibe"] .chart-area { border-bottom-color: var(--hv-border-strong); }
+:root[data-theme="hypervibe"] .chart-grid { border-top-color: rgba(250, 248, 245, 0.08); }
+:root[data-theme="hypervibe"] .chart-column:hover,
+:root[data-theme="hypervibe"] .chart-column:focus-visible { background: rgba(250, 248, 245, 0.05); }
+/* The tables: the head in labels over a firm line, rows that alternate and light up in blue on hover. */
+/* The head of a table: the labels in their small size, as the design system writes them in a line of a table
+   (Etiquette petite: the normal width, letters spaced by 0.03 em; stretched, "By tool" was 64 px wider than its card),
+   over the rainbow rule of its Tableau, 3 px (2026-11-24). */
+:root[data-theme="hypervibe"] .table th { color: var(--hv-grey); font-size: 10.5px; font-stretch: 100%; font-variation-settings: "wdth" 100; letter-spacing: 0.03em; border-bottom: 0; padding-bottom: 11px; }
+:root[data-theme="hypervibe"] .table thead tr { background: var(--hv-rainbow) left bottom / 100% 3px no-repeat; }
+:root[data-theme="hypervibe"] .table td { border-bottom-color: rgba(250, 248, 245, 0.06); }
+:root[data-theme="hypervibe"] .table tbody tr:nth-child(even) td { background: rgba(250, 248, 245, 0.025); }
+:root[data-theme="hypervibe"] .table tbody tr:hover td { background: rgba(75, 123, 255, 0.12); }
+:root[data-theme="hypervibe"] .day-row td { border-bottom-color: var(--hv-border); font-family: var(--hv-display-font); font-weight: 800; }
+:root[data-theme="hypervibe"] .share-bar { background: rgba(75, 123, 255, 0.2); }
+:root[data-theme="hypervibe"] .share-bar i { background: var(--hv-blue); }
+:root[data-theme="hypervibe"] .share-bar.double { background: rgba(250, 248, 245, 0.08); }
+:root[data-theme="hypervibe"] .share-bar.double i + i { box-shadow: -2px 0 0 var(--hv-surface); }
+:root[data-theme="hypervibe"] .failed-word { color: var(--hv-coral) !important; }
+/* The sources of the index, several at once: the design system's FiltrePilule (2026-11-24). It ticks, it does not
+   sink: its round mark is always there, so ticking changes no width; ticked, the border, the word and the mark in
+   blue, the pill tinted in blue at 10 %. */
+:root[data-theme="hypervibe"] #index-sources button { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 12px; border: 1px solid var(--hv-border-strong); border-radius: 999px; background: var(--hv-veil); color: var(--hv-cream); font-weight: 500; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+:root[data-theme="hypervibe"] #index-sources button::before { content: ""; flex: none; box-sizing: border-box; width: 16px; height: 16px; border: 1px solid var(--hv-border-strong); border-radius: 50%; background: transparent no-repeat center / 10px 10px; }
+:root[data-theme="hypervibe"] #index-sources button:hover { background: rgba(250, 248, 245, 0.12); }
+:root[data-theme="hypervibe"] #index-sources button.active { border-color: var(--hv-blue-light); background: rgba(75, 123, 255, 0.1); color: var(--hv-blue-light); }
+:root[data-theme="hypervibe"] #index-sources button.active::before { border-color: var(--hv-blue); background-color: var(--hv-blue); background-image: var(--hv-mark-check); }
+:root[data-theme="hypervibe"] #index-sources button small { color: inherit; opacity: 0.8; font-family: var(--hv-mono-font); }
+/* Refresh, pause: secondary actions, the site's buttons on the night (a radius of 12; the pill is for labels and
+   filters). A paused source says so in a tint of yellow, without a coloured border around it. */
+:root[data-theme="hypervibe"] :is(#usage-reload, .pause-button) { display: inline-flex; align-items: center; justify-content: center; min-height: 32px; padding: 0 14px; border: 1px solid var(--hv-border); border-radius: 12px; background: var(--hv-veil); color: var(--hv-cream); font-weight: 600; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease; }
+:root[data-theme="hypervibe"] :is(#usage-reload, .pause-button):hover { border-color: var(--hv-border-hover); background: rgba(250, 248, 245, 0.14); }
+:root[data-theme="hypervibe"] #settings .pause-button.is-paused { border-color: transparent; background: rgba(255, 229, 0, 0.15); color: var(--hv-yellow-light); }
+:root[data-theme="hypervibe"] #settings .pause-button.is-paused:hover { border-color: transparent; background: rgba(255, 229, 0, 0.24); }
+/* A help: the design system's question mark, without a circle drawn around it. */
+:root[data-theme="hypervibe"] .help-mark { border-color: transparent; color: var(--hv-grey); }
+:root[data-theme="hypervibe"] .help-mark:hover,
+:root[data-theme="hypervibe"] .help-mark:focus { border-color: transparent; color: var(--hv-cream); }
+/* A path never read: a pill of the design system (PastilleNeutre: the night's hollow, no border), its cross an icon. */
+:root[data-theme="hypervibe"] .exclude-chip { border-color: transparent; background: rgba(250, 248, 245, 0.12); }
+:root[data-theme="hypervibe"] .exclude-remove:hover,
+:root[data-theme="hypervibe"] .exclude-remove:focus-visible { background: var(--hv-hover); color: var(--hv-cream); }
+:root[data-theme="hypervibe"] .source-pick:hover { color: var(--hv-cream); }
+/* The tool chosen in the settings: a choice, so in blue (2026-11-24), its ring and its name. */
+:root[data-theme="hypervibe"] .source-pick.active { color: var(--hv-blue-light); }
+:root[data-theme="hypervibe"] .source-pick.active .ring { box-shadow: 0 0 0 2px var(--hv-blue-light); }
+:root[data-theme="hypervibe"] #legend-body kbd,
+:root[data-theme="hypervibe"] #legend-body .button-like { border-color: var(--hv-border-strong); border-radius: 8px; }
+:root[data-theme="hypervibe"] #index-list li { border-radius: 8px; border-bottom-color: rgba(250, 248, 245, 0.06); }
+:root[data-theme="hypervibe"] #index-list li:hover { background: var(--hv-hover); }
+
+/* ---------------------------------------------------------------- the history window (history.html) */
+
+:root[data-theme="hypervibe"] .history-page { background: var(--hv-night); color: var(--hv-cream); font-family: var(--hv-text-font); }
+:root[data-theme="hypervibe"] .history-page main { padding-top: 40px; }
+:root[data-theme="hypervibe"] .history-page h1 { font-size: 26px; }
+:root[data-theme="hypervibe"] .history-page .day { margin-top: 32px; font-size: 11px; }
+/* A run is a small card; its state is a dot before its time, never a rule down its side. */
+:root[data-theme="hypervibe"] .history-page li { padding: 12px 16px; }
+:root[data-theme="hypervibe"] .history-page li .time::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--hv-teal); vertical-align: 1px; }
+:root[data-theme="hypervibe"] .history-page li.failed .time::before { background: var(--hv-coral); }
+:root[data-theme="hypervibe"] .history-page li.nothing .time::before { background: var(--hv-grey); }
+:root[data-theme="hypervibe"] .history-page .refusal { color: var(--hv-coral-light); }
+:root[data-theme="hypervibe"] .history-page .see-change { color: var(--hv-cream); font-weight: 600; text-decoration: underline; text-decoration-color: rgba(250, 248, 245, 0.4); text-underline-offset: 4px; }
+:root[data-theme="hypervibe"] .history-page .see-change:hover { text-decoration-color: var(--hv-yellow); }
+:root[data-theme="hypervibe"] .history-page .diff { border-color: var(--hv-border); border-radius: 8px; background: var(--hv-field); }
+:root[data-theme="hypervibe"] .history-page .diff .plus { color: var(--hv-teal-light); background: rgba(0, 200, 150, 0.1); }
+:root[data-theme="hypervibe"] .history-page .diff .minus { color: var(--hv-coral-light); background: rgba(255, 96, 64, 0.1); }
+
+/* ---------------------------------------------------------------- the legend alone (legend.html) */
+
+:root[data-theme="hypervibe"] body > main:has(> #legend-body) { padding-top: 40px; }
+:root[data-theme="hypervibe"] main > h1 { font-size: 30px; }

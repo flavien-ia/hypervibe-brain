@@ -1,0 +1,18 @@
+{
+  "name": "conversations-watch",
+  "description": {
+    "en": "Finds the Claude Code conversations that have settled (quiet for thirty minutes, three messages or more) and gives them to the judge to read. A conversation taken up again comes back, and only what follows is read.",
+    "fr": "Repère les conversations Claude Code terminées (calmes depuis trente minutes, au moins trois messages) et les donne à lire au juge. Une conversation reprise revient, et seule la suite est lue."
+  },
+  "kind": "step",
+  "tools": [
+    "claude-code"
+  ],
+  "every": "30m",
+  "when": "before",
+  "judge": "conversations",
+  "calm": 30,
+  "cap": 25,
+  "enabled": true,
+  "timeoutMin": 10
+}

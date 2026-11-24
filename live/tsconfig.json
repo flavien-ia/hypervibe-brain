@@ -1,0 +1,23 @@
+{
+  // Type checking of the server files, in development only (`pnpm check`).
+  // Nothing is built and nothing at runtime needs node_modules: the tool
+  // starts with plain `node server.mjs`. The page has its own configuration
+  // (page/tsconfig.json), with the browser's types.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    // The JSDoc contracts cover the exported functions and the main
+    // structures; a local variable without an annotation is not an error.
+    "noImplicitAny": false,
+    "useUnknownInCatchVariables": false,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "es2022",
+    "lib": ["es2023"],
+    "types": ["node"],
+    "skipLibCheck": true
+  },
+  "include": ["*.mjs", "i18n/*.mjs", "contract.d.ts"]
+}
