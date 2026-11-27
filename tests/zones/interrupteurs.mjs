@@ -309,6 +309,17 @@ try {
   symlinkSync(join(BASE, "ailleurs"), linkOf("autre"), "junction");
   r = run(["switch", "skill", "autre", "off"]);
   check("a link that leads elsewhere than the brain holds the place: it is left, and said", r.out?.here === "left" && /left as it is/.test(r.out.left ?? "") && isLink("autre") && existsSync(join(BASE, "ailleurs")), r.raw);
+
+  console.log("\nThe scan sees a password behind a few words, and an address that works as a key (2026-11-27)");
+  {
+    // (Written in pieces: nothing here is a secret.)
+    const { scanSecrets } = await import(pathToFileURL(join(PLUGIN, "scripts", "secret-scan.mjs")).href);
+    const kinds = (t) => scanSecrets(t).map((f) => f.kind).join("|");
+    const value = ["Ab3x", "Y9zQ", "!"].join("");
+    check("a password with words between its name and its value", kinds(`Mot de pa${"sse"} de dev : \`${value}\`.`) === "a password" && kinds(`pass${"word"} for the admin: ${value}`) === "a password");
+    check("a deposit address whose name ends with a random part", kinds(`- purchases: acme-shop-${"y9k2" + "m4p7q1"}@suppliers.example.com`) === "an email address that works as a key");
+    check("a sentence about passwords, plain addresses and a year in an address are left alone", !kinds("Le mot de passe se saisit dans la fenêtre : jamais dans le chat.") && !kinds("marie.durand@example.com, jean-pierre@example.com") && !kinds("contact-2026@example.com, team-support@example.com"));
+  }
 } finally {
   for (let tries = 0; tries < 5; tries++) {
     try { rmSync(BASE, { recursive: true, force: true }); break; } catch { /* a file still held */ }

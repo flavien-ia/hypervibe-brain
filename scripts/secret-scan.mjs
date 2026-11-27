@@ -57,7 +57,9 @@ const RULES = [
   // value: a value is quoted, or holds a digit or a sign of a password.
   {
     kind: "a password",
-    re: /(?:^|[^\p{L}])(?:password|passwd|passphrase|mot de passe|mdp|pwd)["'`]?([ \t]*[:=][ \t]*)(\S+)/giu,
+    // (A few words may stand between the word and its value: "mot de passe de
+    // dev : ...", "password for the admin: ...", found missing on 2026-11-27.)
+    re: /(?:^|[^\p{L}])(?:password|passwd|passphrase|mot de passe|mdp|pwd)["'`]?(?:[ \t]+[\p{L}'’-]{1,14}){0,4}?([ \t]*[:=][ \t]*)(\S+)/giu,
     value: 2,
     keep: (m) => {
       // (Markdown's emphasis around a word is not part of it.)
@@ -85,6 +87,15 @@ const RULES = [
     re: /[?&](?:token|access_token|auth_token|auth|key|api_key|apikey|secret|signature|sig|password|pwd)=([^&\s"'`<>)]+)/gi,
     value: 1,
     keep: (m) => m[1].length >= 8,
+  },
+  // An email address whose name ends with a random part is a key: whoever
+  // knows it can drop things into the inbox it opens (the deposit address of
+  // an accounting tool, a capture address). Found missing on 2026-11-27.
+  {
+    kind: "an email address that works as a key",
+    re: /(?:^|[^\w.+-])[a-z0-9][a-z0-9._-]*[-+]([a-z0-9]{8,})@[a-z0-9.-]+\.[a-z]{2,}/gi,
+    value: 1,
+    keep: (m) => mixed(m[1]),
   },
   {
     kind: "a server's address with its SSH account",

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.17.0 (2026-11-27)
+## 0.18.0 (2026-11-27)
 
 A security release, after a full audit of the plugin, of the cloud copy and of the update.
 
