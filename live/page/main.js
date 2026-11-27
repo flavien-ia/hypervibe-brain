@@ -8,8 +8,8 @@
 //   dom.js, format.js         reaching the elements; writing texts, numbers, dates
 //   api.js                    everything asked to the server (contract.d.ts)
 //   state.js                  what the page knows at a given moment
-//   theme.js                  the two designs (the night, Hypervibe), and the colours the canvases paint
-//   icones-hypervibe.js       the icons of the Hypervibe design, put beside the night's ones
+//   theme.js                  the colours the canvases paint, and the ground the page stands on
+//   icones-hypervibe.js       the icons of the design system, put where the page draws an icon
 //   map.js                    where everything sits on the map (pure computation)
 //   arrange.js                the map arranged for the current view and layers
 //   canvas.js, paint-background.js, paint-live.js   the two canvases
@@ -54,7 +54,7 @@ import { setUpShortcuts } from "./shortcuts.js";
 import { state } from "./state.js";
 import { takeOverFormerKeys } from "./storage.js";
 import { connect } from "./stream.js";
-import { loadFonts, onThemeChange, setUpThemeSwitch } from "./theme.js";
+import { loadFonts, onGroundChange, setUpGroundChoice } from "./theme.js";
 import { refreshToolCard, setUpToolCard } from "./tool-card.js";
 import { setUpUsage } from "./usage.js";
 
@@ -72,15 +72,17 @@ setUpFloors();
 setUpSearch();
 setUpShortcuts();
 setUpFilterBox();
-setUpThemeSwitch();
-// The icons of the design system, on the Hypervibe design only (2026-11-24).
+setUpGroundChoice();
+// The icons of the design system (2026-11-24).
 startIcons();
-// A CHANGE OF DESIGN REDRAWS THE MAP AT ONCE (2026-11-23), without reloading:
-// the colours of the harnesses are worked out when the map is arranged.
-// The fonts of the Hypervibe design come a moment later (2026-11-24): once
+// A CHANGE OF GROUND REPAINTS THE MAP AT ONCE (2026-11-27), without reloading:
+// the stylesheet follows the root's attribute by itself, the canvases are
+// painted again with the palette of the new ground (the disc of a tool, the
+// edge of a text).
+onGroundChange(() => { if (state.layout) paint(); });
+// The fonts of the design come a moment after the page (2026-11-24): once
 // they are there, the canvases are painted again in them.
 const paintInFonts = () => loadFonts().then((loaded) => { if (loaded && state.layout) paint(); });
-onThemeChange(() => { if (state.layout) { arrange(); paint(); } paintInFonts(); });
 setUpUsage();
 setUpSettings();
 // The fixed panels of the map, placed so that none covers another (2026-11-24).

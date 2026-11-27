@@ -16,7 +16,7 @@ export const nativeClient = (client) => /claude[-_ ]?code/i.test(String(client ?
  * The head of a SKILL.md, its body apart. A value may be quoted, or folded on
  * the lines after it (description: >).
  * @param {string} text
- * @returns {{ name: string, description: string, body: string }}
+ * @returns {{ name: string, description: string, body: string, cloud: boolean }}
  */
 export function splitSkill(text) {
   const t = String(text).replace(/^﻿/, "");
@@ -38,7 +38,9 @@ export function splitSkill(text) {
     }
     return v.replace(/^["']|["']$/g, "");
   };
-  return { name: field("name"), description: field("description"), body: m ? t.slice(m[0].length) : t };
+  // `cloud: false` in the head keeps a skill on the computer (2026-11-27): it
+  // is never sent to the brain's cloud copy, whatever else was chosen.
+  return { name: field("name"), description: field("description"), body: m ? t.slice(m[0].length) : t, cloud: !/^(false|no|non|off)$/i.test(field("cloud")) };
 }
 
 /**

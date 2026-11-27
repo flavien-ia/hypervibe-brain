@@ -89,13 +89,54 @@ export const normOf = (v) => {
   return Math.sqrt(n) || 1;
 };
 
-/** Contacts: every word, anywhere in what is known of them, accents ignored; core first. */
-export function matchContacts(contacts, terms, { limit = 20 } = {}) {
+// A CONTACT WITHOUT ITS ADDRESS (2026-11-27). The cloud copy serves the
+// directory to tokens that may not see email addresses. Removing the one
+// field `address` was not enough: the search still looked into it (a word
+// that matched said a letter of the address, and the whole address came out
+// in under two hundred questions), and the domain, the subjects and what is
+// known of a contact carry addresses of their own. So, without the right, a
+// contact is first made into what may be seen, and the search only ever
+// looks at that:
+//   - only the fields listed here are kept (never the address or the domain,
+//     nor a field a source added: a phone number, another address);
+//   - in every text kept, an email address is replaced by ADDRESS_MASK, and
+//     so is the contact's own domain where it is written out.
+// What stays visible, and is said to the person: the name, the counts, the
+// dates, the subjects of the exchanges and what is known of the contact.
+export const ADDRESS_MASK = "[address hidden]";
+const EMAIL = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+/gu;
+const SEEN_WITHOUT_ADDRESS = ["name", "sent", "received", "first", "last", "subjects", "tier", "note", "summary", "context", "themes"];
+/** A contact as a reader without the right to addresses may see it. */
+export function withoutAddress(contact) {
+  const own = String(contact?.domain ?? "").trim();
+  const domain = own.includes(".") ? new RegExp(own.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi") : null;
+  const mask = (v) => {
+    if (typeof v === "string") {
+      const s = v.replace(EMAIL, ADDRESS_MASK);
+      return domain ? s.replace(domain, ADDRESS_MASK) : s;
+    }
+    if (Array.isArray(v)) return v.map(mask);
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, mask(x)]));
+    return v;
+  };
+  const out = {};
+  for (const k of SEEN_WITHOUT_ADDRESS) if (contact?.[k] !== undefined && contact[k] !== null) out[k] = mask(contact[k]);
+  return out;
+}
+
+/**
+ * Contacts: every word, anywhere in what is known of them, accents ignored; core first.
+ * `addresses: false`: for a reader who may not see addresses (see above):
+ * the search and the answer are both made of the contacts without theirs.
+ */
+export function matchContacts(contacts, terms, { limit = 20, addresses = true } = {}) {
   const words = fold(terms).split(/\s+/).filter(Boolean);
   if (!words.length) return [];
-  return contacts
+  return (addresses ? contacts : contacts.map(withoutAddress))
     .filter((c) => {
-      const text = fold(Object.values(c).flat().filter((v) => typeof v === "string" || typeof v === "number").join(" "));
+      const all = fold(Object.values(c).flat().filter((v) => typeof v === "string" || typeof v === "number").join(" "));
+      // (The mask is not a word of the contact: "hidden" finds nobody.)
+      const text = addresses ? all : all.replaceAll(fold(ADDRESS_MASK), " ");
       return words.every((w) => text.includes(w));
     })
     .sort((a, b) => (b.tier ?? 0) - (a.tier ?? 0) || Number(b.sent ?? 0) - Number(a.sent ?? 0))

@@ -2,7 +2,9 @@
 
 ## Not released yet
 
-- **The Hypervibe design of the live view stands on the night of its own design system.** The page, the map and the full pages (settings, usage, legend, index, history) are painted on its warm black `#1A1410` instead of the night blue of the Night design; panels, cards, tooltips and dialogs are that night under the design system's veil of cream, and every text keeps a contrast of 4.5:1 or more. The Night design does not change.
+- **The live view has one design, Hypervibe, and you choose the background it stands on.** The Design switch is gone, and so is the Night design. In the settings, under Appearance, pick the background among Black, Night blue (the colour the view was born in) and Hypervibe night (the default): it changes at once on the page, the map and the other windows of the view, and the browser remembers it. Every text keeps a contrast of 4.5:1 or more on the three.
+- **The brain needs Node 22.16 or later.** The full-text search it relies on is not in Node before that version: the check of the computer said 22.13, and a brain made on 22.13 to 22.15 could not build its index.
+- **A cloud copy nobody reads yet can be emptied.** `cloud.mjs empty` removes everything it holds and stops the evening sync; `resume` starts it again.
 
 ## 0.16.2 (2026-11-24)
 

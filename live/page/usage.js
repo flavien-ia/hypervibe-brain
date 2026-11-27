@@ -28,8 +28,8 @@ import { USAGE_JUDGE as JUDGE, USAGE_JUDGE_REREAD as JUDGE_REREAD, USAGE_WARNING
 // (validated together on the card's surface): the tokens it reads or writes
 // anew, and, darker, those it reads again at each turn (JUDGE_REREAD: nine
 // tenths of the volume, about a tenth of the weight). A cap that is reached:
-// the warning colour of the page (WARNING, the paused button's). Each depends
-// on the design (theme.js, 2026-11-23): live bindings, read at each drawing.
+// the warning colour of the page (WARNING, the paused button's). Each is a
+// colour of the design (theme.js, 2026-11-23).
 const DAY_MS = 86_400_000;
 
 /** What is shown: the period in days (1: today, 0: everything), the journal, and the judges with their runs (null: not read). @type {{ days: number, lines: UsageLine[] | null, judges: JudgeCost[] | null }} */

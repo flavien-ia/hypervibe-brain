@@ -1,4 +1,5 @@
-// icones-hypervibe.js: the icons of the Hypervibe design (2026-11-24).
+// icones-hypervibe.js: the icons of the page, those of the design system of
+// Hypervibe (2026-11-24).
 //
 // THE ICONS OF THE DESIGN SYSTEM, WITHOUT A DEPENDENCY. The design system of
 // Hypervibe has one family of icons, Phosphor in duotone (MIT licence,
@@ -10,20 +11,18 @@
 // The weight of the stroke, its round ends, its joins are in the paths
 // themselves: an icon is filled, never stroked.
 //
-// THE NIGHT IS NEVER TOUCHED. The page keeps writing its own icons, those of
-// the night design. Only while the root carries data-theme="hypervibe" does
-// this module put an icon of the design system beside each of them (the
-// night's icon is then hidden by theme-hypervibe.css), and turn the arrows
-// typed in the texts ("←", "→", "↗", "×"...) into icons, which the design
-// system asks for ("never an arrow typed instead of an icon"). Back to the
-// night, everything it added is taken away and the page is as it was, element
-// for element. It follows the page by itself: a change of design (the
-// attribute of the root) and whatever the page writes later (a card, a list,
-// a dialog), through one MutationObserver; on the night, that observer does
-// nothing.
+// THE PAGE KEEPS WRITING ITS ICONS AS IT ALWAYS DID: a small drawing in the
+// markup or in a module, with its classes, its size and its states. This
+// module puts an icon of the design system beside each of them (the drawing
+// is then hidden by theme-hypervibe.css), and turns the arrows typed in the
+// texts ("←", "→", "↗", "×"...) into icons, which the design system asks
+// for ("never an arrow typed instead of an icon"). It follows whatever the
+// page writes later (a card, a list, a dialog) through one MutationObserver.
+// (Until 2026-11-27 it did so under one of two designs only, and took its
+// icons away under the other: the page has one design now.)
 //
-// It reads the design on the root only, not theme.js, so that the pages
-// without the map (history.html, legend.html) use it as they are.
+// It imports nothing of the page, so that the pages without the map
+// (history.html, legend.html) use it as they are.
 
 /** @typedef {{ fond: string | null, trait: string }} Picto */
 
@@ -134,9 +133,9 @@ export function iconInDrawing(name, { x, y, size, color }) {
 // ------------------------------------------------------------ what is replaced
 
 // Each icon of the page, by where it is, and the icon of the design system
-// that stands for it. The night's element stays in the page, hidden; the new
+// that stands for it. The drawn element stays in the page, hidden; the new
 // one comes right after it and takes its classes (its size and its states:
-// folded, live, spinning... are those of the night's rules).
+// folded, live, spinning... are those of the base rules).
 // (Chosen on 2026-11-24. The pulse of the activity has no equivalent in the
 // design system: the brain stands for it, which lights up when an AI reads.
 // The two rings of "where the tools stand" become the database, the stacked
@@ -170,10 +169,7 @@ const OWN_WORDS = "button, [role='button'], a, .help-mark, .skill-mark, .hero-de
 /** Where it does not: the text of a note, code, fields. */
 const NOT_OURS = ".body, .exec-text, .modal-read-body, code, pre, kbd, textarea, select, option, script, style, svg, .hv-glyph";
 
-const SWAP_SELECTORS = SWAPS.map(([selector, icon]) => [`${selector}:not(.hv-icone):not(.hv-night-icon)`, icon]);
-
-/** Whether the page wears the Hypervibe design. */
-const on = () => typeof document !== "undefined" && document.documentElement.dataset.theme === "hypervibe";
+const SWAP_SELECTORS = SWAPS.map(([selector, icon]) => [`${selector}:not(.hv-icone):not(.hv-replaced)`, icon]);
 
 /** @param {string} html @returns {Element} */
 function element(html) {
@@ -182,12 +178,11 @@ function element(html) {
   return /** @type {Element} */ (tpl.content.firstElementChild);
 }
 
-/** @param {Element} night @param {string} icon */
-function swap(night, icon) {
-  const classes = night.getAttribute("class") ?? "";
-  const fresh = element(iconSvg(icon, { className: `${classes} hv-swapped`.trim() }));
-  night.after(fresh);
-  night.classList.add("hv-night-icon");
+/** @param {Element} drawn the icon the page drew @param {string} icon the one of the design system that stands for it */
+function swap(drawn, icon) {
+  const classes = drawn.getAttribute("class") ?? "";
+  drawn.after(element(iconSvg(icon, { className: classes })));
+  drawn.classList.add("hv-replaced");
 }
 
 /** @param {Text} text */
@@ -227,7 +222,6 @@ function glyph(character, icon, extra) {
 
 /** @param {Node} root */
 function dress(root) {
-  if (!on()) return;
   if (root.nodeType === Node.TEXT_NODE) { dressText(/** @type {Text} */ (root)); return; }
   if (!(root instanceof Element) && !(root instanceof Document)) return;
   if (root instanceof Element && root.closest(".hv-icone, .hv-glyph")) return;
@@ -240,25 +234,6 @@ function dress(root) {
   const texts = [];
   for (let n = walker.nextNode(); n; n = walker.nextNode()) texts.push(/** @type {Text} */ (n));
   for (const text of texts) dressText(text);
-}
-
-/** Back to the night: every icon this module added goes, the night's come back. */
-function undress() {
-  for (const el of document.querySelectorAll("svg.hv-swapped")) el.remove();
-  for (const el of document.querySelectorAll(".hv-night-icon")) {
-    el.classList.remove("hv-night-icon");
-    if (!el.classList.length) el.removeAttribute("class");
-  }
-  /** @type {Set<Node>} */
-  const parents = new Set();
-  for (const el of document.querySelectorAll(".hv-glyph")) {
-    const parent = el.parentNode;
-    el.replaceWith(document.createTextNode(el.querySelector(".hv-glyph-text")?.textContent ?? ""));
-    if (parent) parents.add(parent);
-  }
-  // The text that was cut around a character is one text again.
-  for (const parent of parents) parent.normalize();
-  document.getElementById("hv-icone-arc-en-ciel-defs")?.remove();
 }
 
 /**
@@ -274,20 +249,16 @@ function gradient() {
 
 let started = false;
 
-/** Follows the design of the page and what it writes: call once, on any page of the view. */
+/** Dresses the page in the icons of the design system, and follows what it writes afterwards: call once, on any page of the view. */
 export function startIcons() {
   if (started || typeof document === "undefined" || !document.body) return;
   started = true;
-  const follow = () => {
-    if (on()) { gradient(); dress(document.body); } else undress();
-  };
-  new MutationObserver(follow).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   new MutationObserver((changes) => {
-    if (!on()) return;
     for (const change of changes) {
       if (change.type === "characterData") dress(change.target);
       else for (const node of change.addedNodes) if (node.isConnected) dress(node);
     }
   }).observe(document.body, { childList: true, subtree: true, characterData: true });
-  if (on()) follow();
+  gradient();
+  dress(document.body);
 }

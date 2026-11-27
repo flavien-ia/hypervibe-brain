@@ -6,7 +6,7 @@
 // State in FAKE_CF_DIR. Only what cloud.mjs uses is understood.
 
 import { DatabaseSync } from "node:sqlite";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const DIR = process.env.FAKE_CF_DIR;
@@ -68,6 +68,11 @@ if (a0 === "d1" && a1 === "create") {
   mkdirSync(join(DIR, `r2-${bucket}`), { recursive: true });
   copyFileSync(opt("--file"), join(DIR, `r2-${bucket}`, key.join("/")));
   console.log("Upload complete.");
+} else if (a0 === "r2" && a1 === "object" && a2 === "delete") {
+  const [bucket, ...key] = args[3].split("/");
+  note({ call: "r2 object delete", bucket, key: key.join("/"), jurisdiction: opt("--jurisdiction") ?? null, remote: args.includes("--remote") });
+  rmSync(join(DIR, `r2-${bucket}`, key.join("/")), { force: true });
+  console.log("Delete complete.");
 } else if (a0 === "secret" && a1 === "put") {
   const value = readFileSync(0, "utf8");
   const f = join(DIR, `secrets-${tomlName()}.json`);

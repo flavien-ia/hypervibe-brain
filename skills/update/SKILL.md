@@ -5,7 +5,9 @@ description: Update the Hypervibe Brain plugin to its latest published version, 
 
 # /brain:update - Update the plugin
 
-Brings **this plugin** to the latest version published on its public repository (`flavien-ia/hypervibe-brain`, one GitHub release per version, with the plugin as a zip and its fingerprint). The update itself never touches the person's brain: only the plugin's own files. Afterwards, Step 4 may offer to bring a setting of the brain's own readers in step, on the person's yes.
+Brings **this plugin** to the latest version published on its public repository (`flavien-ia/hypervibe-brain`, one GitHub release per version, with the plugin as a zip, its fingerprint and **the author's signature**). The update itself never touches the person's brain: only the plugin's own files.
+
+**Only what the author signed is installed.** The plugin carries the author's public key; each published version is signed with the matching private key, which never leaves the author's computer. The site and GitHub only carry the files: whoever controls them can fail to serve an update, never make one. A plugin older than this rule reaches the first signed version by the fingerprint alone (it does not know signatures yet); from then on, every update is checked against the author's key. Afterwards, Step 4 may offer to bring a setting of the brain's own readers in step, on the person's yes.
 
 ## Communication
 - Reply in the person's language. Plain sentences, no jargon: "I am checking whether a newer version exists", "I am replacing the plugin's files", never "unzip" or "backup directory" without saying what it is.
@@ -33,22 +35,27 @@ Read the JSON:
 node "${CLAUDE_SKILL_DIR}/../../scripts/update.mjs" download
 ```
 
-The JSON gives `file`, `version`, `sha256` and `sha256Verified`. **The download checks itself** against the fingerprint GitHub computed when the version was published:
+The JSON gives `file`, `version`, `sha256`, `sha256Verified` and `signatureVerified`. **The download checks itself, twice**: against the published fingerprint (the file arrived whole), then against the author's signature (the file is the one the author published):
 
-- `reason: "sha256-mismatch"` → **stop**: the download does not match what was published, nothing was installed. Do not retry blindly, do not install anyway.
+- `reason: "signature-missing"` or `"signature-invalid"` → **stop**. This version does not carry the author's signature, or what was downloaded is not what they signed. Nothing was installed, and the installed version keeps working. Say it plainly: *"The update was refused: it is not signed by the author of the plugin. I installed nothing."* Do not retry in a loop, and do not look for another way to install that version (no download by hand, no zip uploaded in the app, no `--force`). Suggest reporting it to the author, on the plugin's public repository.
+- `reason: "sha256-missing"` or `"sha256-mismatch"` → **stop**: the download does not match what was published, nothing was installed. Do not retry blindly, do not install anyway.
+- `reason: "version-mismatch"` → **stop**: the archive is not the version that was announced. Nothing was installed; same advice as for a refused signature.
+- `testKey: true` in an answer, here or at Step 3 → **stop and install nothing**: that is the plugin's own test setting, which a real update never shows. Say so to the person.
 - `version` different from the `publishedVersion` of Step 1 → say so plainly and offer to try again later. **Stop.**
 - any other `ok: false` → pass on `message`. **Stop.**
 
 ## Step 3 - Install
 
 ```bash
-node "${CLAUDE_SKILL_DIR}/../../scripts/update.mjs" install --zip "<file from step 2>"
+node "${CLAUDE_SKILL_DIR}/../../scripts/update.mjs" install --zip "<file from step 2>" --sha256 "<sha256 from step 2>"
 ```
 
-The script unpacks the archive aside and checks it is a whole plugin **before** touching the installed one; then it moves the current folder aside for the swap and puts the new one in its place. On any failure the previous version is put back.
+The script checks the author's signature **again** by itself (it sits next to the archive, where Step 2 put it), and that the archive is the one Step 2 checked. It then unpacks the archive aside and checks it is a whole plugin **before** touching the installed one; then it moves the current folder aside for the swap and puts the new one in its place. On any failure the previous version is put back.
 
 - `ok: true` → note `version`, `oldVersion`, `backup`, `backupKept` and `desktop` (for Step 5). Step 4.
-- `ok: false` → nothing was replaced, or the previous version was put back. Say so with `message`. **Stop.**
+- `reason: "signature-missing"`, `"signature-invalid"` or `"sha256-mismatch"` → nothing was replaced. Same words and same advice as at Step 2. **Stop.**
+- `reason: "not-newer"` → the archive is not above the installed version (`installed`, `offered`): an update never goes backwards. Nothing was replaced. **Stop.** Never offer `--force` yourself: it exists for the person who asks, in their own words, to go back to an older version, and even then the signature is required.
+- any other `ok: false` → nothing was replaced, or the previous version was put back. Say so with `message`. **Stop.**
 
 ## Step 4 - Bring the evening save in step
 
@@ -77,6 +84,15 @@ node "<plugin folder of the new version>/scripts/live.mjs" state
 - `installed` is true and the view is not `running`, or `current` is false: run `live.mjs on` from that same folder. It rewrites the small program that starts the view and starts the new one. Say nothing when everything is in step.
 - `installed` is false with no `turnedOff` (the person never had the view: it came with this version): run `live.mjs on` from that same folder, and say it in one sentence: "this version comes with a live view of your brain; it is on, `/brain:live` shows it or turns it off".
 - `turnedOff` (they turned it off themselves) or `standalone: true` (an older copy of the view, from before it was part of the plugin): change nothing.
+
+**The cloud copy**, if the brain has one (`/brain:add-cloud`). Its server is a copy of the plugin's code, made when it was put online: an update of the plugin does not reach it by itself, and a correction of the plugin is not live there until it is put online again. Look, from the new version of the plugin:
+
+```bash
+node "<plugin folder of the new version>/scripts/cloud.mjs" state
+```
+
+- `deployed: false`, or `serverBehind: false`: nothing to do, say nothing.
+- `serverBehind: true`: run `node "<plugin folder of the new version>/scripts/cloud.mjs" deploy`. It changes no key and no data, only the server's code. Say it in one sentence ("the online copy of your brain now runs the new version too"). If it fails (this computer is not the one that runs the brain's routines, or Cloudflare is not connected), say that the online server still runs the old version, and that `/brain:add-cloud` brings it up to date from the computer that runs the brain.
 
 **The readers of the live reading**, if the brain has them (`node "<plugin folder of the new version>/scripts/sources.mjs" install --list` shows `conversations` or `documents` as `installed`). An update never rewrites what was installed in the brain, so a reader installed by an earlier version may lack what the new one counts on. Two things to look at in the brain's `sources/<name>/source.json`, each offered in one sentence and done on their yes, with nothing else changed in the file:
 

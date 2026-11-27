@@ -40,7 +40,7 @@ const fwd = (p) => String(p).replaceAll("\\", "/");
  * The skills of the floor: a folder of executive/skills with a SKILL.md (a
  * folder without one is shared by others, "_presta", not a skill).
  * @param {string} brainDir
- * @returns {{ name: string, description: string, folder: string, dir: string }[]}
+ * @returns {{ name: string, description: string, folder: string, dir: string, cloud: boolean }[]}
  */
 export function listSkills(brainDir) {
   const root = join(brainDir, "executive", "skills");
@@ -51,8 +51,10 @@ export function listSkills(brainDir) {
     const file = join(root, d.name, "SKILL.md");
     if (!existsSync(file)) continue;
     try {
-      const { name, description } = splitSkill(readFileSync(file, "utf8"));
-      out.push({ name: name || d.name, description, folder: d.name, dir: fwd(join(root, d.name)) });
+      const { name, description, cloud } = splitSkill(readFileSync(file, "utf8"));
+      // `cloud`: false when the skill's head says `cloud: false` (it stays on
+      // this computer, cloud.mjs never sends it). Nothing changes here.
+      out.push({ name: name || d.name, description, folder: d.name, dir: fwd(join(root, d.name)), cloud });
     } catch {
       // a skill that cannot be read is left out, never the end of the list
     }

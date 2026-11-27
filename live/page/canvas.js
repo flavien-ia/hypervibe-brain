@@ -20,14 +20,14 @@ export const backgroundContext = /** @type {CanvasRenderingContext2D} */ (backgr
 export const liveContext = /** @type {CanvasRenderingContext2D} */ (liveCanvas.getContext("2d"));
 
 /**
- * Writes a text with an edge around it, so that it reads over anything: dark
- * on the night, cream on the Hypervibe design (theme.js).
+ * Writes a text with an edge around it, so that it reads over anything: the
+ * edge is the ground of the page (theme.js).
  * @param {CanvasRenderingContext2D} c
  * @param {string} text
  * @param {number} x
  * @param {number} y
  * @param {string} color
- * @param {string} [edge] another edge (the yellow marker of what is chosen)
+ * @param {string} [edge] another edge
  * @param {number} [width] its width
  */
 export function writeText(c, text, x, y, color, edge = colors.textEdge, width = colors.textEdgeWidth) {

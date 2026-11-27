@@ -1,16 +1,9 @@
 /* base.css: what every page of brain-live shares (the brain, the history
-   window, the legend alone): the colours, the tooltip and the modal. */
-:root {
-  --bg: #0b0c18;
-  --panel: rgba(16, 17, 32, 0.9);
-  --border: rgba(154, 160, 208, 0.25);
-  --text: #e8e9f5;
-  --muted: #9aa0c0;
-  --selection: #ffe500;
-  --green: #7ee36b;
-  --red: #ff8a8a;
-  color-scheme: dark;
-}
+   window, the legend alone): the tooltip and the modal. The colours they
+   read (--bg, --panel, --border, --text, --muted...) are given by the design
+   of the page, theme-hypervibe.css, which every page loads after this sheet
+   (2026-11-27: the night blue values that stood here served the design the
+   page no longer has). */
 /* The tooltip (tooltip.js): a small window, with its tip towards the element. */
 .tooltip { position: fixed; z-index: 30; max-width: 300px; padding: 9px 12px; border: 1px solid #3a3d63; border-radius: 9px; background: #1b1c33; color: var(--text); font-size: 12.5px; font-weight: 400; line-height: 1.45; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); pointer-events: none; }
 .tooltip::after { content: ""; position: absolute; left: calc(var(--tip-x, 50%) - 6px); bottom: -6px; width: 10px; height: 10px; border-right: 1px solid #3a3d63; border-bottom: 1px solid #3a3d63; background: #1b1c33; transform: rotate(45deg); }

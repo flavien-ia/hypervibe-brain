@@ -91,9 +91,9 @@ export const DOMAINS = {};
 const declaredTypes = new Map();
 let personType = "person";
 
-const otherDomain = () => ({ name: t("otherDomain"), color: NIGHT_GREY });
-/** The grey of the other domain, as the night paints it (theme.js shows it in its own grey). */
-const NIGHT_GREY = "#6b7280";
+const otherDomain = () => ({ name: t("otherDomain"), color: OTHER_GREY });
+/** The grey of the other domain, as a brain would declare it (theme.js shows any grey in the grey of the design). */
+const OTHER_GREY = "#6b7280";
 
 /**
  * Receives the vocabulary of the brain served with the map; the tables are filled in place.
