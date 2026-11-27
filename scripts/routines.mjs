@@ -321,7 +321,7 @@ const steps = [
   ...(cfg.sync === true ? [["sync.mjs", ["--quiet", "--json"]]] : []),
   ...(runner ? [["cold-copy.mjs", []], ["viz.mjs", ["build", "--if-exists"]], ["viz.mjs", ["publish-app"]]] : []),
   // The cloud copy, by difference, if the person set one up.
-  ...(runner && brainCfg.cloud?.database ? [["cloud.mjs", ["sync"]]] : []),
+  ...(runner && brainCfg.cloud?.database && brainCfg.cloud.paused !== true ? [["cloud.mjs", ["sync"]]] : []),
   // The brain's own steps that come after the save (a mirror, a publication...).
   ...(runner ? [["sources.mjs", ["run", "--due", "--phase", "after"]]] : []),
 ];

@@ -12,6 +12,9 @@
 //   node scripts/cloud.mjs sync [--all]
 //        sends what changed since the last time (by difference: a missed
 //        evening is caught up at the next one); --all rewrites everything
+//   node scripts/cloud.mjs empty | resume
+//        empties the copy (every table, the vectors) and stops the evening
+//        sync; resume lets it start again
 //   node scripts/cloud.mjs deploy
 //        deploys the Worker; prints its address
 //   node scripts/cloud.mjs token create <name> [--private] [--addresses]
@@ -196,9 +199,31 @@ if (command === "setup") {
   Object.assign(cloud, c);
   d1(SCHEMA);
   out({ ok: true, cloud: c });
+} else if (command === "empty" || command === "resume") {
+  // EMPTY (2026-11-27): the cloud copy keeps its door and its place, and holds
+  // nothing: every table emptied, the vectors removed, and no evening sync
+  // until `resume`. For a copy nobody reads yet: what is not there cannot leak.
+  requireRunner(cfg);
+  if (!cloud.database) fail("no cloud copy yet: cloud.mjs setup first");
+  if (command === "resume") {
+    writeCloud({ paused: false });
+    out({ ok: true, paused: false, next: "cloud.mjs sync --all sends everything again" });
+  } else {
+    writeCloud({ paused: true });
+    d1(`${SCHEMA}
+DELETE FROM note; DELETE FROM note_more; DELETE FROM private_note; DELETE FROM private_note_more; DELETE FROM fts; DELETE FROM private_fts; DELETE FROM link; DELETE FROM contact; DELETE FROM skill; DELETE FROM meta;`);
+    const gone = [];
+    for (const f of ["matrix.json", "matrix.f32"]) {
+      const u = wrangler(["r2", "object", "delete", `${cloud.bucket}/${f}`, "--remote", "--jurisdiction", "eu"]);
+      if (u.ok) gone.push(f);
+    }
+    const left = d1("SELECT (SELECT COUNT(*) FROM note) + (SELECT COUNT(*) FROM private_note) + (SELECT COUNT(*) FROM contact) + (SELECT COUNT(*) FROM skill) + (SELECT COUNT(*) FROM link) n;", { read: true })[0]?.n;
+    out({ ok: left === 0, paused: true, rowsLeft: left, vectorsRemoved: gone });
+  }
 } else if (command === "sync") {
   requireRunner(cfg);
   if (!cloud.database) fail("no cloud copy yet: cloud.mjs setup first");
+  if (cloud.paused === true) fail("the cloud copy is emptied and paused: cloud.mjs resume, then sync --all");
   const r = await buildIndex({ quiet: true, ifStale: true });
   if (!r.ok) fail(`the index could not be rebuilt: ${r.errors[0]?.rel}: ${r.errors[0]?.msg}`);
   const db = openDb({ readonly: true });
