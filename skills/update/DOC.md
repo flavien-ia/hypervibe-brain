@@ -12,10 +12,10 @@ Brings the Hypervibe Brain plugin up to its latest published version. Claude che
 
 1. **The check**: Claude compares your version with the latest one published on the plugin's public repository, and tells you where you stand.
 2. **Depending on your install**: if you uploaded a zip, Claude downloads the new version and checks it. If you installed it from the public repository, Claude runs Claude Code's own update commands.
-3. **The download is checked**: the file received is compared with the fingerprint GitHub computed when the version was published. If they differ, nothing is installed.
+3. **The download is checked, twice**: against its published fingerprint (the file arrived whole), and against the author's signature. The plugin carries the author's public key, and only a version signed by the author is installed: neither the site nor GitHub can sign in their place. If either check fails, nothing is installed.
 4. **The swap**: the new version is unpacked and checked aside, then takes the place of the old one, which is kept aside. At the slightest problem, the old one comes back. On Claude Desktop, that copy only serves during the swap itself: Desktop deletes it on its own a few minutes later, so Claude never promises it there.
 5. **The evening save**: Claude arms it again at the same time, so that it runs the new version.
-6. **The live view**: if it is on, it moves to the new version by itself and its window reloads. Claude checks that it did.
+6. **The live view and the cloud copy**: if the live view is on, it moves to the new version by itself and its window reloads; Claude checks that it did. If your brain has a copy online (`/brain:add-cloud`), Claude puts its server online again, so that it runs the new version too: no key and no data change.
 7. **The background reading**, if you have it: an update never rewrites what was installed in your brain, so Claude looks at whether its two readers have what the new version counts on (the proof that each item was read to its end, the reading of PDFs) and offers to add what is missing. If their access to Claude is kept only in your Hypervibe vault, Claude offers to copy it to a file on your computer, without ever showing it: a vault closes itself after a few hours, and the reading would stop with it.
 
 ## What it creates for you
@@ -39,6 +39,6 @@ Once the update is done, close and reopen Claude: that is when it loads the new 
 Every published version has its page on the public repository, with the list of its changes. Claude gives you the link when an update is available.
 {{/callout}}
 
-{{callout:warning|If the download does not match}}
-Claude stops and installs nothing. Try again later; if the difference persists, do not force the install.
+{{callout:warning|If the update is refused}}
+Claude stops and installs nothing: your current version keeps working. If Claude tells you the author's signature is missing or refused, do not install that version another way (no download by hand), and report it to the author on the plugin's public repository. If only the fingerprint differs, try again later; if the difference persists, do not force the install. An update never goes back to an older version on its own.
 {{/callout}}
