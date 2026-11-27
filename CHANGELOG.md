@@ -1,10 +1,22 @@
 # Changelog
 
-## Not released yet
+## 0.17.0 (2026-11-27)
 
-- **The live view has one design, Hypervibe, and you choose the background it stands on.** The Design switch is gone, and so is the Night design. In the settings, under Appearance, pick the background among Black, Night blue (the colour the view was born in) and Hypervibe night (the default): it changes at once on the page, the map and the other windows of the view, and the browser remembers it. Every text keeps a contrast of 4.5:1 or more on the three.
-- **The brain needs Node 22.16 or later.** The full-text search it relies on is not in Node before that version: the check of the computer said 22.13, and a brain made on 22.13 to 22.15 could not build its index.
-- **A cloud copy nobody reads yet can be emptied.** `cloud.mjs empty` removes everything it holds and stops the evening sync; `resume` starts it again.
+A security release, after a full audit of the plugin, of the cloud copy and of the update.
+
+- **Nothing in your brain runs on a computer before you said yes there.** Your guards, your skills, your brain's programs, its background readers, the services your keys are sent to and the folders it watches are each approved on each computer, in a window that shows what each one does, and asked again when they change. What was already running is approved once, as it is, at the update.
+- **A guard that changed no longer decides.** Your guards run through a small launcher that checks they are the ones you approved; one that was changed is not run, and what it guards is refused until you have looked at it.
+- **A background reader can do less with what it reads.** It only gets tools of known kinds, cannot copy a file of your computer into your brain, starts without the keys of your session, cannot choose where a note says it comes from, and a lesson or a decision it draws is a proposal the weekly letter shows you, never a rule.
+- **What your AI is shown from your brain says what it is.** A suggestion written by a machine says "seed, not validated" and where it comes from, and a lesson a background reader drew from a document is no longer listed among your lessons before you validate it.
+- **An update is installed only if it carries the author's signature.** Each version is signed and the plugin carries the matching public key: neither the site nor GitHub can sign in the author's place. An update never goes back to an older version. Your current version reaches this one the old way; from here on, every update is checked.
+- **The locks hold against the ways around them.** The memory's lock and the guards' lock read a path as the disk does, and let only a plain reading name a locked place; lifting a lock or approving something is yours alone, in your own terminal.
+- **The live view gives its key only to the window you open.** `/brain:live` opens it with a code that serves once; any other program that asks for the page gets a screen that says how to open the view.
+- **Your skills no longer go to the cloud copy unless you choose it, and never with a secret in them.** A skill that seems to hold a key, a password or a server's account stays on your computer, and Claude tells you which line. `cloud: false` at the head of a skill keeps it there whatever happens.
+- **The cloud copy gives away less.** An online agent without the right to email addresses can no longer work them out, a private note you did not choose to copy leaves by its title only, removing an agent's key tells the truth when Cloudflare cannot be reached, and nothing readable stays on your disk after a sync. `cloud.mjs empty` empties a copy nobody reads yet.
+- **The live view has one design, Hypervibe, and you choose the background it stands on**: Black, Night blue or Hypervibe night, in the settings, under Appearance.
+- **The brain needs Node 22.16 or later.** The full-text search it relies on is not in Node before that version.
+- **Smaller things**: the usage journal no longer keeps the first words of your messages and forgets after ninety days; `/brain:status` tells you when other accounts of the computer can write in your brain's folder; after an update of the plugin, the online server is updated too.
+- **To update**: `/brain:update`, or download the new zip from https://hypervibe.fr/brain and upload it in the Claude app.
 
 ## 0.16.2 (2026-11-24)
 
