@@ -89,11 +89,41 @@ export type ContactRow = [address: string, name: string, client: string, tier: n
 export type ContactsResponse = ContactRow[];
 
 /** The executive floor of the brain (scripts/executive.mjs, 2026-11-22): the person's skills and guards. */
-export interface ExecutiveSkill { name: string; description: string; folder: string; placed?: "linked" | "missing" | "other"; file?: string; uses?: string[] }
-/** A plugin installed on this computer, and its skills (not moved into the brain). */
-export interface ExecutiveHarness { name: string; version: string; skills: ExecutiveSkill[]; hooks?: { event: string; matcher: string; script: string; file?: string; what?: string }[] }
+/** What in a skill's files looks like a secret (2026-11-27): how many, and the first ones by file, line and kind, never by value. */
+export interface SkillSecrets { count: number; lines: { file: string; line: number; kind: string }[] }
+/**
+ * A skill. One of the person's own says whether it is on (`on`, the brain's
+ * switch, 2026-11-27), where it stands for Claude Code (`placed`), why it
+ * waits for the person's approval on this computer (`pending`) and what in it
+ * looks like a secret (`secrets`). A skill of a plugin has none of these: it
+ * follows its harness.
+ */
+export interface ExecutiveSkill { name: string; description: string; folder: string; on?: boolean; placed?: "linked" | "missing" | "other"; pending?: string | null; secrets?: SkillSecrets; file?: string; uses?: string[] }
+/**
+ * A plugin installed on this computer, and its skills (not moved into the
+ * brain). `key` is its name in the platform (<plugin>@<marketplace>); `on`
+ * the brain's switch and `enabledHere` what this computer's platform settings
+ * say (2026-11-27); `own` for the brain's own plugin, which is never switched
+ * off from the brain; `protects`, how many of its hooks run before an action.
+ */
+export interface ExecutiveHarness { name: string; key?: string; version: string; on?: boolean; enabledHere?: boolean; own?: boolean; protects?: number; skills: ExecutiveSkill[]; hooks?: { event: string; matcher: string; script: string; file?: string; what?: string }[] }
 export interface ExecutiveGuard { file: string; what: string; present: boolean; placed: boolean; hooks: { event: string; matcher?: string; timeout?: number; placed: boolean }[] }
-export interface ExecutiveResponse { ok: boolean; floor?: string; skills: ExecutiveSkill[]; guards: ExecutiveGuard[]; harnesses?: ExecutiveHarness[]; error?: string }
+export interface ExecutiveResponse { ok: boolean; floor?: string; skills: ExecutiveSkill[]; guards: ExecutiveGuard[]; harnesses?: ExecutiveHarness[]; /** What the brain keeps switched off: the skills by folder, the harnesses by key. */ switches?: { skills: string[]; harnesses: string[] }; error?: string }
+
+/**
+ * POST /api/executive/switch?kind=skill|harness&name=<folder | plugin@marketplace>&to=on|off[&confirmed=1]:
+ * one of the person's own skills, or a whole harness, switched off or on
+ * (2026-11-27). `here` says what happened on this computer: "unlinked",
+ * "linked", "pending" (on in the brain, waiting for the person's approval
+ * before Claude Code is shown it), "left" (another folder holds its place),
+ * "disabled", "enabled", "not installed". A refusal carries a code: "confirm"
+ * (the harness checks before an action: the person's yes is asked, `protects`
+ * names its hooks), "own" (the brain's own plugin), "guard" (a guard has no
+ * switch), "unknown", "failed", "silent".
+ */
+export type SwitchResponse =
+  | { ok: true; to: "on" | "off"; here: string; how?: string }
+  | { ok: false; code: "confirm" | "own" | "guard" | "unknown" | "failed" | "silent"; protects?: string[] };
 
 export type CatalogueRow = [address: string, tool: string, title: string, date: string];
 

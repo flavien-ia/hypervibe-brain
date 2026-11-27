@@ -15,13 +15,13 @@
 // stands by the tool it guards, on the floor above. Which tool a guard guards
 // is still guessed from its name.
 
-import { attempt, getExecutive, readSkillText, translateSkill } from "./api.js";
+import { attempt, getExecutive, readSkillText, switchPiece, translateSkill } from "./api.js";
 import { liveCanvas, writeText } from "./canvas.js";
 import { $ } from "./dom.js";
 import { escapeHtml } from "./format.js";
 import { language } from "./lang.js";
 import { renderBody } from "./markdown.js";
-import { readDialog } from "./modal.js";
+import { confirmDialog, readDialog, toast } from "./modal.js";
 import { t } from "./i18n.js";
 import { RING_GAP, pack } from "./map.js";
 import { panel, panelContent } from "./panel.js";
@@ -41,7 +41,8 @@ const OWN = "";
 
 /** @typedef {import("../contract.d.ts").ExecutiveSkill} Skill */
 /** @typedef {import("../contract.d.ts").ExecutiveGuard} Guard */
-/** @typedef {{ key: string, name: string, version: string, color: string, x: number, y: number, r: number, n: number }} Harness */
+/** @typedef {import("../contract.d.ts").ExecutiveHarness} Plugin */
+/** @typedef {{ key: string, name: string, version: string, color: string, x: number, y: number, r: number, n: number, off: boolean, data: Plugin | null }} Harness */
 /** @typedef {{ event: string, matcher: string, script: string, file?: string, what?: string }} PluginHook */
 /** @typedef {{ kind: "skill", item: Skill, harness: Harness, x: number, y: number } | { kind: "guard", item: Guard, x: number, y: number, tool: import("./state.js").ToolPlace | null } | { kind: "hook", item: PluginHook, plugin: string, version: string, color: string, x: number, y: number }} Piece */
 
@@ -54,6 +55,19 @@ let harnesses = [];
 /** The piece whose card is open. @type {string | null} */
 let chosen = null;
 const keyOf = (/** @type {Piece} */ p) => (p.kind === "skill" ? `skill:${p.harness.key}:${p.item.folder}` : p.kind === "hook" ? `hook:${p.plugin}:${p.item.event}:${p.item.script}` : `guard:${p.item.file}`);
+/** The key of a harness's own card (2026-11-27), beside those of the pieces. @param {string} key */
+const harnessKey = (key) => `harness:${key}`;
+
+// WHAT IS SWITCHED OFF STAYS DRAWN (2026-11-27). The person switches one of
+// their skills, or a whole harness, off from its card (flip, below); the
+// brain keeps the switch (scripts/executive.mjs). A skill that is off is a
+// hollow dot, faint, and a harness that is off a faint arc with a dashed
+// edge, every skill of it hollow: still there, and plainly not in use. The
+// name of an arc counts what is off.
+/** Whether a plugin of the floor is switched off in the brain. @param {Plugin | null | undefined} h */
+const pluginOff = (h) => h?.on === false;
+/** Whether a skill is off: one of the person's own by its own switch, a plugin's with its harness. @param {Piece & { kind: "skill" }} p */
+const skillOff = (p) => (p.harness.key === OWN ? p.item.on === false : p.harness.off);
 
 // ONE FLOOR BROUGHT FORWARD (2026-11-23): a click on the name of a floor
 // brings it forward, and the other one nearly vanishes (floorNames, below);
@@ -94,15 +108,15 @@ export function arrangeFloor(layout, ring = state.toolPlaces) {
   harnesses = [];
   if (!floor) return;
   const { x: cx, y: cy, r } = layout.center;
-  /** @type {{ key: string, name: string, version: string, color: string, skills: Skill[] }[]} */
-  const groups = [{ key: OWN, name: t("execPersonalSkills"), version: "", color: SKILL_COLOR, skills: floor.skills ?? [] }];
-  (floor.harnesses ?? []).forEach((h, i) => groups.push({ key: h.name, name: h.name, version: h.version, color: colors.vivid[(i + 2) % colors.vivid.length], skills: h.skills }));
+  /** @type {{ key: string, name: string, version: string, color: string, skills: Skill[], data: Plugin | null }[]} */
+  const groups = [{ key: OWN, name: t("execPersonalSkills"), version: "", color: SKILL_COLOR, skills: floor.skills ?? [], data: null }];
+  (floor.harnesses ?? []).forEach((h, i) => groups.push({ key: h.name, name: h.name, version: h.version, color: colors.vivid[(i + 2) % colors.vivid.length], skills: h.skills, data: h }));
   const shown = groups.filter((g) => g.skills.length);
   const circles = pack(shown.map((g) => Math.sqrt(g.skills.length) + 1), 0.25);
   const R = r * 0.9;
   shown.forEach((g, i) => {
     const c = circles[i];
-    const h = { key: g.key, name: g.name, version: g.version, color: g.color, x: cx + c.x * R, y: cy + c.y * R, r: c.r * R, n: g.skills.length };
+    const h = { key: g.key, name: g.name, version: g.version, color: g.color, x: cx + c.x * R, y: cy + c.y * R, r: c.r * R, n: g.skills.length, off: pluginOff(g.data), data: g.data };
     harnesses.push(h);
     g.skills.forEach((item, j) => {
       const a = j * 2.39996;
@@ -137,7 +151,7 @@ const NAMES_PX = 140;
 const STEP_PX = 10;
 /** The margin of the framing around the crown, in pixels (camera.js). */
 export const CROWN_MARGIN = 70;
-/** @typedef {{ key: string, name: string, version: string, color: string, a0: number, a1: number, r0: number, r1: number, n: number }} Arc */
+/** @typedef {{ key: string, name: string, version: string, color: string, a0: number, a1: number, r0: number, r1: number, n: number, harness: Harness }} Arc */
 /** The arcs of the crown. @type {Arc[]} */
 let arcs = [];
 
@@ -163,9 +177,9 @@ function arrangeCrown(layout, around) {
     const p = around.find((q) => q.id === id && !q.parent);
     return p ? Math.atan2(p.y - cy, p.x - cx) : null;
   };
-  /** @type {{ key: string, name: string, version: string, color: string, skills: Skill[], want: number | null }[]} */
-  const groups = [{ key: OWN, name: t("execPersonalSkills"), version: "", color: SKILL_COLOR, skills: floor.skills ?? [], want: null }];
-  (floor.harnesses ?? []).forEach((h, i) => groups.push({ key: h.name, name: h.name, version: h.version, color: colors.vivid[(i + 2) % colors.vivid.length], skills: h.skills, want: null }));
+  /** @type {{ key: string, name: string, version: string, color: string, skills: Skill[], want: number | null, data: Plugin | null }[]} */
+  const groups = [{ key: OWN, name: t("execPersonalSkills"), version: "", color: SKILL_COLOR, skills: floor.skills ?? [], want: null, data: null }];
+  (floor.harnesses ?? []).forEach((h, i) => groups.push({ key: h.name, name: h.name, version: h.version, color: colors.vivid[(i + 2) % colors.vivid.length], skills: h.skills, want: null, data: h }));
   const shown = groups.filter((g) => g.skills.length);
   // Where each harness would like to stand: facing the tools its skills name.
   for (const g of shown) {
@@ -198,9 +212,9 @@ function arrangeCrown(layout, around) {
     const rows = Math.ceil(g.skills.length / perRow);
     const r1 = r0 + STEP * (rows + 0.5);
     const mid = (a0 + a1) / 2, rm = (r0 + r1) / 2;
-    const h = { key: g.key, name: g.name, version: g.version, color: g.color, x: cx + Math.cos(mid) * rm, y: cy + Math.sin(mid) * rm, r: (r1 - r0) / 2, n: g.skills.length };
+    const h = { key: g.key, name: g.name, version: g.version, color: g.color, x: cx + Math.cos(mid) * rm, y: cy + Math.sin(mid) * rm, r: (r1 - r0) / 2, n: g.skills.length, off: pluginOff(g.data), data: g.data };
     harnesses.push(h);
-    arcs.push({ key: g.key, name: g.name, version: g.version, color: g.color, a0, a1, r0, r1, n: g.skills.length });
+    arcs.push({ key: g.key, name: g.name, version: g.version, color: g.color, a0, a1, r0, r1, n: g.skills.length, harness: h });
     CROWN.outer = Math.max(CROWN.outer, r1);
     g.skills.forEach((item, j) => {
       const row = Math.floor(j / perRow), col = j % perRow;
@@ -256,14 +270,17 @@ function paintCrown(c) {
   const lit = chosen ? pieces.find((p) => keyOf(p) === chosen) ?? null : null;
   const litUses = new Set(lit?.kind === "skill" ? lit.item.uses ?? [] : []);
   setWorld(c, 0);
-  // The arcs.
+  // The arcs. (A harness that is switched off: fainter, its edge dashed.)
   for (const a of arcs) {
+    const off = a.harness.off;
     c.beginPath();
     c.arc(cx, cy, a.r1, a.a0, a.a1);
     c.arc(cx, cy, a.r0, a.a1, a.a0, true);
     c.closePath();
-    c.globalAlpha = 0.07; c.fillStyle = a.color; c.fill();
-    c.globalAlpha = 0.5; c.lineWidth = 1.2 * px; c.strokeStyle = a.color; c.stroke();
+    c.globalAlpha = off ? 0.025 : 0.07; c.fillStyle = a.color; c.fill();
+    c.setLineDash(off ? [5 * px, 5 * px] : []);
+    c.globalAlpha = off ? 0.35 : 0.5; c.lineWidth = 1.2 * px; c.strokeStyle = a.color; c.stroke();
+    c.setLineDash([]);
   }
   c.globalAlpha = 1;
   // The links of the skills to the tools they name: faint, the chosen skill's bright (and the others then hidden).
@@ -271,21 +288,29 @@ function paintCrown(c) {
     if (p.kind !== "skill") continue;
     const mine = lit === p;
     if (lit && !mine) continue;
+    // (A skill that is off acts on nothing: its links are drawn only when it is the chosen one, and faint.)
+    const off = skillOff(p);
+    if (off && !mine) continue;
     for (const id of p.item.uses ?? []) {
       const to = placeOf(id);
       if (!to) continue;
-      c.strokeStyle = p.harness.color; c.globalAlpha = mine ? 0.9 : 0.07; c.lineWidth = (mine ? 1.8 : 1) * px;
+      c.strokeStyle = p.harness.color; c.globalAlpha = mine ? (off ? 0.35 : 0.9) : 0.07; c.lineWidth = (mine ? 1.8 : 1) * px;
       c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(to.x, to.y); c.stroke();
     }
   }
   c.globalAlpha = 1;
-  // The skills.
+  // The skills. (One that is off: a hollow dot, faint.)
   const dot = Math.max(3.2 * px, 3.2 * px + STEP_PX * 0.08 / (state.baseScale || k));
   for (const p of pieces) {
     if (p.kind !== "skill") continue;
-    c.fillStyle = p.harness.color;
-    c.beginPath(); c.arc(p.x, p.y, dot, 0, Math.PI * 2); c.fill();
-    if (p.harness.key === OWN && p.item.placed && p.item.placed !== "linked") { c.strokeStyle = colors.misplaced; c.lineWidth = 2 * px; c.stroke(); }
+    c.beginPath(); c.arc(p.x, p.y, dot, 0, Math.PI * 2);
+    if (skillOff(p)) {
+      c.fillStyle = colors.disc; c.fill();
+      c.globalAlpha = 0.55; c.strokeStyle = p.harness.color; c.lineWidth = 1.3 * px; c.stroke(); c.globalAlpha = 1;
+    } else {
+      c.fillStyle = p.harness.color; c.fill();
+      if (p.harness.key === OWN && p.item.placed && p.item.placed !== "linked") { c.strokeStyle = colors.misplaced; c.lineWidth = 2 * px; c.stroke(); }
+    }
     if (lit === p) { c.strokeStyle = colors.mark; c.lineWidth = 2 * px; c.beginPath(); c.arc(p.x, p.y, dot + 5 * px, 0, Math.PI * 2); c.stroke(); }
   }
   // The tools the chosen skill names, circled.
@@ -298,23 +323,37 @@ function paintCrown(c) {
     c.strokeStyle = lit.harness.color; c.lineWidth = 2.2; c.stroke();
   }
   drawGuards(c);
+  // (The hooks of a harness that is off do not run: faint.)
+  const offPlugins = new Set((floor?.harnesses ?? []).filter(pluginOff).map((h) => h.name));
   for (const p of pieces) {
     if (p.kind !== "hook") continue;
     const e = toScreen(p);
     shield(c, e.x, e.y, 6.5);
     c.fillStyle = colors.disc; c.fill();
+    c.globalAlpha = offPlugins.has(p.plugin) && lit !== p ? 0.35 : 1;
     c.strokeStyle = p.color; c.lineWidth = lit === p ? 2.4 : 1.5; c.stroke();
+    c.globalAlpha = 1;
   }
   // The names: each arc on its outer edge; the skills from close enough, the chosen one always.
+  // (The name of an arc opens the card of its harness: where it is written is kept for the pointer, arcNameAt.)
+  arcNames = [];
   for (const a of arcs) {
     const mid = (a.a0 + a.a1) / 2;
     const e = toScreen({ x: cx + Math.cos(mid) * (a.r1 + 10), y: cy + Math.sin(mid) * (a.r1 + 10) });
     const o = toScreen({ x: cx, y: cy });
     const out = Math.atan2(e.y - o.y, e.x - o.x);
     c.font = `700 11px ${colors.displayFont}`;
-    c.textAlign = Math.cos(out) > 0.3 ? "left" : Math.cos(out) < -0.3 ? "right" : "center";
-    c.textBaseline = Math.sin(out) > 0.3 ? "top" : Math.sin(out) < -0.3 ? "bottom" : "middle";
-    writeText(c, `${a.name.toUpperCase()} · ${a.n}`, e.x + Math.cos(out) * 6, e.y + Math.sin(out) * 6, inkOf(a.color));
+    const align = Math.cos(out) > 0.3 ? "left" : Math.cos(out) < -0.3 ? "right" : "center";
+    const baseline = Math.sin(out) > 0.3 ? "top" : Math.sin(out) < -0.3 ? "bottom" : "middle";
+    c.textAlign = align;
+    c.textBaseline = baseline;
+    const label = arcLabel(a);
+    const x = e.x + Math.cos(out) * 6, y = e.y + Math.sin(out) * 6;
+    const w = c.measureText(label).width, h = 14;
+    arcNames.push({ arc: a, x: (align === "left" ? x : align === "right" ? x - w : x - w / 2) - 5, y: (baseline === "top" ? y : baseline === "bottom" ? y - h : y - h / 2) - 4, w: w + 10, h: h + 8 });
+    c.globalAlpha = a.harness.off ? 0.6 : 1;
+    writeText(c, label, x, y, chosen === harnessKey(a.key) ? colors.mark : inkOf(a.color));
+    c.globalAlpha = 1;
     c.textBaseline = "alphabetic";
   }
   c.font = `600 10.5px ${colors.font}`;
@@ -322,7 +361,7 @@ function paintCrown(c) {
   for (const p of pieces) {
     if (p.kind !== "skill" || (lit !== p && near < 2.4)) continue;
     const e = toScreen(p);
-    writeText(c, `/${p.item.name}`, e.x, e.y + 15, lit === p ? colors.mark : colors.skillName);
+    writeText(c, skillOff(p) ? `/${p.item.name} (${t("execOffMarkF")})` : `/${p.item.name}`, e.x, e.y + 15, lit === p ? colors.mark : colors.skillName);
   }
   for (const p of pieces) {
     if (p.kind === "skill" || (lit !== p && near < 2.4)) continue;
@@ -347,6 +386,20 @@ function shield(c, x, y, w) {
 
 /** The place of a tool of the ring, by id (its first place). @param {string} id */
 const placeOf = (id) => state.toolPlaces.find((p) => p.id === id) ?? null;
+
+/** How many of an arc's skills are off (all of them when its harness is). @param {Arc} a */
+const offIn = (a) => (a.harness.off ? a.n : a.key === OWN ? (floor?.skills ?? []).filter((s) => s.on === false).length : 0);
+/** The name of an arc as it is written: its harness, how many skills, and what is off. @param {Arc} a */
+const arcLabel = (a) => `${a.name.toUpperCase()} · ${a.n}${a.harness.off ? ` · ${t("execOffMark")}` : offIn(a) ? ` · ${t("execOffCount", offIn(a))}` : ""}`;
+/** Where the names of the arcs were written, on the screen, for the pointer. @type {{ arc: Arc, x: number, y: number, w: number, h: number }[]} */
+let arcNames = [];
+/** The arc whose name is under the pointer: a click opens the card of its harness. @param {number} sx @param {number} sy @returns {Arc | null} */
+export function arcNameAt(sx, sy) {
+  if (!crownShown() || ISO.tilt || floorFocus() === "knowledge") return null;
+  return arcNames.find((b) => sx >= b.x && sx <= b.x + b.w && sy >= b.y && sy <= b.y + b.h)?.arc ?? null;
+}
+/** What a hover over the name of an arc says. @param {Arc} a */
+export const describeArc = (a) => `<b>${escapeHtml(a.name)}</b>${a.harness.off ? ` <small>${escapeHtml(t("execOffMark"))}</small>` : ""}<br>${escapeHtml(t("execHarnessHover"))}`;
 
 /**
  * The floor above, painted over the knowledge floor: the pillars of the
@@ -502,7 +555,9 @@ function drawUpperFloor(c) {
   for (const p of pieces) {
     if (p.kind !== "skill") continue;
     c.fillStyle = p.harness.color;
+    c.globalAlpha = skillOff(p) ? 0.3 : 1;
     c.beginPath(); c.arc(p.x, p.y, dot, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = 1;
     if (p.harness.key === OWN && p.item.placed && p.item.placed !== "linked") { c.strokeStyle = colors.misplaced; c.lineWidth = 2 * px; c.stroke(); }
     if (lit === p) { c.strokeStyle = colors.mark; c.lineWidth = 2 * px; c.beginPath(); c.arc(p.x, p.y, dot + 4 * px, 0, Math.PI * 2); c.stroke(); }
   }
@@ -598,8 +653,175 @@ export const describePiece = (p) => {
   if (p.kind === "hook") return `<b>${escapeHtml(p.item.script)}</b> <small>${escapeHtml(p.plugin)}</small><br>${escapeHtml(p.item.event)}${p.item.matcher ? ` · ${escapeHtml(p.item.matcher)}` : ""}`;
   const where = p.harness.key === OWN ? t("execOwn") : p.harness.name;
   const tools = toolNames(p.item);
-  return `<b>/${escapeHtml(p.item.name)}</b> <small>${escapeHtml(where)}</small>${tools.length ? `<br>${escapeHtml(tools.join(", "))}` : ""}`;
+  return `<b>/${escapeHtml(p.item.name)}</b> <small>${escapeHtml(skillOff(p) ? `${where} · ${t("execOffMarkF")}` : where)}</small>${tools.length ? `<br>${escapeHtml(tools.join(", "))}` : ""}`;
 };
+
+// ------------------------------------------------------------ the switches
+
+// THE SWITCH OF A CARD (2026-11-27). One of the person's own skills, and a
+// whole harness, are switched off and on from their card. The change shows
+// at once (the control, the dot or the arc on the map), the server is asked,
+// and its answer confirms it or takes it back with a word at the bottom of
+// the screen. Under the control, a line says when the change takes effect.
+// A SKILL OF A PLUGIN HAS NO SWITCH: the platform offers none that is
+// documented, so its card says that it follows its harness and leads there.
+// NOR HAS A GUARD: nothing in this page pauses one (docs/executive.md says
+// why a page cannot be trusted with that).
+/** What the last switch of a card answered, by the card's key: the line under its control. @type {Map<string, string>} */
+const switchNotes = new Map();
+/** The cards whose switch waits for the server's answer. @type {Set<string>} */
+const switching = new Set();
+
+/**
+ * The control: a switch of the design system, with its state in words.
+ * @param {boolean} on @param {{ disabled?: boolean, feminine?: boolean }} [o]
+ */
+const switchControl = (on, { disabled = false, feminine = false } = {}) =>
+  `<button type="button" id="exec-switch" class="exec-switch" role="switch" aria-checked="${on ? "true" : "false"}"${disabled ? " disabled" : ""}><span class="track" aria-hidden="true"><span class="thumb"></span></span><span class="state">${escapeHtml(t(on ? (feminine ? "execOnF" : "execOn") : feminine ? "execOffF" : "execOff"))}</span></button>`;
+/** The control and the line under it. @param {string} control @param {string} note */
+const switchBlock = (control, note) => `<div class="exec-switch-row">${control}</div><p class="exec-switch-note" id="exec-switch-note" aria-live="polite">${escapeHtml(note)}</p>`;
+
+/** The line under a skill's switch. @param {Skill} s @param {string} key */
+function skillNote(s, key) {
+  if (switching.has(key)) return t("execSwitching");
+  if (s.on !== false && s.pending) return t("execSkillPending");
+  return switchNotes.get(key) ?? t(s.on === false ? "execSkillOffNote" : "execSkillOnNote");
+}
+/** The line under a harness's switch. @param {Plugin} h @param {string} key */
+function harnessNote(h, key) {
+  if (h.own) return t("execHarnessOwn");
+  if (switching.has(key)) return t("execSwitching");
+  if (switchNotes.has(key)) return /** @type {string} */ (switchNotes.get(key));
+  // Off in the brain and still on on this computer (the switch came from another computer), or the other way round.
+  if (h.on === false && h.enabledHere !== false) return t("execHarnessOffElsewhere");
+  if (h.on !== false && h.enabledHere === false) return t("execHarnessDisabledHere");
+  return t(h.on === false ? "execHarnessOffNote" : "execHarnessOnNote");
+}
+
+/** What the server refused, in the person's words. @param {import("../contract.d.ts").SwitchResponse | null} answer */
+const refusalText = (answer) => t(answer && !answer.ok && answer.code === "own" ? "execHarnessOwn" : answer && !answer.ok && answer.code === "guard" ? "execGuardNoSwitch" : "execSwitchFailed");
+
+/**
+ * Switches one of the person's own skills: shown at once, then confirmed.
+ * @param {Piece & { kind: "skill" }} p
+ */
+async function flipSkill(p) {
+  const s = p.item;
+  const key = keyOf(p);
+  if (switching.has(key)) return;
+  const was = { on: s.on, placed: s.placed, pending: s.pending };
+  const to = s.on === false ? "on" : "off";
+  s.on = to === "on";
+  switching.add(key);
+  if (chosen === key) choosePiece(p);
+  paint();
+  const answer = await attempt(switchPiece("skill", s.folder, to));
+  switching.delete(key);
+  if (answer?.ok) {
+    s.on = answer.to === "on";
+    s.placed = answer.here === "linked" ? "linked" : answer.here === "unlinked" ? "missing" : s.placed;
+    s.pending = answer.here === "pending" ? (s.pending ?? "pending") : null;
+    switchNotes.set(key, t(answer.here === "pending" ? "execSkillPending" : answer.here === "left" ? "execSkillLeft" : answer.to === "off" ? "execSkillOffDone" : "execSkillOnDone"));
+  } else {
+    Object.assign(s, was);
+    switchNotes.delete(key);
+    toast(refusalText(answer));
+  }
+  if (chosen === key) choosePiece(p);
+  paint();
+}
+
+/**
+ * Switches a whole harness. One that checks before an action is switched off
+ * only once the person said yes to a question that names what goes.
+ * @param {Harness} h
+ */
+async function flipHarness(h) {
+  const plugin = h.data;
+  const key = harnessKey(h.key);
+  if (!plugin || plugin.own || switching.has(key)) return;
+  const to = plugin.on === false ? "on" : "off";
+  const guards = (plugin.hooks ?? []).filter((x) => x.event === "PreToolUse" || x.event === "PermissionRequest");
+  /** Asks the person before a protection goes. @param {string[]} scripts */
+  const agreed = (scripts) => confirmDialog({ title: t("execConfirmTitle", plugin.name), text: [t("execConfirmText", scripts.length, [...new Set(scripts)].join(", ")), t("execConfirmText2")], yes: t("execConfirmYes") });
+  let confirmed = false;
+  if (to === "off" && (plugin.protects ?? guards.length) > 0) {
+    if (!(await agreed(guards.map((x) => x.script)))) return;
+    confirmed = true;
+  }
+  const was = { on: plugin.on, enabledHere: plugin.enabledHere };
+  const show = (/** @type {boolean} */ on) => {
+    plugin.on = on;
+    h.off = !on;
+    if (chosen === key) chooseHarness(h);
+    paint();
+  };
+  switching.add(key);
+  show(to === "on");
+  let answer = await attempt(switchPiece("harness", plugin.key ?? plugin.name, to, confirmed));
+  // The server found hooks the page did not know of: the question is asked now.
+  if (answer && !answer.ok && answer.code === "confirm" && !confirmed) {
+    if (!(await agreed(answer.protects ?? []))) {
+      switching.delete(key);
+      Object.assign(plugin, was);
+      return void show(was.on !== false);
+    }
+    answer = await attempt(switchPiece("harness", plugin.key ?? plugin.name, to, true));
+  }
+  switching.delete(key);
+  if (answer?.ok) {
+    plugin.enabledHere = answer.here === "not installed" ? plugin.enabledHere : answer.to === "on";
+    switchNotes.set(key, t(answer.to === "off" ? "execHarnessOffDone" : "execHarnessOnDone"));
+    show(answer.to === "on");
+  } else {
+    Object.assign(plugin, was);
+    switchNotes.delete(key);
+    toast(refusalText(answer));
+    show(was.on !== false);
+  }
+}
+
+/**
+ * Opens the card of a harness (a click on the name of its arc, or the button
+ * of one of its skills): what it holds, and for a plugin its switch.
+ * @param {Harness | undefined | null} h
+ */
+export function chooseHarness(h) {
+  if (!h) return;
+  chosen = harnessKey(h.key);
+  state.selection = null;
+  panel.hidden = false;
+  const row = (/** @type {string} */ label, /** @type {string} */ value) => `<div class="row"><span>${escapeHtml(label)}</span><b>${value}</b></div>`;
+  const plugin = h.data;
+  if (!plugin) {
+    // The person's own skills: each has its own switch, in its card.
+    const off = (floor?.skills ?? []).filter((s) => s.on === false);
+    panelContent.innerHTML = `
+      <p class="exec-kind" style="--c:${h.color}"><span class="exec-dot"></span>${escapeHtml(t("execHarness"))}</p>
+      <h2>${escapeHtml(h.name)}</h2>
+      <div class="exec-text"><p>${escapeHtml(t("execOwnHarnessText"))}</p></div>
+      <div class="exec-rows">
+        ${row(t("execItsSkills"), escapeHtml(off.length ? t("execSkillsCountOff", h.n, off.length) : String(h.n)))}
+        ${off.length ? row(t("execOffList"), escapeHtml(off.map((s) => `/${s.name}`).join(", "))) : ""}
+        ${row(t("execLivesIn"), `<code>${escapeHtml(`${floor?.floor ?? ""}/skills`)}</code>`)}
+      </div>`;
+    return;
+  }
+  const hooks = plugin.hooks ?? [];
+  const before = plugin.protects ?? 0;
+  panelContent.innerHTML = `
+    <p class="exec-kind" style="--c:${h.color}"><span class="exec-dot"></span>${escapeHtml(t("execHarness"))}</p>
+    <h2>${escapeHtml(h.name)}</h2>
+    ${switchBlock(switchControl(plugin.on !== false, { disabled: Boolean(plugin.own) }), harnessNote(plugin, chosen))}
+    <div class="exec-rows">
+      ${row(t("execVersion"), escapeHtml(plugin.version || "?"))}
+      ${row(t("execItsSkills"), escapeHtml(String(plugin.skills.length)))}
+      ${row(t("execItsHooks"), escapeHtml(hooks.length ? (before ? t("execHooksBefore", hooks.length, before) : String(hooks.length)) : t("execNoHook")))}
+      ${row(t("execOneSkill"), escapeHtml(t("execOneSkillText")))}
+      ${row(t("execWrite"), escapeHtml(t("execHarnessWrite")))}
+    </div>`;
+  $("#exec-switch").addEventListener("click", () => flipHarness(h));
+}
 
 /** Opens the card of a piece. @param {Piece | null} p */
 export function choosePiece(p) {
@@ -632,14 +854,20 @@ export function choosePiece(p) {
       <p class="exec-kind" style="--c:${p.harness.color}"><span class="exec-dot"></span>${escapeHtml(own ? t("execSkill") : `${t("execSkill")} · ${p.harness.name}`)}</p>
       <h2>/${escapeHtml(s.name)}</h2>
       <div class="exec-text" id="exec-description">${renderBody(s.description)}</div>
-      <p class="exec-actions"><button type="button" id="exec-read" class="open-note-file">${escapeHtml(t("execRead"))}</button></p>
+      ${own && s.secrets?.count ? `<div class="exec-notice" role="note"><b>${escapeHtml(t("execSecretsTitle"))}</b> ${escapeHtml(t("execSecretsText", s.secrets.lines.slice(0, 4).map((l) => t("execSecretLine", l.file, l.line, t("execSecretKind", l.kind))).join(" ; "), Math.max(0, s.secrets.count - 4)))}</div>` : ""}
+      ${own ? switchBlock(switchControl(s.on !== false, { feminine: true }), skillNote(s, keyOf(p))) : ""}
+      <p class="exec-actions"><button type="button" id="exec-read">${escapeHtml(t("execRead"))}</button>${own ? "" : ` <button type="button" id="exec-to-harness">${escapeHtml(t("execSeeHarness"))}</button>`}</p>
       <div class="exec-rows">
         ${own ? row(t("execLivesIn"), `<code>${escapeHtml(`${floor?.floor ?? ""}/skills/${s.folder}`)}</code>`) : row(t("execInPlugin"), escapeHtml(`${p.harness.name} ${p.harness.version}`))}
-        ${own && s.placed ? row(t("execPlaced"), escapeHtml(t(`execPlaced_${s.placed}`))) : ""}
+        ${own && s.placed && s.on !== false ? row(t("execPlaced"), escapeHtml(t(`execPlaced_${s.placed}`))) : ""}
+        ${own ? "" : row(t("execSwitch"), escapeHtml(t(p.harness.off ? "execFollowsHarnessOff" : "execFollowsHarness")))}
         ${row(t("execTools"), escapeHtml(tools.length ? tools.join(", ") : t("execNoTool")))}
         ${row(t("execWrite"), escapeHtml(own ? t("execSkillWrite") : t("execPluginWrite")))}
       </div>`;
+    // (These buttons no longer bear the class of the note's "open its file" button, whose handler asked the server for a note that is none, 2026-11-27.)
     $("#exec-read").addEventListener("click", () => readSkill(s));
+    if (own) $("#exec-switch").addEventListener("click", () => flipSkill(p));
+    else $("#exec-to-harness").addEventListener("click", () => { chooseHarness(p.harness); paint(); });
     translateDescription(s, keyOf(p));
   } else {
     const g = p.item;
@@ -654,6 +882,7 @@ export function choosePiece(p) {
         ${row(t("execWired"), wires || escapeHtml(t("execNotWired")))}
         ${p.tool ? row(t("execInFront"), escapeHtml(toolById(p.tool.id)?.name ?? p.tool.id)) : ""}
         ${row(t("execWrite"), escapeHtml(t("execGuardWrite")))}
+        ${row(t("execSwitch"), escapeHtml(t("execGuardNoSwitch")))}
       </div>`;
   }
 }

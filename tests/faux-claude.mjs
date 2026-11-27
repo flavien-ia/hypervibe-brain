@@ -23,9 +23,45 @@
 // the token: the bench compares it with the fingerprints of its made-up
 // ones), and whether an API key was in its environment.
 
+//
+// It also stands for `claude plugin enable | disable <plugin>@<marketplace>`
+// (2026-11-27), which the executive floor runs to switch a harness: it writes
+// enabledPlugins in the settings of the bench's home (HVBRAIN_HOME, never the
+// person's), as Claude does, and fails when the plugin is already so.
+//   FAUX_CLAUDE_PLUGIN  "absent": a Claude without that command (it fails and
+//                     writes nothing; the floor then goes by the settings)
+
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { opened } from "../scripts/readers/opened.mjs";
+
+if (process.argv[2] === "plugin") {
+  const [, verb, plugin] = process.argv.slice(2);
+  if (process.env.FAUX_CLAUDE_LOG) appendFileSync(process.env.FAUX_CLAUDE_LOG, `${JSON.stringify({ at: new Date().toISOString(), args: process.argv.slice(2) })}\n`, "utf8");
+  const home = process.env.HVBRAIN_HOME;
+  if (!home || process.env.FAUX_CLAUDE_PLUGIN === "absent" || !/^(enable|disable)$/.test(verb ?? "") || !plugin) {
+    console.error("error: unknown command 'plugin'");
+    process.exit(1);
+  }
+  const file = join(home, ".claude", "settings.json");
+  let settings = {};
+  try {
+    settings = JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    settings = {};
+  }
+  const want = verb === "enable";
+  if ((settings.enabledPlugins?.[plugin] !== false) === want) {
+    console.log(`Plugin "${plugin}" is already ${want ? "enabled" : "disabled"}`);
+    process.exit(1);
+  }
+  settings.enabledPlugins = { ...(settings.enabledPlugins ?? {}), [plugin]: want };
+  mkdirSync(join(home, ".claude"), { recursive: true });
+  writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+  console.log(`Successfully ${want ? "enabled" : "disabled"} plugin: ${plugin} (scope: user)`);
+  process.exit(0);
+}
 
 const prompt = readFileSync(0, "utf8");
 const items = prompt.split("\n").filter((l) => /^\d+\. .*\(.+\)$/.test(l.trim())).length;

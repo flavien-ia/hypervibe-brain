@@ -199,6 +199,27 @@ try {
     const all = JSON.stringify(d1.prepare("SELECT * FROM skill").all()) + JSON.stringify(d1.prepare("SELECT * FROM meta").all());
     check("nothing of the held skill is in the cloud copy", !all.includes("Tr0ub4dor") && !all.includes("203.0.113.7") && !all.includes("Write gently"), all.slice(0, 300));
   }
+  {
+    // A SKILL THE PERSON SWITCHED OFF LEAVES THE CLOUD COPY (2026-11-27): the
+    // brain keeps the switch (executive.mjs switch), the next sync removes
+    // the skill online, and it comes back once it is switched on again.
+    mkdirSync(join(BRAIN, "executive", "skills", "letters"), { recursive: true });
+    writeFileSync(join(BRAIN, "executive", "skills", "letters", "SKILL.md"), "---\nname: letters\ndescription: Writes a letter.\n---\n\nWrite the letter kindly.\n", "utf8");
+    const names = () => d1.prepare("SELECT name FROM skill ORDER BY name").all().map((x) => x.name);
+    run("cloud.mjs", ["sync"]);
+    check("a skill that is on is in the cloud copy", JSON.stringify(names()) === '["invoice","letters"]', JSON.stringify(names()));
+    const off = run("executive.mjs", ["switch", "skill", "letters", "off"]);
+    check("the person switches it off in the brain", off.ok && json(off.out).switch === "off", off.out);
+    check("it is no longer among the skills that would go", !json(run("cloud.mjs", ["skills"]).out).sends.includes("letters"));
+    const gone = run("cloud.mjs", ["sync"]);
+    const text = JSON.stringify(d1.prepare("SELECT * FROM skill").all());
+    check("the next sync removes it from the cloud copy, text and all", gone.ok && json(gone.out).skills === 1 && JSON.stringify(names()) === '["invoice"]' && !text.includes("Write the letter kindly"), gone.out);
+    run("executive.mjs", ["switch", "skill", "letters", "on"]);
+    check("switched on again, it is sent again", json(run("cloud.mjs", ["sync"]).out).skills === 1 && JSON.stringify(names()) === '["invoice","letters"]', JSON.stringify(names()));
+    rmSync(join(BRAIN, "executive", "skills", "letters"), { recursive: true, force: true });
+    run("cloud.mjs", ["sync"]);
+    check("the copy is as before the essay", JSON.stringify(names()) === '["invoice"]', JSON.stringify(names()));
+  }
   const p = join(BRAIN, "vault", "notes", "novel-project.md");
   writeFileSync(p, readFileSync(p, "utf8").replace("dreams.", "dreams of whales."), "utf8");
   // What an interrupted run left in the working folder goes at the next sync.

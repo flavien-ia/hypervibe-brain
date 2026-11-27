@@ -122,6 +122,13 @@ export const getSkillsUsed = (since) => get("/api/skills-used", { since });
 export const readSkillText = (file) => get("/api/executive/skill", { file });
 /** A skill's description in a language, translated once and kept. @param {string} file @param {string} lang @returns {Promise<{ ok: boolean, text?: string, error?: string }>} */
 export const translateSkill = (file, lang) => post("/api/executive/translate", { file, lang });
+/**
+ * One of the person's own skills, or a whole harness, switched off or on.
+ * @param {"skill" | "harness"} kind @param {string} name the skill's folder, or <plugin>@<marketplace>
+ * @param {"on" | "off"} to @param {boolean} [confirmed] the person said yes to the question (a harness that checks before an action)
+ * @returns {Promise<import("../contract.d.ts").SwitchResponse>}
+ */
+export const switchPiece = (kind, name, to, confirmed) => post("/api/executive/switch", { kind, name, to, confirmed: confirmed ? 1 : undefined });
 /** @returns {Promise<WeightsResponse>} */
 export const getWeights = () => get("/api/weights");
 /** @param {string} since an ISO date @returns {Promise<WrittenResponse>} */

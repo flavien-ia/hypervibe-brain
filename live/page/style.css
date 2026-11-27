@@ -104,6 +104,20 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .exec-rows .row > span { color: var(--muted); font-size: 11.5px; }
 .exec-rows .row > b { font-weight: 500; line-height: 1.45; word-break: break-word; }
 .exec-rows code { font-size: 11.5px; }
+/* The switch of a skill or of a harness, in its card (2026-11-27): a track and its thumb, its state in words, and under it the line that says when the change takes effect. */
+.exec-switch-row { display: flex; align-items: center; margin: 2px 0 6px; }
+.exec-switch { display: inline-flex; align-items: center; gap: 10px; min-height: 28px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+.exec-switch .track { position: relative; flex: none; box-sizing: border-box; width: 38px; height: 22px; border: 1px solid var(--border); border-radius: 999px; background: rgba(255, 255, 255, 0.08); transition: background-color 150ms ease, border-color 150ms ease; }
+.exec-switch .thumb { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform 150ms ease, background-color 150ms ease; }
+.exec-switch[aria-checked="true"] .track { border-color: var(--green); background: var(--green); }
+.exec-switch[aria-checked="true"] .thumb { transform: translateX(16px); background: #fff; }
+.exec-switch:disabled { cursor: not-allowed; opacity: 0.6; }
+.exec-switch-note { margin: 0 0 12px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.exec-actions button + button { margin-left: 6px; }
+/* What looks like a secret in a skill: a tint and its words, never a coloured edge. */
+.exec-notice { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: rgba(255, 229, 0, 0.1); font-size: 12.5px; line-height: 1.5; word-break: break-word; }
+.exec-notice b { font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .exec-switch .track, .exec-switch .thumb { transition: none; } }
 .live-mark .live-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; box-sizing: border-box; }
 /* The dot of a role, in a tool's card: its sentence does not stick to it. */
 .dot.role-dot { margin-right: 6px; }

@@ -37,6 +37,11 @@
 //                         its file shown in the file manager, the index brought up to date
 //   /api/contacts, /api/catalogue, /api/weights, /api/written, /api/usage
 //                         the layers and filters of the map, the usage journal
+//   /api/executive, /api/executive/switch
+//                         the executive floor (the person's skills, the harnesses,
+//                         the guards); one of the person's skills or a whole
+//                         harness switched off or on (the plugin's executive.mjs).
+//                         Never a guard: no route pauses one (docs/executive.md)
 //   /api/stream           the live feed (Server-Sent Events): each read of the
 //                         brain, each note written, each source that runs
 //   /api/suggest          the plugin's hook asks here for the notes to suggest
@@ -1491,6 +1496,29 @@ function readExecutive() {
 /** @type {Map<string, string>} */
 let hookTexts = new Map();
 
+/**
+ * Switches one of the person's skills, or a whole harness, off or on
+ * (2026-11-27): asked to the plugin, which does it and says what happened.
+ * The answer carries a code the page words in the person's language, never
+ * the plugin's own sentence (it may name a path of the computer).
+ * @param {string} kind "skill" or "harness"; a guard is refused, as anything else
+ * @param {string} name the skill's folder, or <plugin>@<marketplace>
+ * @param {string} to "on" or "off"
+ * @param {boolean} confirmed the person said yes to the page's question (a harness that checks before an action)
+ * @returns {Promise<import("./contract.d.ts").SwitchResponse>}
+ */
+async function switchPiece(kind, name, to, confirmed) {
+  if (kind === "guard") return { ok: false, code: "guard" };
+  if ((kind !== "skill" && kind !== "harness") || (to !== "on" && to !== "off") || !/^[\w.@-]{1,200}$/.test(name)) return { ok: false, code: "unknown" };
+  const answer = await askPlugin(PLUGIN, BRAIN, "executive.mjs", ["switch", kind, name, to, "--line", ...(kind === "harness" && to === "off" && confirmed ? ["--confirmed"] : [])], { HVBRAIN_WHO: "person" });
+  const said = answer.said ?? {};
+  if (!answer.ok) {
+    if (!said.confirm && !said.own) console.error(`executive: ${kind} ${name} was not switched ${to} (${answer.code}: ${answer.error})`);
+    return { ok: false, code: said.confirm ? "confirm" : said.own ? "own" : answer.code === "no-answer" ? "silent" : "failed", ...(said.confirm ? { protects: (said.protects ?? []).map((/** @type {any} */ h) => String(h.script ?? "")) } : {}) };
+  }
+  return { ok: true, to: said.switch === "off" ? "off" : "on", here: String(said.here ?? ""), ...(said.how ? { how: String(said.how) } : {}) };
+}
+
 /** The SKILL.md files the floor named last: the only files the page may ask to read. @type {Set<string> | null} */
 let skillFiles = null;
 /** Whether a file is one of the floor's skills (never another file of the computer). @param {string} file */
@@ -1922,7 +1950,7 @@ function refusal(req, path) {
   return null;
 }
 /** Everything that writes, starts a process or calls a tool: never by a GET. (POST /api/settings is told apart from its GET in the route.) */
-const EFFECT_ROUTES = new Set(["/api/code", "/api/suggest", "/api/fetch", "/api/territories/redo", "/api/territories/rename", "/api/health", "/api/open", "/api/open-note", "/api/now", "/api/undo", "/api/exclude", "/api/catch-up", "/api/validate", "/api/index/refresh", "/api/executive/translate"]);
+const EFFECT_ROUTES = new Set(["/api/code", "/api/suggest", "/api/fetch", "/api/territories/redo", "/api/territories/rename", "/api/health", "/api/open", "/api/open-note", "/api/now", "/api/undo", "/api/exclude", "/api/catch-up", "/api/validate", "/api/index/refresh", "/api/executive/translate", "/api/executive/switch"]);
 
 // WHAT EVERY ANSWER CARRIES (2026-11-21, audit 2). The page could be shown in
 // an invisible frame of another site, whose clicks then fell on its buttons
@@ -2005,6 +2033,17 @@ const server = createServer(async (req, res) => {
     if (p === "/api/executive/skill") return sendJson(res, readSkill(query.get("file") ?? ""), { noStore: true });
     if (p === "/api/skills-used") return sendJson(res, skillsSince(query.get("since") ?? new Date(Date.now() - 86_400_000).toISOString()), { noStore: true });
     if (p === "/api/executive/translate" && req.method === "POST") return sendJson(res, await translateSkill(query.get("file") ?? "", query.get("lang") ?? ""), { noStore: true });
+    // SWITCHING OFF AND ON (2026-11-27): one of the person's own skills, or a
+    // whole harness. The plugin does it (executive.mjs switch): it keeps the
+    // switch in the brain, removes or puts back the skill's link (never
+    // without its approval on this computer), disables or enables the plugin
+    // in the platform, and notes it in the journal. A harness that checks
+    // before an action is switched off only with `confirmed=1`, which the
+    // page sends once the person said yes to its question. NEVER A GUARD: no
+    // route pauses one, because this route cannot tell the person from a
+    // program of their account (the view's token is a file of that account,
+    // and an AI that drives a browser clicks like anyone): docs/executive.md.
+    if (p === "/api/executive/switch" && req.method === "POST") return sendJson(res, await switchPiece(query.get("kind") ?? "", query.get("name") ?? "", query.get("to") ?? "", query.get("confirmed") === "1"), { noStore: true });
     if (p === "/api/suggest" && req.method === "POST") {
       // JSON only (a form of a third-party page cannot send any without
       // permission), and a message of human size.

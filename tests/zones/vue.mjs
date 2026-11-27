@@ -10,7 +10,7 @@
 //   node tests/zones/vue.mjs [--keep]
 
 import { spawn, spawnSync } from "node:child_process";
-import { appendFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, lstatSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -295,6 +295,110 @@ async function main() {
   check("decision C, audit 4: a note is read whole, with nothing hidden and nothing started", typeof noteBody.body?.body === "string" && noteBody.body.body.includes("one"), noteBody.text.slice(0, 300));
   const unknownNote = await ask("/api/note?slug=nothing-here");
   check("audit 16: a note that cannot be read says so without a path of the machine", typeof unknownNote.body?.error === "string" && !/[A-Z]:\\|\/Users\//.test(unknownNote.body.error), unknownNote.text);
+
+  // ---------------------------------------------------------------- the switches of the executive floor (2026-11-27)
+  // One of the person's skills and a whole harness are switched off and on
+  // from the view; a guard never is. A throwaway floor: a skill adopted (so
+  // linked and approved here), one that seems to hold a secret, a guard, and
+  // three plugins in the registry of the fake home.
+  {
+    const floorSkill = (dir, name, body = `# ${name}\n`) => {
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "SKILL.md"), `---\nname: ${name}\ndescription: A skill of the zone (${name}).\n---\n\n${body}`, "utf8");
+    };
+    const fwd = (p) => p.replaceAll("\\", "/");
+    const CLAUDE = join(HOME, ".claude");
+    floorSkill(join(CLAUDE, "skills", "essai"), "essai");
+    const adopted = run("node", [join(PLUGIN, "scripts", "executive.mjs"), "adopt-skill", "essai", "--brain", BRAIN]);
+    const word = ["Tr0ub4dor", "!x"].join("");
+    floorSkill(join(BRAIN, "executive", "skills", "serveur"), "serveur", ["The admin password", `: ${word}\n`].join(""));
+    mkdirSync(join(BRAIN, "executive", "guards"), { recursive: true });
+    writeFileSync(join(BRAIN, "executive", "guards", "essai-guard.mjs"), "// Asks before anything is sent.\nprocess.exit(0);\n", "utf8");
+    writeFileSync(join(BRAIN, "executive", "guards.json"), JSON.stringify({ "essai-guard.mjs": { what: "Asks before anything is sent.", hooks: [{ event: "PreToolUse", matcher: "Bash" }] } }), "utf8");
+    const pluginAt = (name, hooks) => {
+      const root = join(BASE, "plugins", name);
+      floorSkill(join(root, "skills", "faire"), "faire");
+      if (hooks) {
+        mkdirSync(join(root, "hooks"), { recursive: true });
+        mkdirSync(join(root, "scripts"), { recursive: true });
+        writeFileSync(join(root, "hooks", "hooks.json"), JSON.stringify({ hooks }), "utf8");
+        writeFileSync(join(root, "scripts", "avant.mjs"), "// Asks before a message is sent.\nprocess.exit(0);\n", "utf8");
+      }
+      return fwd(root);
+    };
+    mkdirSync(join(CLAUDE, "plugins"), { recursive: true });
+    writeFileSync(join(CLAUDE, "plugins", "installed_plugins.json"), JSON.stringify({ version: 2, plugins: {
+      "outils@place": [{ scope: "user", installPath: pluginAt("outils", null), version: "1.0.0" }],
+      "veille@place": [{ scope: "user", installPath: pluginAt("veille", { PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: 'node "${CLAUDE_PLUGIN_ROOT}/scripts/avant.mjs"' }] }] }), version: "1.0.0" }],
+      "brain@place": [{ scope: "user", installPath: fwd(PLUGIN), version: "0" }],
+    } }), "utf8");
+    const settingsFile = join(CLAUDE, "settings.json");
+    writeFileSync(settingsFile, JSON.stringify({ model: "x", enabledPlugins: { "outils@place": true, "veille@place": true, "brain@place": true } }, null, 2), "utf8");
+    const linked = () => { try { return lstatSync(join(CLAUDE, "skills", "essai")).isSymbolicLink(); } catch { return false; } };
+    const switches = () => readJ(join(BRAIN, "executive", "switches.json"), {});
+    const floorNow = async () => (await ask("/api/executive")).body;
+    const flip = (query, o = {}) => ask(`/api/executive/switch?${query}`, { method: "POST", ...o });
+
+    let floor = await floorNow();
+    const skillOf = (name) => floor?.skills?.find((/** @type {any} */ s) => s.folder === name);
+    const harnessOf = (key) => floor?.harnesses?.find((/** @type {any} */ h) => h.key === key);
+    check("switches: the floor says of each skill and each harness whether it is on", adopted.ok && linked() && skillOf("essai")?.on === true && skillOf("essai").placed === "linked" && harnessOf("outils@place")?.on === true && harnessOf("outils@place").enabledHere === true && harnessOf("veille@place")?.protects === 1 && harnessOf("outils@place").protects === 0 && JSON.stringify(floor.switches) === '{"skills":[],"harnesses":[]}', JSON.stringify(floor).slice(0, 700));
+    const secretOf = skillOf("serveur")?.secrets;
+    check("switches: a skill that seems to hold a secret says so, by file, line and kind, never by value", secretOf?.count === 1 && secretOf.lines[0].file === "SKILL.md" && secretOf.lines[0].line === 6 && secretOf.lines[0].kind === "a password" && skillOf("essai").secrets.count === 0 && !JSON.stringify(floor).includes(word), JSON.stringify(secretOf));
+
+    check("switches: a switch is never a GET, and asks for the token", (await ask("/api/executive/switch?kind=skill&name=essai&to=off")).status === 405 && (await flip("kind=skill&name=essai&to=off", { noToken: true })).status === 401 && linked());
+    const off = await flip("kind=skill&name=essai&to=off");
+    floor = await floorNow();
+    check("switches: a skill switched off from the view loses its link, stays in the brain, and the floor says it is off", off.body?.ok === true && off.body.to === "off" && off.body.here === "unlinked" && !linked() && existsSync(join(BRAIN, "executive", "skills", "essai", "SKILL.md")) && skillOf("essai")?.on === false && switches().skills?.essai === "off", off.text);
+    const on = await flip("kind=skill&name=essai&to=on");
+    floor = await floorNow();
+    check("switches: switched on again, its link is back", on.body?.ok === true && on.body.here === "linked" && linked() && skillOf("essai")?.on === true, on.text);
+    const waiting = await flip("kind=skill&name=serveur&to=on");
+    check("switches: a skill never approved on this computer is not linked by the view: it waits for the person", waiting.body?.ok === true && waiting.body.here === "pending" && !existsSync(join(CLAUDE, "skills", "serveur")), waiting.text);
+
+    const hOff = await flip("kind=harness&name=outils@place&to=off");
+    floor = await floorNow();
+    check("switches: a harness switched off is disabled in the platform's settings, and off in the brain", hOff.body?.ok === true && hOff.body.here === "disabled" && readJ(settingsFile).enabledPlugins["outils@place"] === false && readJ(settingsFile).model === "x" && switches().harnesses?.["outils@place"] === "off" && harnessOf("outils@place")?.on === false && harnessOf("outils@place").enabledHere === false, hOff.text);
+    check("switches: it stays on the floor, with its skills, to be drawn faint", harnessOf("outils@place")?.skills?.length === 1);
+    const hOn = await flip("kind=harness&name=outils@place&to=on");
+    check("switches: and enabled again", hOn.body?.ok === true && hOn.body.here === "enabled" && readJ(settingsFile).enabledPlugins["outils@place"] === true, hOn.text);
+    const asked = await flip("kind=harness&name=veille@place&to=off");
+    check("switches: a harness that checks before an action is not switched off without the person's yes, and its hooks are named", asked.body?.ok === false && asked.body.code === "confirm" && JSON.stringify(asked.body.protects) === '["avant.mjs"]' && readJ(settingsFile).enabledPlugins["veille@place"] === true && !switches().harnesses?.["veille@place"], asked.text);
+    const agreed = await flip("kind=harness&name=veille@place&to=off&confirmed=1");
+    check("switches: with their yes, it is", agreed.body?.ok === true && readJ(settingsFile).enabledPlugins["veille@place"] === false, agreed.text);
+    await flip("kind=harness&name=veille@place&to=on");
+    const own = await flip("kind=harness&name=brain@place&to=off&confirmed=1");
+    check("switches: the brain's own plugin is refused", own.body?.ok === false && own.body.code === "own" && readJ(settingsFile).enabledPlugins["brain@place"] === true, own.text);
+
+    // A GUARD IS NEVER PAUSED FROM THE VIEW: no route does it, whatever is asked.
+    const guard = await flip("kind=guard&name=essai-guard.mjs&to=off&confirmed=1");
+    const asSkill = await flip("kind=skill&name=essai-guard.mjs&to=off");
+    const asHarness = await flip("kind=harness&name=essai-guard.mjs&to=off&confirmed=1");
+    floor = await floorNow();
+    check("switches: a guard has no switch in the view, under any name", guard.body?.ok === false && guard.body.code === "guard" && asSkill.body?.ok === false && asHarness.body?.ok === false && floor.guards?.length === 1 && floor.guards[0].file === "essai-guard.mjs" && !JSON.stringify(switches()).includes("guard") && existsSync(join(BRAIN, "executive", "guards", "essai-guard.mjs")), `${guard.text} ${asSkill.text} ${asHarness.text}`);
+    const routes = [...read(join(PLUGIN, "live", "server.mjs")).matchAll(/p === "(\/api\/executive[^"]*)"/g)].map((m) => m[1]);
+    check("switches: the server has no route that pauses a guard", routes.sort().join() === "/api/executive,/api/executive/skill,/api/executive/switch,/api/executive/translate" && !/switch", "guard"|pause-guard|guard-pause/.test(read(join(PLUGIN, "live", "server.mjs"))), routes.join());
+    const odd = await flip(`kind=skill&name=${encodeURIComponent("../essai")}&to=off`);
+    check("switches: a name that is not one, or a state that is neither on nor off, is refused", odd.body?.ok === false && odd.body.code === "unknown" && (await flip("kind=skill&name=essai&to=maybe")).body?.code === "unknown" && (await flip("kind=skill&name=absente&to=off")).body?.code === "failed" && linked());
+    check("switches: no answer carries a path of the computer", ![off, on, waiting, hOff, asked, own, guard, odd].some((a) => /[A-Z]:[\\/]|\/Users\/|hvb-zone/.test(a.text)));
+    const events = read(join(HB, "events.jsonl")).trim().split("\n").map((l) => JSON.parse(l)).filter((e) => e.what === "switched");
+    check("switches: each one is noted in the journal as the person's", events.length >= 5 && events.every((e) => e.who === "person") && events.some((e) => e.kind === "harness" && e.name === "veille@place" && e.confirmed === true), JSON.stringify(events.slice(0, 3)));
+    // The page: a switch of the design system (a hand over it, its state in
+    // words), an effect asked by POST, the same words in both languages, an
+    // entry in the legend, and what looks like a secret said in a tint.
+    const pageOf = (f) => read(join(PLUGIN, "live", "page", f));
+    const control = /\.exec-switch \{([^}]*)\}/.exec(pageOf("style.css"))?.[1] ?? "";
+    const dressed = pageOf("theme-hypervibe.css");
+    check("switches: the control is a switch with its state in words and a hand over it, dressed by the design system", /role="switch"/.test(pageOf("executive.js")) && /aria-checked/.test(pageOf("executive.js")) && /cursor: pointer/.test(control) && /\.exec-switch\[aria-checked="true"\] \.track \{[^}]*var\(--hv-blue\)/.test(dressed), control);
+    check("switches: the page asks for it by POST", /switchPiece = [^\n]*post\("\/api\/executive\/switch"/.test(pageOf("api.js")));
+    const notice = `${/\.exec-notice \{([^}]*)\}/.exec(pageOf("style.css"))?.[1] ?? ""} ${/\.exec-notice \{([^}]*)\}/.exec(dressed)?.[1] ?? ""}`;
+    check("switches: what looks like a secret is said in a tint, with no edge of colour", /background:/.test(notice) && !/border(-left|-right|-top|-bottom)?:/.test(notice), notice);
+    const keysOf = (f) => new Set([...pageOf(f).matchAll(/^  (exec[A-Za-z_]+|legendSwitchedOff[A-Za-z]+):/gm)].map((m) => m[1]));
+    const [enKeys, frKeys] = [keysOf("i18n/en.js"), keysOf("i18n/fr.js")];
+    const used = [...pageOf("executive.js").matchAll(/t\("(exec[A-Za-z_]+)"/g)].map((m) => m[1]);
+    check("switches: every text the cards use is in both languages", enKeys.size > 60 && [...enKeys].every((k) => frKeys.has(k)) && [...frKeys].every((k) => enKeys.has(k)) && used.every((k) => enKeys.has(k)) && enKeys.has("legendSwitchedOffTitle"), [...enKeys].filter((k) => !frKeys.has(k)).concat(used.filter((k) => !enKeys.has(k))).join(", "));
+    check("switches: the legend has its entry, with a drawing", /\["switchedOff", "legendSwitchedOffTitle", "legendSwitchedOffText"\]/.test(pageOf("legend.js")) && /^\s*switchedOff: `</m.test(pageOf("legend.js")));
+  }
 
   // ---------------------------------------------------------------- the page, without a browser
   await pageChecks();

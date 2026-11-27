@@ -44,6 +44,8 @@ const DRAWINGS = {
   skillLit: `<circle cx="32" cy="16" r="10" fill="#A783F6" fill-opacity="0.35"/><circle cx="32" cy="16" r="4" fill="#A783F6" stroke="#FAF8F5" stroke-width="1.5"/><line x1="32" y1="16" x2="32" y2="38" stroke="#A783F6" stroke-width="1.6"/><circle cx="32" cy="40" r="6" fill="var(--bg)" stroke="#A783F6" stroke-width="2"/>`,
   ownGuard: `<path d="M32 11.350000000000001L43 16.3L43 24.55Q41.35 33.9 32 38.3Q22.65 33.9 21 24.55L21 16.3Z" fill="#FF6040" stroke="var(--bg)" stroke-width="1.5"/><rect x="28.5" y="23.5" width="7" height="5.5" fill="var(--bg)"/><path d="M29.6 23.5 a2.4 2.4 0 0 1 4.8 0" fill="none" stroke="var(--bg)" stroke-width="1.5"/>`,
   pluginHook: `<path d="M22 15.950000000000001L29 19.1L29 24.35Q27.95 30.3 22 33.1Q16.05 30.3 15 24.35L15 19.1Z" fill="var(--bg)" stroke="#00C896" stroke-width="1.5"/><path d="M42 15.950000000000001L49 19.1L49 24.35Q47.95 30.3 42 33.1Q36.05 30.3 35 24.35L35 19.1Z" fill="var(--bg)" stroke="#FF4D6D" stroke-width="1.5"/>`,
+  // What is switched off (2026-11-27): a pale arc with a dashed edge, its skills hollow; beside it, one skill off among others on.
+  switchedOff: `<path d="M6 40 A30 30 0 0 1 58 40" fill="none" stroke="#A783F6" stroke-width="10" stroke-opacity="0.06"/><path d="M6 40 A30 30 0 0 1 58 40" fill="none" stroke="#A783F6" stroke-opacity="0.45" stroke-dasharray="4 4"/><circle cx="14" cy="27" r="2.2" fill="var(--bg)" stroke="#A783F6" stroke-opacity="0.6"/><circle cx="24" cy="19" r="2.2" fill="var(--bg)" stroke="#A783F6" stroke-opacity="0.6"/><circle cx="34" cy="16" r="2.2" fill="var(--bg)" stroke="#A783F6" stroke-opacity="0.6"/><circle cx="44" cy="19" r="2.2" fill="var(--bg)" stroke="#A783F6" stroke-opacity="0.6"/><circle cx="52" cy="27" r="2.2" fill="var(--bg)" stroke="#A783F6" stroke-opacity="0.6"/>`,
   seeds: `<circle cx="14" cy="34" r="1.6" fill="#A39A90" opacity=".3"/><circle cx="50" cy="38" r="1.6" fill="#A39A90" opacity=".3"/><circle cx="32" cy="8" r="1.6" fill="#A39A90" opacity=".3"/><g fill="#3FD4AE" stroke="#3FD4AE" stroke-width="1.4"><circle cx="20" cy="18" r="6" fill-opacity=".25"/><circle cx="20" cy="18" r="2.6"/><circle cx="42" cy="22" r="6" fill-opacity=".25"/><circle cx="42" cy="22" r="2.6"/><circle cx="30" cy="36" r="6" fill-opacity=".25"/><circle cx="30" cy="36" r="2.6"/></g>`,
   chosenNote: `<path d="M26 26L48 12M26 26L52 34M26 26L8 38" fill="none" stroke="#FAF8F5" stroke-opacity=".4"/><circle cx="48" cy="12" r="2.4" fill="#FAF8F5"/><circle cx="52" cy="34" r="2.4" fill="#FAF8F5"/><circle cx="8" cy="38" r="2.4" fill="#FAF8F5"/><circle cx="26" cy="26" r="12" fill="#FFE500" opacity=".25"/><circle cx="26" cy="26" r="4.5" fill="#FFE500"/>`,
   status: () => `<rect x="4" y="14" width="56" height="20" rx="5" fill="rgba(63,212,174,.14)" stroke="#3FD4AE"/><text x="32" y="27.5" fill="#3FD4AE" font-size="9" text-anchor="middle">${escapeHtml(t("validateNote"))}</text>`,
@@ -88,6 +90,7 @@ const SECTIONS = [
     ["skillLit", "legendSkillLitTitle", "legendSkillLitText"],
     ["ownGuard", "legendOwnGuardTitle", "legendOwnGuardText"],
     ["pluginHook", "legendPluginHookTitle", "legendPluginHookText"],
+    ["switchedOff", "legendSwitchedOffTitle", "legendSwitchedOffText"],
   ] },
   { title: "legendFilters", items: [
     ["layers", "legendLayersTitle", "legendLayersText"],

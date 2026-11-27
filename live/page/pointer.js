@@ -8,7 +8,7 @@ import { glideTo, stopGlide, viewOn } from "./camera.js";
 import { scene } from "./canvas.js";
 import { loadTerritories } from "./data.js";
 import { $ } from "./dom.js";
-import { choosePiece, describePiece, floorFocus, floorNameAt, forgetPiece, hoverPiece, pieceAt, toggleFocus, turnFloors } from "./executive.js";
+import { arcNameAt, chooseHarness, choosePiece, describeArc, describePiece, floorFocus, floorNameAt, forgetPiece, hoverPiece, pieceAt, toggleFocus, turnFloors } from "./executive.js";
 import { clockSeconds, conversationName, escapeHtml, shorten, wordWhy } from "./format.js";
 import { t } from "./i18n.js";
 import { domainName, typeName } from "./map.js";
@@ -261,6 +261,14 @@ function onHover(ev) {
     showHover(ev, describePiece(piece));
     return;
   }
+  // The name of an arc of the crown: a click opens the card of its harness (2026-11-27).
+  const arc = arcNameAt(ev.clientX, ev.clientY);
+  if (arc) {
+    onPiece = true;
+    scene.classList.add("over-something");
+    showHover(ev, describeArc(arc));
+    return;
+  }
   // Off a piece (or a floor's name), the hand leaves unless what is below asks for it again.
   if (onPiece && !state.hoverTool && !state.hoverNote && !state.hoverPath && !state.hoverDust) scene.classList.remove("over-something");
   onPiece = false;
@@ -370,6 +378,9 @@ function onRelease(ev) {
   // A piece of the executive floor (executive.js) comes first in its view.
   const piece = pieceAt(ev.clientX, ev.clientY);
   if (piece) { choosePiece(piece); return void paint(); }
+  // The name of an arc of the crown: the card of its harness, with its switch.
+  const arc = arcNameAt(ev.clientX, ev.clientY);
+  if (arc) { chooseHarness(arc.harness); return void paint(); }
   // A click: a tool, else a note, else a dot of the catalogue, else a reading path, else a bubble, else nothing.
   const toolId = toolAt(ev.clientX, ev.clientY);
   if (toolId) {

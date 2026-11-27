@@ -370,6 +370,22 @@
 :root[data-theme="hypervibe"] #open-legend { display: flex; width: 100%; }
 /* The button that reads a skill was the browser's own: the same secondary button (2026-11-24). */
 :root[data-theme="hypervibe"] .exec-actions button { min-height: 32px; padding: 0 14px; font: inherit; font-weight: 600; cursor: pointer; }
+/* The switch of a skill or of a harness (2026-11-27), with the tokens of the
+   design system: off, a hollow track under a strong border and a grey thumb;
+   on, the blue of what is chosen and a cream thumb. Its state is also said in
+   words beside it, never by the colour alone. */
+:root[data-theme="hypervibe"] .exec-switch { color: var(--hv-cream); cursor: pointer; }
+:root[data-theme="hypervibe"] .exec-switch .track { border-color: var(--hv-border-strong); background: var(--hv-field); }
+:root[data-theme="hypervibe"] .exec-switch .thumb { background: var(--hv-grey); }
+:root[data-theme="hypervibe"] .exec-switch:hover:not(:disabled) .track { border-color: var(--hv-cream); }
+:root[data-theme="hypervibe"] .exec-switch[aria-checked="true"] .track { border-color: var(--hv-blue); background: var(--hv-blue); }
+:root[data-theme="hypervibe"] .exec-switch[aria-checked="true"] .thumb { background: var(--hv-cream); }
+:root[data-theme="hypervibe"] .exec-switch[aria-checked="true"]:hover:not(:disabled) .track { border-color: var(--hv-blue-light); background: var(--hv-blue-light); }
+:root[data-theme="hypervibe"] .exec-switch:disabled { cursor: not-allowed; }
+:root[data-theme="hypervibe"] .exec-switch-note { color: var(--hv-grey); }
+/* What looks like a secret in a skill: the design system's Encart, a tint of the yellow and no edge. */
+:root[data-theme="hypervibe"] .exec-notice { border-radius: 12px; background: rgba(255, 229, 0, 0.12); color: var(--hv-cream); }
+:root[data-theme="hypervibe"] .exec-notice b { color: var(--hv-yellow-light); }
 /* The dangerous action, discreet: the coral of the problem, its tint on hover. */
 :root[data-theme="hypervibe"] #panel .health-action.danger { border-color: var(--hv-coral); background: none; color: var(--hv-coral-light); }
 :root[data-theme="hypervibe"] #panel .health-action.danger:hover:not(:disabled) { border-color: var(--hv-coral); background: rgba(255, 96, 64, 0.15); color: var(--hv-coral-light); }

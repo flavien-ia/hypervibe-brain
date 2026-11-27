@@ -37,17 +37,39 @@ export { SKILL_TOOL, nativeClient };
 const fwd = (p) => String(p).replaceAll("\\", "/");
 
 /**
+ * The skills the person switched off in their brain (executive/switches.json,
+ * written by executive.mjs switch, 2026-11-27), by their folder. A file that
+ * is missing or cannot be read switches nothing off.
+ * @param {string} brainDir
+ * @returns {Set<string>}
+ */
+export function switchedOff(brainDir) {
+  try {
+    const skills = JSON.parse(readFileSync(join(brainDir, "executive", "switches.json"), "utf8").replace(/^﻿/, ""))?.skills;
+    return new Set(Object.entries(skills && typeof skills === "object" && !Array.isArray(skills) ? skills : {}).filter(([, v]) => v === "off").map(([k]) => k));
+  } catch {
+    return new Set();
+  }
+}
+
+/**
  * The skills of the floor: a folder of executive/skills with a SKILL.md (a
  * folder without one is shared by others, "_presta", not a skill).
+ * A SKILL THAT IS SWITCHED OFF IS NOT ONE OF THEM (2026-11-27): everything
+ * that serves the skills to another AI starts from this list (the prompts,
+ * brain_skill, the sentence of the instructions, the cloud copy, which then
+ * removes it at its next synchronisation), so a skill the person switched off
+ * is served nowhere.
  * @param {string} brainDir
  * @returns {{ name: string, description: string, folder: string, dir: string, cloud: boolean }[]}
  */
 export function listSkills(brainDir) {
   const root = join(brainDir, "executive", "skills");
   if (!existsSync(root)) return [];
+  const off = switchedOff(brainDir);
   const out = [];
   for (const d of readdirSync(root, { withFileTypes: true })) {
-    if (!d.isDirectory() || d.name.startsWith(".")) continue;
+    if (!d.isDirectory() || d.name.startsWith(".") || off.has(d.name)) continue;
     const file = join(root, d.name, "SKILL.md");
     if (!existsSync(file)) continue;
     try {

@@ -8,6 +8,7 @@ Range dans votre brain **ce que votre IA sait faire** : vos propres skills, et l
 - Vous avez des garde-fous (des hooks qui demandent ou refusent avant un geste risqué) et voulez que l'IA ne puisse plus les modifier
 - Vous installez votre brain sur un nouvel ordinateur et voulez y retrouver vos skills et vos garde-fous
 - Vous voulez savoir où en est l'étage exécutif : ce qui est rangé, ce qui reste dans les dossiers de Claude Code, ce qui n'est plus en place
+- Vous voulez éteindre une de vos skills, ou un plugin entier, sans le perdre : « désactive la skill X », « coupe le harnais Y », et plus tard « rallume X »
 
 ## Comment ça se passe
 
@@ -15,7 +16,8 @@ Range dans votre brain **ce que votre IA sait faire** : vos propres skills, et l
 2. **Le choix** : Claude vous propose de ranger ce qui reste, et vous choisissez quoi (tout, une partie, rien).
 3. **Le rangement** : chaque skill choisie part dans votre brain, une copie est gardée avant, et un lien reste à sa place : vous l'appelez par sa /commande comme avant.
 4. **Les garde-fous** : Claude les interroge sur quelques cas sans risque avant et après le déplacement, pour vérifier qu'ils répondent pareil. Un garde-fou qui appelle un fichier à côté de lui (une fenêtre de confirmation) part avec ce fichier.
-5. **Sur un nouvel ordinateur** : Claude repose les liens de vos skills et rebranche vos garde-fous. Vos skills sont là à la session suivante.
+5. **Sur un nouvel ordinateur** : Claude repose les liens de vos skills et rebranche vos garde-fous. Vos skills sont là à la session suivante. Ce que vous avez éteint reste éteint.
+6. **Éteindre et rallumer** : vous dites quoi éteindre, Claude le fait et vous dit quand cela prend effet. Une de vos skills disparaît de Claude Code tout de suite et reste dans votre brain ; un plugin s'éteint à votre prochaine session. Si le plugin vérifie certaines actions avant qu'elles se fassent, Claude vous demande d'abord, puisque cette protection part avec lui.
 
 ## Ce que ça crée pour vous
 
@@ -24,6 +26,8 @@ Range dans votre brain **ce que votre IA sait faire** : vos propres skills, et l
 - Des garde-fous que l'IA ne peut ni modifier ni déplacer : vous seul les changez
 - Dans la vue en direct, le calque **Harnais** : vos skills et vos plugins en couronne autour des outils, une skill qui s'allume quand l'IA s'en sert
 - Une copie de tout ce qui a été déplacé, dans les sauvegardes de votre ordinateur
+- La liste de ce que vous avez éteint, gardée dans votre brain : elle vous suit sur un autre ordinateur, et une autre IA branchée sur votre brain laisse aussi ces skills de côté
+- Un avertissement quand une de vos skills semble contenir une clé ou un mot de passe (où il se trouve, jamais sa valeur), pour que vous puissiez le ranger ailleurs
 
 ## Prérequis
 
@@ -35,4 +39,8 @@ Range dans votre brain **ce que votre IA sait faire** : vos propres skills, et l
 - Les plugins que vous installez ne sont pas déplacés : chacun est un produit, avec son propre dépôt. La vue les montre à côté de vos skills.
 - Pour changer un garde-fou, ouvrez son fichier vous-même : l'IA n'y a pas accès, c'est le principe.
 - `/brain:status` vous dit si une skill ou un garde-fou n'est plus en place.
+- Trois mots : une **skill** est un savoir-faire écrit, que votre IA suit quand vous l'appelez ; un **harnais** est un plugin que vous avez installé, un lot de skills avec parfois ses propres vérifications ; un **garde-fou** est une vérification à vous, qui encadre votre IA.
+- Dans la vue en direct, l'interrupteur est dans la fiche de chacune de vos skills et de chaque harnais (cliquez sur le nom de son arc). Ce qui est éteint reste dessiné, estompé.
+- Une seule skill d'un plugin ne s'éteint pas à part : Claude Code n'a pas de réglage pour cela. Le plugin entier, oui.
+- Un garde-fou n'a pas d'interrupteur, ni pour votre IA ni dans la vue en direct : pour en mettre un en pause, vous le faites à la main. Le plugin de votre brain ne s'éteint pas non plus depuis le brain, il porte les verrous.
 - Une autre IA branchée sur votre brain (Codex, Cursor, Claude Desktop...) reçoit vos skills du brain lui-même, traduites pour elle. Vos garde-fous ne peuvent pas arrêter ses gestes : elle les reçoit comme des règles, et vous demande avant.

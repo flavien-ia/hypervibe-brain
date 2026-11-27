@@ -63,6 +63,8 @@ node "${CLAUDE_SKILL_DIR}/../../scripts/computers.mjs" clone --url <the brain's 
 
    If no window opened (`opened: false`), give them the line of `byHand` to paste in a terminal of their own. Run `place` again afterwards and say that the skills will be there at the next session of Claude Code. A skill that holds a place of its own here (`left`): say it and leave it; `/brain:executive` brings it into the brain if they want.
 
+   **What they switched off stays off here.** A skill that is off in their brain is not put back on this computer (`skillsOff`): say it in one line. For the plugins, nothing is switched off by itself, since a plugin installed on a computer is that computer's choice: when the answer carries `harnessesToOffer`, name the plugins that are off in their brain while installed and on here, ask which ones they want off on this computer too, and run the `switchOff` line only for those (it takes effect at the next session).
+
    The same window shows what else arrived with the brain and waits for them here: the data sources of its registry (which service each speaks to, with which keys) and the watched folders. `node "${CLAUDE_SKILL_DIR}/../../scripts/trust.mjs" state` lists what is left.
 6. Test it together: a capture here (`/brain:capture`), then on the other computer, "synchronise my brain" (`sync.mjs`), and the note is there.
 

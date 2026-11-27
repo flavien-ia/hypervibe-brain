@@ -278,7 +278,9 @@ const hashOf = (o) => createHash("sha256").update(JSON.stringify(o)).digest("hex
  * `cloud: false`, and but those in which secret-scan.mjs finds what looks
  * like a secret: those are held back, named with the lines, never sent. The
  * rules of the guards go the same way: a rule that seems to hold a secret
- * stays here.
+ * stays here. A skill the person switched off (executive.mjs switch) is not
+ * among the skills at all (skills-mcp.mjs, listSkills): it is not sent, and
+ * the sync that follows removes it from the copy.
  * @returns {{ on: boolean, send: Map<string, { description: string, folder: string, body: string, files: string, hash: string }>, held: { skill: string, file: string, found: { line: number, kind: string }[] }[], kept: string[], rules: string[], rulesHeld: string[] }}
  */
 function cloudSkills({ preview = false } = {}) {

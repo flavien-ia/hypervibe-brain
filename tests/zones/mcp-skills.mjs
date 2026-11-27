@@ -6,8 +6,8 @@
 //
 //   node tests/zones/mcp-skills.mjs
 
-import { spawn } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -126,6 +126,32 @@ try {
   const nprompts = await native.ask("prompts/list", {});
   check("prompts/list is empty for it", Array.isArray(nprompts?.result?.prompts) && nprompts.result.prompts.length === 0, JSON.stringify(nprompts));
   native.close();
+
+  // A SKILL THE PERSON SWITCHED OFF IS SERVED NOWHERE (2026-11-27): the
+  // brain keeps the switch (executive.mjs switch), so another AI plugged
+  // into the brain leaves the skill out too.
+  console.log("\nA skill switched off");
+  mkdirSync(join(BRAIN, "executive", "skills", "lettre"), { recursive: true });
+  writeFileSync(join(BRAIN, "executive", "skills", "lettre", "SKILL.md"), "---\nname: lettre\ndescription: Écrit une lettre.\n---\n\nÉcris la lettre.\n", "utf8");
+  const flip = (to) => JSON.parse(spawnSync(process.execPath, [join(PLUGIN, "scripts", "executive.mjs"), "switch", "skill", "devis", to], { env, encoding: "utf8" }).stdout || "{}");
+  const offAnswer = flip("off");
+  check("the switch is kept in the brain", offAnswer.ok === true && JSON.parse(readFileSync(join(BRAIN, "executive", "switches.json"), "utf8")).skills.devis === "off", JSON.stringify(offAnswer));
+  const quiet = await session("codex-mcp-client");
+  const qPrompts = (await quiet.ask("prompts/list", {}))?.result?.prompts ?? [];
+  check("no prompt for it, the other skill still offered", qPrompts.length === 1 && qPrompts[0].name === "lettre", JSON.stringify(qPrompts));
+  check("the instructions no longer name it", quiet.init?.result?.instructions?.includes("lettre") && !/\bdevis\b/.test(quiet.init.result.instructions.split("brain too")[1] ?? ""), quiet.init?.result?.instructions);
+  const qList = JSON.parse((await quiet.ask("tools/call", { name: "brain_skill", arguments: {} }))?.result?.content?.[0]?.text ?? "{}");
+  check("brain_skill does not list it", JSON.stringify(qList.skills?.map((s) => s.name)) === '["lettre"]', JSON.stringify(qList));
+  const qOne = await quiet.ask("tools/call", { name: "brain_skill", arguments: { name: "devis" } });
+  const qGet = await quiet.ask("prompts/get", { name: "devis" });
+  check("nor gives it by its name, as a tool or as a prompt", qOne?.result?.isError === true && !qOne.result.content[0].text.includes("devis.mjs") && qGet?.error?.code === -32602, JSON.stringify([qOne, qGet]));
+  quiet.close();
+  check("switched on again, it is served again", flip("on").ok === true);
+  const back = await session("codex-mcp-client");
+  const bPrompts = (await back.ask("prompts/list", {}))?.result?.prompts ?? [];
+  check("its prompt is back", bPrompts.map((x) => x.name).sort().join() === "devis,lettre", JSON.stringify(bPrompts));
+  back.close();
+  rmSync(join(BRAIN, "executive", "skills", "lettre"), { recursive: true, force: true });
 
   console.log("\nA floor without skills");
   rmSync(join(BRAIN, "executive", "skills", "devis"), { recursive: true, force: true });

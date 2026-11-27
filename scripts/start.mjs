@@ -182,7 +182,8 @@ function executiveFacts() {
   } catch {
     floor = { skills: [], shared: [], guards: [] };
   }
-  const unplaced = [...(floor.skills ?? []), ...(floor.shared ?? [])].filter((s) => s.placed !== "linked").length + (floor.guards ?? []).filter((g) => !g.placed).length;
+  // (A skill the person switched off is not "not placed": it has no link on purpose, executive.mjs switch, 2026-11-27.)
+  const unplaced = [...(floor.skills ?? []), ...(floor.shared ?? [])].filter((s) => s.placed !== "linked" && s.on !== false).length + (floor.guards ?? []).filter((g) => !g.placed).length;
   const held = (floor.skills ?? []).length + (floor.guards ?? []).length;
   const out = (left.skills ?? []).length + (left.hooks ?? []).length;
   return { state: out || unplaced ? "todo" : held ? "done" : "na", skills: (floor.skills ?? []).length, guards: (floor.guards ?? []).length, left: { skills: (left.skills ?? []).length, hooks: (left.hooks ?? []).length }, ...(unplaced ? { unplaced } : {}) };

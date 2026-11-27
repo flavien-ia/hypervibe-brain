@@ -16,6 +16,7 @@ import { judgeHealth, liveSources, waiting } from "./judge.mjs";
 import { readQueue } from "./vault-queue.mjs";
 import { startState } from "./start.mjs";
 import { pending } from "./trust.mjs";
+import { state as executiveFloor } from "./executive.mjs";
 
 loadEnv();
 const cfg = config();
@@ -100,6 +101,21 @@ try {
 } catch {
   approvals = null;
 }
+// WHAT THE PERSON SWITCHED OFF, AND WHAT LOOKS LIKE A SECRET IN A SKILL
+// (2026-11-27, executive.mjs): the skills and the harnesses the brain keeps
+// off (a skill that is off is not "missing": it was asked), a skill off in
+// the brain that this computer still links (`place` takes the link away), and
+// each skill in which a key or a password seems to be written, by file, line
+// and kind, never by value.
+let floor = null;
+try {
+  const f = executiveFloor({ harnesses: false, secrets: true });
+  const skillSecrets = f.skills.filter((k) => k.secrets?.count).map((k) => ({ skill: k.folder, count: k.secrets.count, lines: k.secrets.lines }));
+  const stillLinked = f.skills.filter((k) => !k.on && k.placed === "linked").map((k) => k.folder);
+  if (f.switches.skills.length || f.switches.harnesses.length || skillSecrets.length) floor = { skillsOff: f.switches.skills, harnessesOff: f.switches.harnesses, ...(stillLinked.length ? { offButLinkedHere: stillLinked } : {}), skillSecrets };
+} catch {
+  floor = null;
+}
 // WHO ELSE MAY WRITE IN THE BRAIN'S FOLDER (2026-11-27, lib.mjs): another
 // account of the computer that may write there may change what runs for the
 // person and what their AI reads as theirs.
@@ -139,6 +155,7 @@ const s = {
   lastSave,
   judgesFailing: judges,
   ...(approvals ? { approvals } : {}),
+  ...(floor ? { executive: floor } : {}),
   ...(openTo ? { folderWritableBy: openTo } : {}),
   waitingForVault,
   ...(waitingForVault.length ? { waitingForVaultSince } : {}),
@@ -152,6 +169,8 @@ else {
   if (s.lastAlert) console.log(`  ALERT of ${s.lastAlert.date.slice(0, 10)}: ${s.lastAlert.problems.join(" ; ")}`);
   for (const j of s.judgesFailing) console.log(`  JUDGE ${j.down ? "DOWN" : "failing"}: ${j.name}, ${j.failures} run(s) failed in a row since ${String(j.failingSince ?? "?").slice(0, 16)} (${j.cause}), ${j.waiting} item(s) waiting: ${j.lastError}`);
   if (s.approvals) console.log(`  WAITING FOR YOUR APPROVAL on this computer (not running meanwhile): ${[...s.approvals.guards.map((g) => `guard ${g.file}`), ...s.approvals.skills.map((k) => `skill ${k.name}`), ...s.approvals.sources.map((x) => `${x.kind} ${x.name}`), ...s.approvals.data.map((d) => `data ${d.scheme}://`), ...s.approvals.watch.map((w) => `folder ${w}`)].join(", ")}. In a terminal of yours: ${s.approvals.how?.byHand ?? "trust.mjs guide"}`);
+  if (s.executive?.skillSecrets.length) console.log(`  A SKILL SEEMS TO HOLD A SECRET (it works as before; a brain is saved and synchronised): ${s.executive.skillSecrets.map((k) => `${k.skill} (${k.lines.slice(0, 4).map((l) => `${l.file} line ${l.line}: ${l.kind}`).join("; ")}${k.count > 4 ? `; and ${k.count - 4} more` : ""})`).join(" ; ")}`);
+  if (s.executive?.skillsOff.length || s.executive?.harnessesOff.length) console.log(`  switched off in the brain: ${[...s.executive.skillsOff.map((k) => `skill ${k}`), ...s.executive.harnessesOff.map((h) => `harness ${h}`)].join(", ")}`);
   if (s.folderWritableBy) console.log(`  WARNING: the brain's folder can be changed by ${s.folderWritableBy}, not by you alone`);
   if (s.waitingForVault.length) console.log(`  waiting for the Hypervibe vault to be opened (not a failure): ${s.waitingForVault.join(", ")}`);
   console.log(`${s.name}: ${s.notes} note(s) ${JSON.stringify(s.byStatus)}, stage ${s.stage ?? "?"}`);
