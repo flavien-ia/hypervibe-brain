@@ -20,7 +20,7 @@
 
 ## Install
 
-Requirements: Claude Code (desktop app or CLI). Node 22.13+ and git are checked, and installed if needed, by the first skill.
+Requirements: Claude Code (desktop app or CLI). Node 22.16+ and git are checked, and installed if needed, by the first skill.
 
 ```
 /plugin marketplace add flavien-ia/hypervibe-brain

@@ -25,7 +25,7 @@ open. It is a wait, not a failure.
 
 ## Start
 
-Node 22.13 or later, and a brain created by the plugin. No install step: the
+Node 22.16 or later, and a brain created by the plugin. No install step: the
 view has no runtime dependency.
 
 ```bash

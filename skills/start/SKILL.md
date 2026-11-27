@@ -43,7 +43,7 @@ node "${CLAUDE_SKILL_DIR}/../../scripts/prereqs.mjs" --json
 node "${CLAUDE_SKILL_DIR}/../../scripts/start.mjs" state
 ```
 
-The audit reports: `os`, `node` (`ok` = 22.13 or later), `git`, `gitIdentity` (name and email that sign the brain's saves), `gh` (GitHub CLI, connected or not), `cloudflare` (connected or not), `ready`, and `brain` (a brain already set up on this computer, or null).
+The audit reports: `os`, `node` (`ok` = 22.16 or later), `git`, `gitIdentity` (name and email that sign the brain's saves), `gh` (GitHub CLI, connected or not), `cloudflare` (connected or not), `ready`, and `brain` (a brain already set up on this computer, or null).
 
 The state reports `brain` (its folder, or null), `parts` (the seven parts in their order, `preflight`, `computer`, `container`, `tools`, `knowledge`, `executive`, `life`, each with its `state`), `part` (the part in progress), `next` (the step or block to do now, or `preflight` while no brain is active here), `steps` and `session.blocks`. A step is `done`, `todo`, `declined`, `later` (postponed by the person) or `na` (it does not apply); a block can also be `later`, `never` or `running`. Each block of the knowledge carries its `progress`: `total` (what was counted, null while nothing counted it), `done`, `left`, `notes` (the notes it added to the brain, null where that is not measured) and `unit`. The state is read from what is really there on this computer, and only what the person declined or agreed to is kept beside it: trust it over your memory of an earlier conversation. (`phase` is still given, for older readers: ignore it.)
 

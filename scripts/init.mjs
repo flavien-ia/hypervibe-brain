@@ -40,7 +40,7 @@ const fail = (error) => {
 };
 
 const [maj, min] = process.versions.node.split(".").map(Number);
-if (maj < 22 || (maj === 22 && min < 13)) fail(`Node ${process.versions.node} is too old: the brain needs Node 22.13 or later (its database comes with Node from that version)`);
+if (maj < 22 || (maj === 22 && min < 16)) fail(`Node ${process.versions.node} is too old: the brain needs Node 22.16 or later (its database comes with Node from that version)`);
 
 const dirArg = opt("--dir");
 const name = opt("--name");

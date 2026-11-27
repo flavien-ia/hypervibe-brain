@@ -20,7 +20,7 @@
 
 ## Installer
 
-Il faut Claude Code (l'app de bureau ou la ligne de commande). Node 22.13+ et git sont vérifiés, et installés si besoin, par la première skill.
+Il faut Claude Code (l'app de bureau ou la ligne de commande). Node 22.16+ et git sont vérifiés, et installés si besoin, par la première skill.
 
 ```
 /plugin marketplace add flavien-ia/hypervibe-brain

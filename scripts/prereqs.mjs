@@ -25,10 +25,11 @@ const firstLine = (s) => s.split(/\r?\n/).find(Boolean) ?? "";
 
 const os = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "mac" : "linux";
 const [maj, min] = process.versions.node.split(".").map(Number);
-const node = { version: process.versions.node, ok: maj > 22 || (maj === 22 && min >= 13), path: process.execPath };
+const node = { version: process.versions.node, ok: maj > 22 || (maj === 22 && min >= 16), path: process.execPath };
 
 // The full-text search needs SQLite's FTS5 in this node. Official builds have
-// it; a node built against another SQLite (some package managers) may not.
+// it from 22.16 on (22.13 to 22.15 come without: found by the CI of 2026-11-24); a
+// node built against another SQLite (some package managers) may not.
 let sqliteFts = false;
 try {
   const { DatabaseSync } = await import("node:sqlite");
@@ -90,7 +91,7 @@ void userConfig;
 if (process.argv.includes("--json")) console.log(JSON.stringify(report, null, 2));
 else {
   const mark = (b) => (b ? "ok " : "-- ");
-  console.log(`\n${mark(node.ok)} Node ${node.version}${node.ok ? "" : " (22.13 or later needed)"}`);
+  console.log(`\n${mark(node.ok)} Node ${node.version}${node.ok ? "" : " (22.16 or later needed)"}`);
   console.log(`${mark(git.installed)} git ${git.version ?? "missing"}`);
   console.log(`${mark(report.required.gitIdentity)} git identity ${identity.name ? `${identity.name} <${identity.email ?? "?"}>` : "missing"}`);
   console.log(`${mark(gh.loggedIn)} GitHub CLI ${gh.installed ? (gh.loggedIn ? `connected as ${gh.account}` : "installed, not connected") : "missing"} (optional: online backup)`);

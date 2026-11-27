@@ -1,7 +1,7 @@
 // lib.mjs - What every script of the brain shares: where things are, how a
 // note (a "fiche") is read, and what makes it valid.
 //
-// Zero dependency on purpose: SQLite comes with Node (22.13+), the frontmatter
+// Zero dependency on purpose: SQLite comes with Node (22.16+), the frontmatter
 // is a small fixed format read below, and the MCP server speaks its protocol
 // by hand. Nothing to install means nothing that breaks on a new computer.
 

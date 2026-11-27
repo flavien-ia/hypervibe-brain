@@ -17,9 +17,9 @@ node --version 2>/dev/null || echo "NO_NODE"
 node "${CLAUDE_SKILL_DIR}/../../scripts/prereqs.mjs" --json
 ```
 
-The audit (it needs Node to run at all) reports `os`, `node` (`ok` = 22.13 or later), `git`, `gitIdentity`, `sqliteFts`, `gh`, `cloudflare` and `ready`.
+The audit (it needs Node to run at all) reports `os`, `node` (`ok` = 22.16 or later), `git`, `gitIdentity`, `sqliteFts`, `gh`, `cloudflare` and `ready`.
 
-Required: **Node 22.13+**, **git**, **a git identity**. Optional: **GitHub** (online, versioned backup of the brain, recommended), **Cloudflare** (only for cloud access to the brain, a later option).
+Required: **Node 22.16+**, **git**, **a git identity**. Optional: **GitHub** (online, versioned backup of the brain, recommended), **Cloudflare** (only for cloud access to the brain, a later option).
 
 ## Install what is required
 
@@ -48,11 +48,11 @@ When they say it is done, run the audit again.
 
 ### Linux
 
-Node from the distribution is often too old for the brain (22.13+ needed). Recommend the official instructions at https://nodejs.org (or `nvm`), and `sudo apt install git` / `sudo dnf install git`; commands with `sudo` are typed by the person, never by you.
+Node from the distribution is often too old for the brain (22.16+ needed). Recommend the official instructions at https://nodejs.org (or `nvm`), and `sudo apt install git` / `sudo dnf install git`; commands with `sudo` are typed by the person, never by you.
 
 ### Node too old
 
-If Node is present but older than 22.13, update it the same way (Windows: `winget upgrade OpenJS.NodeJS.LTS`; Mac: the person runs the official installer again, or `brew upgrade node` if they use Homebrew).
+If Node is present but older than 22.16, update it the same way (Windows: `winget upgrade OpenJS.NodeJS.LTS`; Mac: the person runs the official installer again, or `brew upgrade node` if they use Homebrew).
 
 ### Search engine check
 
