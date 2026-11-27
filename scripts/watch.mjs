@@ -25,6 +25,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { PLUGIN_ROOT, ROOT, config, isFrench, userConfig } from "./lib.mjs";
 import { add, pileOf } from "./judge.mjs";
+import { watchedApproved } from "./trust.mjs";
 import { excludedBy, exclusionsOf } from "./exclude.mjs";
 import { addressOf } from "./roots.mjs";
 
@@ -140,7 +141,8 @@ const skippedFile = (name) => name.startsWith(".") || name.startsWith("~$") || /
  */
 export function watchDocuments({ judge = "documents", since, settle, cap, extensions, depth } = {}) {
   requireJudge(judge);
-  const watched = (config().sources?.watch ?? []).map(String);
+  // Only the folders the person approved on this computer (trust.mjs): one that arrived with the brain waits.
+  const watched = watchedApproved((config().sources?.watch ?? []).map(String));
   if (!watched.length) return { fresh: 0, replaced: 0, report: "documents: no folder is watched (components.mjs watch add <folder>)" };
   const settled = minutes(settle, 15);
   const from = (Date.parse(since ?? "") || NaN) - settled;
@@ -281,7 +283,8 @@ export function conversationsBacklog({ judge = "conversations", days = 30, calm,
  */
 export function documentsBacklog({ judge = "documents", days = 30, settle, extensions, depth, put = false } = {}) {
   const span = Math.max(1, Number(days) || 30);
-  const watched = (config().sources?.watch ?? []).map(String);
+  // Only the folders the person approved on this computer (trust.mjs): one that arrived with the brain waits.
+  const watched = watchedApproved((config().sources?.watch ?? []).map(String));
   if (!watched.length) return { items: 0, waiting: 0, days: span, folders: 0 };
   if (put) requireJudge(judge);
   const { found } = changedDocuments(judge, watched, { from: Date.now() - span * 86400_000, settled: minutes(settle, 15), extensions, depth });

@@ -8,6 +8,7 @@ Une page dit ce que fait le plugin et pourquoi, sans recopier le code. Elle se t
 
 | Page | Ce qu'elle explique |
 |---|---|
+| [Ce qui tourne tout seul est approuvé sur chaque ordinateur](approbations.md) | Les empreintes et les approbations par ordinateur (garde-fous, skills, programmes, juges, registre des données, dossiers suivis), le lanceur des garde-fous, ce qui était déjà en place, les règles d'un juge, les limites |
 | [Les journaux du brain](journal.md) | Où va chaque ligne, le fichier par mois, les lignes silencieuses, qui lit quoi |
 | [La mémoire de l'IA entre dans le brain](memoire.md) | La sauvegarde, la mise de côté, les registres par lots, la relecture, le verrou et le retour arrière |
 | [Les réglages propres à chaque brain](reglages.md) | Où se met chaque sorte de règle propre à une personne, qui la lit et quand, les clés de `brain.json`, les réglages des suggestions et des rappels des leçons |

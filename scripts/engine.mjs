@@ -441,6 +441,13 @@ export async function search(db, q, { semantic = false, by, limit = 10, type, do
     type: r.type,
     title: r.title,
     status: say("status", r.status),
+    // ASKED BY NATURE (the lessons, the decisions), a seed says so in clear,
+    // with where it comes from (2026-11-27): what is asked for as the person's
+    // rules must never hold, unmarked, a note a machine wrote and nobody
+    // validated. (Every result already says its status; the origin is added
+    // where the question is about rules. The cloud copy's answers are kept the
+    // same as these: its search by nature is to follow.)
+    ...(nature && r.status === "seed" ? { care: `seed, not validated${r.source ? `, from ${String(r.source).replace(/\s+/g, " ").slice(0, 120)}` : ""}` } : {}),
     updated: r.updated,
     ...(score !== undefined ? { score } : {}),
     excerpt: snippet(r.body, shown),

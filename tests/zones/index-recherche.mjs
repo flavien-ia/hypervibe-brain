@@ -271,6 +271,10 @@ try {
     linked = false;
   }
   setBrainJson({ data: { dev: { adapter: "files", root: fwd(BASE) }, docs: { adapter: "files", root: fwd(DOCS) } } });
+  // An entry of the registry is read only once approved on this computer (trust.mjs, 2026-11-27).
+  const waiting = json(node("query.mjs", ["fetch", "docs://ordinaire.txt"]).out);
+  check("a data entry that was never approved on this computer is not read, and the tool says why", /not approved|never approved/.test(String(waiting?.error ?? "")), JSON.stringify(waiting).slice(0, 300));
+  node("trust.mjs", ["approve", "data", "--all"]);
   const fetchAt = (address) => {
     const x = node("query.mjs", ["fetch", address]);
     let v = null;

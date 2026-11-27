@@ -16,6 +16,7 @@
 //   node scripts/memory.mjs state               found, backed up, the ledgers and what they still hold, the lock
 //   node scripts/memory.mjs lock on|off         the AI stops (or starts again) writing in its own memory
 //   node scripts/memory.mjs restore [--backup]  everything back where it was (from the archives, or from the backup)
+//   (`lock off` and `restore` lift the lock: the person runs them, in a terminal of their own)
 //
 // NOTHING IS LOST, AND IT IS A PROGRAM THAT SAYS SO.
 //   backup   copies every file of every memory folder into this computer's
@@ -44,6 +45,7 @@ import { brainLang } from "./i18n.mjs";
 import { ledgers, listed, open } from "./ledger.mjs";
 import { addressOf, ensureRoot } from "./roots.mjs";
 import { writeRulesBlock } from "./rules-block.mjs";
+import { NOT_THE_PERSON, personAsks } from "./trust.mjs";
 
 /** The mark of the page the plugin leaves in a memory folder: not a memory, a signpost. */
 export const POINTER = "<!-- hypervibe-brain:memory -->";
@@ -556,8 +558,14 @@ if (isMain) {
   } else if (a[0] === "backup") out(backup());
   else if (a[0] === "archive") out(archive());
   else if (a[0] === "state" || a[0] === undefined) out(state());
-  else if (a[0] === "lock" && ["on", "off"].includes(a[1])) out(lock(a[1] === "on"));
-  else if (a[0] === "restore") out(restore({ fromBackup: a.includes("--backup") }));
+  // LIFTING THE LOCK IS THE PERSON'S OWN GESTURE (2026-11-27): `lock off` and
+  // `restore` (which lifts it) run in a terminal of theirs, never for them
+  // (trust.mjs, personAsks; the plugin's lock refuses the AI these commands).
+  else if (a[0] === "lock" && a[1] === "on") out(lock(true));
+  else if ((a[0] === "lock" && a[1] === "off") || a[0] === "restore") {
+    if (!personAsks()) out({ ...NOT_THE_PERSON(), error: "lifting the memory's lock is the person's own gesture: they run this command themselves, in a terminal of their own", byHand: `node "${fwd(process.argv[1])}" ${a.join(" ")}` });
+    else out(a[0] === "restore" ? restore({ fromBackup: a.includes("--backup") }) : lock(false));
+  }
   else {
     console.log("usage: memory.mjs find | backup | archive | state | lock on|off | restore [--backup] (see the top of scripts/memory.mjs)");
     process.exitCode = 2;

@@ -17,17 +17,16 @@
 // wrote it back over whatever had been queued meanwhile.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
-import { HOME, readJsonFile, writeFileAtomic } from "./lib.mjs";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { HOME, hypervibeVaultScripts, readJsonFile, writeFileAtomic } from "./lib.mjs";
 
 const QUEUE = join(HOME, ".hypervibe-brain", "queue.json");
 
 // Where the Hypervibe vault's scripts are. Looked for again when the folder
 // found is gone: an update of that plugin moves it, and a hub that kept the old
 // path for as long as it ran saw a vault "locked" for ever (2026-11-21). No
-// vault at all: not looked for again before ten minutes (the walk reads the
-// plugins' folders).
+// vault at all: not looked for again before ten minutes.
 const LOOK_AGAIN_MS = 10 * 60_000;
 let found = null;
 let lookedAt = 0;
@@ -38,23 +37,14 @@ export function vaultDir() {
   if (!found && lookedAt && Date.now() - lookedAt < LOOK_AGAIN_MS) return null;
   found = null;
   lookedAt = Date.now();
-  const walk = (dir, depth) => {
-    if (found || depth > 6 || !existsSync(dir)) return;
-    let entries = [];
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return; // a folder that cannot be listed holds no vault for us
+  // Only the vault of a Hypervibe plugin the platform registered (lib.mjs,
+  // hypervibeVaultScripts, 2026-11-27): never a vault.mjs found elsewhere.
+  for (const script of hypervibeVaultScripts()) {
+    if (existsSync(join(dirname(script), "launch.mjs"))) {
+      found = dirname(script);
+      break;
     }
-    for (const e of entries) {
-      if (found) return;
-      if (!e.isDirectory() || e.name === "node_modules" || e.name.startsWith(".git")) continue;
-      const p = join(dir, e.name);
-      if (existsSync(join(p, "scripts", "vault", "vault.mjs")) && existsSync(join(p, "scripts", "vault", "launch.mjs"))) found = join(p, "scripts", "vault");
-      else walk(p, depth + 1);
-    }
-  };
-  walk(join(HOME, ".claude", "plugins"), 0);
+  }
   return found;
 }
 

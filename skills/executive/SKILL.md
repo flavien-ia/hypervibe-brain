@@ -18,7 +18,7 @@ node "${CLAUDE_SKILL_DIR}/../../scripts/executive.mjs" state
 node "${CLAUDE_SKILL_DIR}/../../scripts/executive.mjs" candidates
 ```
 
-`state`: what the floor holds. `skills` (each with `placed`: `linked` when Claude Code finds it, `missing` when it does not, `other` when another skill of the same name holds its place), `shared` (folders other skills use, without a SKILL.md of their own), `guards` (each with `placed`: wired or not, and `what` it does, in its own words), `harnesses` (the plugins installed, with their skills and hooks: shown, never moved).
+`state`: what the floor holds. `skills` (each with `placed`: `linked` when Claude Code finds it, `missing` when it does not, `other` when another skill of the same name holds its place), `shared` (folders other skills use, without a SKILL.md of their own), `guards` (each with `placed`: wired or not, `approved`, and `what` it does, in its own words), `pending` (what waits for the person's approval on this computer, each with `why`), `harnesses` (the plugins installed, with their skills and hooks: shown, never moved). `carried`, when it is there: what was already in use on this computer before approvals existed, approved once as it was; say it in one line.
 
 `candidates`: what is left in Claude Code's folders. `skills` (folders of their own; `hasSkill: false` is a folder other skills use), `hooks` (the ones the settings run, with what each says it does), `loose` (files of the hooks' folder that no setting runs: a file a guard uses beside it, or a leftover).
 
@@ -26,9 +26,24 @@ node "${CLAUDE_SKILL_DIR}/../../scripts/executive.mjs" candidates
 
 In a few lines: how many skills and guards live in the brain, how many are left in Claude Code's folders, and anything not in place (a skill `missing`, a guard not wired). The plugins are shown, not moved: each is a product with its own repository.
 
+## What waits for their approval
+
+A skill or a guard runs on a computer only once the person said yes **on that computer**, and a guard asks again when it changed: their brain travels (a second computer, a restored copy), and what arrives with it must not start running by itself. `pending` lists what waits. Say it first, in plain words:
+
+- a guard that `changed since its approval` **is not run any more, and what it guards is refused meanwhile** (a command, a sending): that is on purpose, a guard that may have been rewritten must not decide. If they changed it themselves, they only have to approve it again;
+- one `never approved on this computer` arrived with the brain.
+
+Show them what each one says it does (`what` for a guard, its description for a skill), and for a guard that changed, offer to show them the change (read its file; `git diff` in the brain's folder says what moved). **The approval is theirs to give, never yours**: the commands that approve are refused when you run them. Open the window where they see each one and type yes:
+
+```bash
+node "${CLAUDE_SKILL_DIR}/../../scripts/trust.mjs" window
+```
+
+If no window opened (`opened: false`), give them the line of `byHand` to paste in a terminal of their own. Then read `state` again: what they approved is placed.
+
 ## Bring in what is left
 
-Offer to bring in the skills and the hooks that are left, the person choosing (all of them, some, none). Say what it changes: the skill moves into their brain (a copy is kept first), Claude Code finds it as before, and from now on an improvement of the skill is an improvement in their brain. For a guard: it moves too, the settings run it from the brain, and **their AI can no longer change it**; they change it by hand. That is the point of a guard.
+Offer to bring in the skills and the hooks that are left, the person choosing (all of them, some, none). Say what it changes: the skill moves into their brain (a copy is kept first), Claude Code finds it as before, and from now on an improvement of the skill is an improvement in their brain. For a guard: it moves too, the settings run it from the brain, and **their AI can no longer change it**; they change it by hand, and approve it again after each change (see "What waits for their approval"). That is the point of a guard. Bringing one in from this computer is its approval here.
 
 For each skill agreed:
 
@@ -54,7 +69,7 @@ A file the settings run but that is not a guard (a sound at the end of an answer
 node "${CLAUDE_SKILL_DIR}/../../scripts/executive.mjs" place
 ```
 
-It puts back the link of every skill and the wiring of every guard the brain holds, and touches nothing that is someone else's (`left` names a folder of its own that holds the place of a skill: say it, never remove it). Claude Code reads its skills when a session opens: say that the new skills will be there at the next session.
+It puts back the link of every skill and the wiring of every guard the brain holds **that the person approved on this computer**, and touches nothing that is someone else's (`left` names a folder of its own that holds the place of a skill: say it, never remove it). On a computer that has just received the brain, nothing is approved yet: `pending` lists every skill and every guard, and "What waits for their approval" above says how they approve them (one window, a yes for each, or for all the skills at once). Claude Code reads its skills when a session opens: say that the new skills will be there at the next session.
 
 ## End
 

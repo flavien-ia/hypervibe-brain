@@ -37,6 +37,10 @@ if (BRAIN && process.env.HVBRAIN_RULES_BLOCK !== "off") {
   import("./rules-block.mjs").then((m) => m.writeRulesBlock()).catch(() => {});
 }
 
+// The computer's own journals keep ninety days (lib.mjs, purgeLocalJournals):
+// looked at once a day at most, a few seconds after the start, never in the way.
+setTimeout(() => import("./lib.mjs").then((m) => m.purgeLocalJournals()).catch(() => {}), 5000).unref();
+
 const TOOL = join(dirname(fileURLToPath(import.meta.url)), "tool.mjs");
 
 /** Read fresh each time: the brain may be created after the server started. */

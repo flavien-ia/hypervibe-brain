@@ -178,7 +178,7 @@ try {
   let s = said(r);
   check("a short message that names a note gets that note, by its name", r.ok && /\[marc-garnier\]/.test(s) && !/marc-[0-9]/.test(s), s || r.out);
   check("and the embeddings API was not asked: too short for meaning", embedCalls() === calls, `${embedCalls() - calls} calls`);
-  check("each suggestion carries its type and its closest sentence", /\[marc-garnier\] \(person\): "Marc Garnier dirige un cabinet d'architecture\./.test(s), s);
+  check("each suggestion carries its type, what it is (a seed, and where from) and its closest sentence", /\[marc-garnier\] \(person; seed, not validated, from zone\): "Marc Garnier dirige un cabinet d'architecture\./.test(s), s);
   for (const p of ["oui vas y, continue et pousse", "vérifie que le tarif est le même", "ok go", "yes, go ahead and push it"]) {
     calls = embedCalls();
     r = hook(p);

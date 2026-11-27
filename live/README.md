@@ -43,10 +43,20 @@ started with `--permanent` (what `on` and the start with the session do).
 
 Everything under `/api/` but the ping asks for the view's token. It is made
 the first time a server starts and kept in `~/.hypervibe-brain/live-token.json`
-(readable by the person's account alone where the system has such rights); the
-page gets it in a cookie when it is itself asked for, and a program of the
-computer (the plugin's suggestion hook) reads the file and sends it in the
-header `x-brain-token`.
+(readable by the person's account alone: its mode, and on Windows an access
+list that names that account only). A program of the computer (the plugin's
+suggestion hook) reads the file and sends it in the header `x-brain-token`.
+The page gets it in a cookie, against a code (since 2026-11-27: the page's own
+document used to come with the cookie, so any program of the computer that
+asked for `/` received the token). `scripts/live.mjs open` reads the token,
+asks the server for a code (`POST /api/code`) that serves once within two
+minutes, and opens the window on `/?code=<it>`; the server gives the cookie
+and sends the window to the same address without the code. A page asked for
+with neither a cookie nor a code is a short screen that says how to open the
+view (`/brain:live`); it asks again by itself every few seconds. A page that
+has its cookie keeps it (the installed app, a page left open while the server
+restarts). Without the token, the ping only says that a view answers: the
+brain's folder, the plugin's and the process number are given to who shows it.
 
 The brain is the one the plugin's own scripts find: `HVBRAIN_DIR`, else the one
 noted in `~/.hypervibe-brain/config.json` (`brain`). The plugin is the folder

@@ -49,7 +49,7 @@
 import { createServer } from "node:http";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, statSync, watch, watchFile } from "node:fs";
+import { appendFileSync, chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, statSync, watch, watchFile } from "node:fs";
 import { homedir, hostname } from "node:os";
 import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -209,10 +209,19 @@ const words = () => t(language(BRAIN));
 //     no other site's request carries it) when the page itself is asked for;
 //   - a program (the plugin's suggestion hook) reads it in the file and sends
 //     it in the header `x-brain-token`.
-// What it does not do: a program of this account that asks for the page gets
-// the cookie as a browser does. It keeps out who cannot read the file and does
-// not know to ask for the page first, and every request of another site,
-// whatever the browser.
+//
+// THE PAGE NO LONGER GETS IT FOR THE ASKING (2026-11-27, security audit). The
+// page's own document came with the cookie: any program of the computer that
+// asked for "/" received the whole token, the file's rights notwithstanding.
+// The cookie is now given against a CODE: scripts/live.mjs, which reads the
+// token in its file, asks this server for one (POST /api/code, with the
+// token), and opens the window on "/?code=<it>". A code serves once, for two
+// minutes, and leaves the address at once (a redirection). A page asked for
+// without a cookie nor a code is a short screen that says how to open the view
+// (/brain:live); a page that has its cookie keeps it, and gets it again at
+// each visit (a view opened from its shortcut, a server restarted).
+// The file itself is kept for the person alone: its mode elsewhere, and on
+// Windows an access list that names their account only (as the judge's token).
 const TOKEN_FILE = join(HUB, "live-token.json");
 const COOKIE = `brain-live-${PORT}`;
 /** @param {unknown} token */
@@ -246,8 +255,66 @@ function hasToken(req) {
     return g.length === expected.length && timingSafeEqual(g, expected);
   });
 }
-/** What the page is given with its own document: the token, for this address only, for a year. */
+/** What the page is given against a code (and again at each visit it already carries it): the token, for this address only, for a year. */
 const tokenCookie = () => `${COOKIE}=${token()}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Strict`;
+
+/**
+ * The token's file for the person alone. Its mode says so where the system
+ * reads modes; on Windows a file takes its folder's access list, which may
+ * name other accounts: one that names this account only is written instead
+ * (granted first, the inherited entries removed only once that worked: the
+ * other order could leave a file nobody reads). Done at each start: a file of
+ * before the rule gets it too.
+ * @returns {string} how the file is kept
+ */
+function keepForThePersonAlone() {
+  try {
+    if (process.platform !== "win32") {
+      chmodSync(TOKEN_FILE, 0o600);
+      return "mode 600";
+    }
+    const who = process.env.USERDOMAIN && process.env.USERNAME ? `${process.env.USERDOMAIN}\\${process.env.USERNAME}` : process.env.USERNAME;
+    if (!who) return "profile folder";
+    /** @param {string[]} a */
+    const icacls = (a) => spawnSync("icacls", [TOKEN_FILE, ...a], { encoding: "utf8", windowsHide: true, timeout: 30_000 }).status === 0;
+    return icacls(["/grant:r", `${who}:(F)`]) && icacls(["/inheritance:r"]) ? "access list: this account only" : "profile folder";
+  } catch {
+    return "profile folder";
+  }
+}
+const TOKEN_KEPT = keepForThePersonAlone();
+
+// THE CODES (see THE TOKEN): each serves once, within two minutes of its making.
+const CODE_MS = 120_000;
+/** @type {Map<string, number>} a code and the moment it stops serving */
+const codes = new Map();
+/** A new code, for whoever showed the token. */
+function newCode() {
+  const now = Date.now();
+  for (const [c, until] of codes) if (until < now) codes.delete(c);
+  // (Never more than a handful: each opening of the window makes one.)
+  if (codes.size > 50) codes.clear();
+  const code = randomBytes(24).toString("hex");
+  codes.set(code, now + CODE_MS);
+  return code;
+}
+/** Whether a code serves, and it no longer does. @param {string} code */
+function spendCode(code) {
+  const until = codes.get(code);
+  if (until === undefined) return false;
+  codes.delete(code);
+  return until >= Date.now();
+}
+/** When a page was last asked for without its cookie (a window that waits to be opened the right way), for scripts/live.mjs. */
+let lastUnconnected = 0;
+/** The screen of a page asked for without a cookie nor a code: how to open the view. No script, it asks again by itself. */
+function notConnectedPage() {
+  const fr = language(BRAIN) === "fr";
+  const [title, line, how, wait] = fr
+    ? ["Second brain", "Cette fenêtre n’est pas reliée à votre second brain.", "Pour ouvrir la vue en direct, dites <b>/brain:live</b> à Claude, ou demandez-lui d’ouvrir la vue en direct.", "Cette page se reliera toute seule, sans rien recharger."]
+    : ["Second brain", "This window is not connected to your second brain.", "To open the live view, say <b>/brain:live</b> to Claude, or ask it to open the live view.", "This page will connect by itself, with nothing to reload."];
+  return `<!doctype html><html lang="${fr ? "fr" : "en"}"><head><meta charset="utf-8"><meta http-equiv="refresh" content="4"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>html{color-scheme:light dark}body{font:16px/1.5 system-ui,sans-serif;margin:0;min-height:100vh;display:grid;place-items:center}main{max-width:32rem;padding:2rem}h1{font-size:1.25rem;margin:0 0 1rem}p{margin:.5rem 0}small{opacity:.7}</style></head><body><main><h1>${line}</h1><p>${how}</p><p><small>${wait}</small></p></main></body></html>`;
+}
 
 // ---------------------------------------------------------------- the map
 
@@ -1855,7 +1922,7 @@ function refusal(req, path) {
   return null;
 }
 /** Everything that writes, starts a process or calls a tool: never by a GET. (POST /api/settings is told apart from its GET in the route.) */
-const EFFECT_ROUTES = new Set(["/api/suggest", "/api/fetch", "/api/territories/redo", "/api/territories/rename", "/api/health", "/api/open", "/api/open-note", "/api/now", "/api/undo", "/api/exclude", "/api/catch-up", "/api/validate", "/api/index/refresh", "/api/executive/translate"]);
+const EFFECT_ROUTES = new Set(["/api/code", "/api/suggest", "/api/fetch", "/api/territories/redo", "/api/territories/rename", "/api/health", "/api/open", "/api/open-note", "/api/now", "/api/undo", "/api/exclude", "/api/catch-up", "/api/validate", "/api/index/refresh", "/api/executive/translate"]);
 
 // WHAT EVERY ANSWER CARRIES (2026-11-21, audit 2). The page could be shown in
 // an invisible frame of another site, whose clicks then fell on its buttons
@@ -1871,7 +1938,7 @@ const PROTECTION = [
   ["referrer-policy", "no-referrer"],
   ["cross-origin-resource-policy", "same-origin"],
 ];
-/** The page's own documents: asking for one gives the page its token (a cookie). */
+/** The page's own documents: served to who carries the cookie, or brings a code (see THE TOKEN). */
 const DOCUMENTS = new Set(["/", "/index.html", "/history.html", "/legend.html"]);
 
 const server = createServer(async (req, res) => {
@@ -1918,7 +1985,15 @@ const server = createServer(async (req, res) => {
     // A third line since 2026-11-17: which process answers, and from which
     // copy of the plugin (scripts/live.mjs only ever stops a server that says
     // so itself; a view of before, a repository of its own, says two lines).
-    if (p === "/api/ping") return void res.end(`brain-live\n${BRAIN_KEY}\n${JSON.stringify({ pid: process.pid, version: VERSION, root: PLUGIN.replaceAll("\\", "/"), permanent: process.argv.includes("--permanent"), started: STARTED })}`);
+    // ONLY TO WHO SHOWS THE TOKEN (2026-11-27): the brain's folder, the
+    // plugin's and the process number were given to anything that asked.
+    // Without the token, the ping says that a view answers, and no more.
+    if (p === "/api/ping") {
+      if (!hasToken(req)) return void res.end(`brain-live\n\n${JSON.stringify({ locked: true })}`);
+      return void res.end(`brain-live\n${BRAIN_KEY}\n${JSON.stringify({ pid: process.pid, version: VERSION, root: PLUGIN.replaceAll("\\", "/"), permanent: process.argv.includes("--permanent"), started: STARTED, tokenKept: TOKEN_KEPT, ...(lastUnconnected ? { unconnected: new Date(lastUnconnected).toISOString() } : {}) })}`);
+    }
+    // A code for one opening of the window (scripts/live.mjs, which showed the token).
+    if (p === "/api/code") return sendJson(res, { ok: true, code: newCode(), ms: CODE_MS }, { noStore: true });
     if (p === "/api/setup") return sendJson(res, readSetup(), { noStore: true });
     if (p === "/api/start") return sendJson(res, await readStart(), { noStore: true });
     // The words of this brain, for a page that does not draw the map (the
@@ -2314,8 +2389,26 @@ const server = createServer(async (req, res) => {
       res.writeHead(404);
       return void res.end();
     }
-    // The page's own document comes with the token (a cookie no script reads
-    // and no other site's request carries): what it asks for next is known.
+    // THE PAGE'S OWN DOCUMENT (see THE TOKEN). With a code that serves: the
+    // cookie (no script reads it, no other site's request carries it), and
+    // the same address without the code. With its cookie already: the page,
+    // and the cookie for another year. With neither: how to open the view.
+    if (DOCUMENTS.has(p)) {
+      const code = query.get("code");
+      const known = hasToken(req);
+      if (code !== null) {
+        const good = spendCode(code);
+        if (good || known) {
+          res.writeHead(302, { location: p, "cache-control": "no-store", ...(good ? { "set-cookie": tokenCookie() } : {}) });
+          return void res.end();
+        }
+      }
+      if (!known) {
+        lastUnconnected = Date.now();
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+        return void res.end(notConnectedPage());
+      }
+    }
     res.writeHead(200, { "content-type": MIME[extname(file)] ?? "application/octet-stream", "cache-control": "no-store", ...(DOCUMENTS.has(p) ? { "set-cookie": tokenCookie() } : {}) });
     res.end(body);
   } catch (e) {

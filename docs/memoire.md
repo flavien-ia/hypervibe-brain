@@ -48,12 +48,12 @@ Le passage du 20 novembre 2026 a montré ce que des lecteurs laissent derrière 
 
 ## Le verrou
 
-Trois choses, posées et levées ensemble par `memory.mjs lock on|off` :
+Trois choses, posées et levées ensemble par `memory.mjs lock on|off`. Lever le verrou (`lock off`, `restore`) est le geste de la personne : depuis le 27 novembre 2026 ces deux commandes ne tournent que dans un terminal à elle, et le verrou du plugin les refuse à l'IA.
 
 | Quoi | Où | Pourquoi |
 |---|---|---|
 | Le réglage de Claude Code | `autoMemoryEnabled: false` dans `~/.claude/settings.json` | Claude Code cesse d'écrire sa mémoire. L'ancienne valeur est gardée et rendue à la levée, et le fichier d'avant est copié une fois à côté. |
-| Le garde-fou du plugin | `scripts/hook-memory.mjs`, lancé avec celui de l'étage exécutif par un seul programme, `scripts/hook-locks.mjs`, déclaré dans `hooks/hooks.json` (depuis le 24 novembre 2026 : deux programmes au lieu d'un dépassaient parfois le délai de Claude Code sur un ordinateur chargé, et un verrou qui ne répond pas à temps laisse passer l'action) | Il refuse une écriture dans un dossier de mémoire et dit d'écrire dans le brain. Inerte tant que le verrou est levé. |
+| Le garde-fou du plugin | `scripts/hook-memory.mjs`, lancé avec celui de l'étage exécutif par un seul programme, `scripts/hook-locks.mjs`, déclaré dans `hooks/hooks.json` (depuis le 24 novembre 2026 : deux programmes au lieu d'un dépassaient parfois le délai de Claude Code sur un ordinateur chargé, et un verrou qui ne répond pas à temps laisse passer l'action) | Il refuse une écriture dans un dossier de mémoire et dit d'écrire dans le brain. Inerte tant que le verrou est levé. Depuis le 27 novembre 2026 le chemin est résolu avant d'être comparé, et une commande qui nomme un dossier de mémoire est refusée sauf si c'est une lecture simple (`scripts/lock-paths.mjs` ; `cp`, un `cd` puis une redirection, `node -e` ou `MultiEdit` passaient). |
 | La règle | Le bloc du plugin dans le `CLAUDE.md` global | Elle dit où écrire à la place, et de chercher dans le brain avant une tâche. |
 
 Une règle seule ne suffisait pas. Sur le premier brain, elle nommait un seul dossier alors que Claude Code en tient un par dossier de travail : en deux semaines, une session ouverte ailleurs a encore écrit vingt fichiers. Une règle est un contexte qu'un modèle peut ne pas suivre, un garde-fou tient.

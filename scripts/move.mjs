@@ -157,7 +157,34 @@ for (const k of Object.keys(trusted)) {
   delete trusted[k];
   done.trustedSources++;
 }
-setUserConfig({ brain: to, trustedSources: trusted });
+// The approvals of this computer follow the brain to its new place
+// (trust.mjs: "trusted" and the date the rule began, keyed by the folder).
+setUserConfig((c) => {
+  const approved = { ...(c.trusted ?? {}) };
+  for (const k of Object.keys(approved)) {
+    if (!k.startsWith(`${from}::`)) continue;
+    approved[`${to}::${k.slice(from.length + 2)}`] = approved[k];
+    delete approved[k];
+  }
+  const since = { ...(c.trustSince ?? {}) };
+  if (since[from]) {
+    since[to] = since[from];
+    delete since[from];
+  }
+  return { brain: to, trustedSources: trusted, ...(Object.keys(approved).length ? { trusted: approved } : {}), ...(Object.keys(since).length ? { trustSince: since } : {}) };
+});
+
+// The guards of the executive floor are wired again at the new place (the
+// platform's settings name each guard's file: left as they were, the launcher
+// would find no guard there and refuse what each one guards, 2026-11-27).
+try {
+  if (existsSync(join(to, "executive", "guards.json"))) {
+    const placed = spawnSync(process.execPath, [join(PLUGIN_ROOT, "scripts", "executive.mjs"), "place", "--brain", to], { encoding: "utf8", windowsHide: true, timeout: 120_000 });
+    done.executive = placed.status === 0 ? (JSON.parse(placed.stdout).done ?? []).length : String(placed.stdout || placed.stderr).trim().slice(0, 200);
+  }
+} catch (e) {
+  done.executive = String(e?.message ?? e).slice(0, 200);
+}
 
 done.written = json("written.json", rekey);
 done.folded = json("events-folded.json", rekey);

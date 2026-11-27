@@ -44,13 +44,26 @@
 //               with the conversation's own tools. Spaces are written %20.
 //   "catalogue" the catalogue entry itself (the default for any address in it)
 //
-// A secret is { env: { file, key } } (a project's .env) or { vault: [item, field] }
-// (the Hypervibe vault). It is read when needed, never written, never returned.
+// A secret is { env: { file, key } } (a .env inside the brain's folder) or
+// { vault: [item, field] } (the Hypervibe vault). It is read when needed,
+// never written, never returned.
+//
+// AN ENTRY IS APPROVED ON EACH COMPUTER BEFORE IT IS READ (2026-11-27,
+// security audit; trust.mjs). The registry is a file of the brain, and it
+// says where keys are sent: an "http" entry with a token address of its own
+// choosing received the person's client id and secret, each evening (the
+// health check) and at each read. An entry is now read only once the person
+// approved, on this computer, the services it names and the keys it sends
+// them; a change of either waits for a new approval, and the tool answers
+// why. A secret's .env is only ever a file inside the brain's folder: an
+// absolute path read any file of the computer for a line that looked like a
+// key. And a route can no longer leave the service its entry names.
 
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { DATA_ADDRESS, HOME, ROOT, config, hypervibeVault, userConfig } from "./lib.mjs";
 import { readCatalogue } from "./catalogue.mjs";
+import { dataPending, dataRefusal } from "./trust.mjs";
 
 const LIMIT = 50;
 
@@ -93,8 +106,22 @@ export function parseAddress(address) {
   return { scheme: m[1], parts: m[2].split("/").filter(Boolean).map(decodeURIComponent), query: Object.fromEntries(new URLSearchParams(m[3] ?? "")) };
 }
 
+/**
+ * The .env a secret names, as a path: only ever a file INSIDE the brain's
+ * folder (2026-11-27). Null for any other (an absolute path elsewhere, a path
+ * that climbs out with "..").
+ * @param {unknown} file
+ * @returns {string | null}
+ */
+export function envFileOf(file) {
+  if (typeof file !== "string" || !file.trim()) return null;
+  const p = resolve(ROOT, file);
+  const rel = relative(resolve(ROOT), p);
+  return !rel || /^\.\.([\\/]|$)/.test(rel) || isAbsolute(rel) ? null : p;
+}
 function readEnvFile(file, key) {
-  const p = isAbsolute(file) ? file : join(ROOT, file);
+  const p = envFileOf(file);
+  if (!p) throw new Error("a key's .env must be a file inside the brain's folder: this entry names one outside it, and it was not read");
   if (!existsSync(p)) return null;
   const m = new RegExp(`^${key}=["']?([^"'\\r\\n]+)`, "m").exec(readFileSync(p, "utf8"));
   return m ? m[1] : null;
@@ -213,7 +240,17 @@ async function fromHttp(def, parts, query) {
     if (!tj.access_token) throw new Error(`the service refused its token (${t.status})`);
     headers.Authorization = `Bearer ${tj.access_token}`;
   }
-  const res = await fetch(`${entity.base}${path}`, { method: "GET", headers, signal: AbortSignal.timeout(30_000) });
+  // A ROUTE STAYS WITH ITS SERVICE (2026-11-27): the address is the entry's
+  // base and a path. A route such as "@other.example/x" after a base without
+  // a path made an address of another host, which received the keys.
+  let target;
+  try {
+    target = new URL(`${entity.base}${path}`);
+    if (target.origin !== new URL(String(entity.base)).origin || target.username || target.password) throw new Error("another host");
+  } catch {
+    throw new Error("this route does not stay on the service its entry names: nothing was sent");
+  }
+  const res = await fetch(target, { method: "GET", headers, signal: AbortSignal.timeout(30_000) });
   if (!res.ok) throw new Error(`the service answered ${res.status}`);
   return res.json();
 }
@@ -346,6 +383,9 @@ export async function fetchAddress(address) {
       if (entry) return { address, tool: entry.tool, data: entry, note: "from the catalogue: only its excerpt is kept here" };
       return { error: def ? "nothing at this address in the catalogue" : `no tool registered for "${a.scheme}://" (brain.json, data)` };
     }
+    // Approved on this computer, as it stands (see the top): otherwise it is not read.
+    const waits = dataPending(a.scheme, def);
+    if (waits) return { error: dataRefusal(a.scheme, waits) };
     let data;
     // (A statement and a document have their own limit, 60 KB of text.)
     if (def.adapter === "postgres") data = bounded(await fromPostgres(def, a.parts, a.query));

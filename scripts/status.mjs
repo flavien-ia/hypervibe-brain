@@ -7,7 +7,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { DB_PATH, EMB_DIR, HOME, ROOT, config, loadEnv, readVault, requireBrain, validate } from "./lib.mjs";
+import { DB_PATH, EMB_DIR, HOME, ROOT, config, loadEnv, readVault, requireBrain, validate, writableByOthers } from "./lib.mjs";
 
 requireBrain();
 import { embeddingsAvailable } from "./embeddings.mjs";
@@ -15,6 +15,7 @@ import { hasRemote, repoState, tryGit } from "./git.mjs";
 import { judgeHealth, liveSources, waiting } from "./judge.mjs";
 import { readQueue } from "./vault-queue.mjs";
 import { startState } from "./start.mjs";
+import { pending } from "./trust.mjs";
 
 loadEnv();
 const cfg = config();
@@ -88,6 +89,21 @@ try {
 } catch {
   start = null;
 }
+// WHAT WAITS FOR THE PERSON'S APPROVAL ON THIS COMPUTER (2026-11-27,
+// trust.mjs): a guard, a skill, a program, a judge, a data source or a watched
+// folder that arrived with the brain or changed since they approved it. It
+// does not run meanwhile: said first, with how to approve.
+let approvals = null;
+try {
+  const p = await pending();
+  if (p.count) approvals = { count: p.count, guards: p.guards.map((g) => ({ file: g.file, why: g.why })), skills: p.skills.map((s) => ({ name: s.folder, why: s.why })), sources: p.sources.map((s) => ({ name: s.name, kind: s.kind, why: s.why })), data: p.data.map((d) => ({ scheme: d.scheme, why: d.why })), watch: p.watch, how: p.how };
+} catch {
+  approvals = null;
+}
+// WHO ELSE MAY WRITE IN THE BRAIN'S FOLDER (2026-11-27, lib.mjs): another
+// account of the computer that may write there may change what runs for the
+// person and what their AI reads as theirs.
+const openTo = writableByOthers(ROOT);
 // Asked once: each question runs git.
 const repoInfo = repoState();
 const repo = repoInfo.state === "yes";
@@ -122,6 +138,8 @@ const s = {
   lastAlert,
   lastSave,
   judgesFailing: judges,
+  ...(approvals ? { approvals } : {}),
+  ...(openTo ? { folderWritableBy: openTo } : {}),
   waitingForVault,
   ...(waitingForVault.length ? { waitingForVaultSince } : {}),
   start,
@@ -133,6 +151,8 @@ else {
   // What needs the person comes first.
   if (s.lastAlert) console.log(`  ALERT of ${s.lastAlert.date.slice(0, 10)}: ${s.lastAlert.problems.join(" ; ")}`);
   for (const j of s.judgesFailing) console.log(`  JUDGE ${j.down ? "DOWN" : "failing"}: ${j.name}, ${j.failures} run(s) failed in a row since ${String(j.failingSince ?? "?").slice(0, 16)} (${j.cause}), ${j.waiting} item(s) waiting: ${j.lastError}`);
+  if (s.approvals) console.log(`  WAITING FOR YOUR APPROVAL on this computer (not running meanwhile): ${[...s.approvals.guards.map((g) => `guard ${g.file}`), ...s.approvals.skills.map((k) => `skill ${k.name}`), ...s.approvals.sources.map((x) => `${x.kind} ${x.name}`), ...s.approvals.data.map((d) => `data ${d.scheme}://`), ...s.approvals.watch.map((w) => `folder ${w}`)].join(", ")}. In a terminal of yours: ${s.approvals.how?.byHand ?? "trust.mjs guide"}`);
+  if (s.folderWritableBy) console.log(`  WARNING: the brain's folder can be changed by ${s.folderWritableBy}, not by you alone`);
   if (s.waitingForVault.length) console.log(`  waiting for the Hypervibe vault to be opened (not a failure): ${s.waitingForVault.join(", ")}`);
   console.log(`${s.name}: ${s.notes} note(s) ${JSON.stringify(s.byStatus)}, stage ${s.stage ?? "?"}`);
   console.log(`  domains: ${Object.entries(s.byDomain).map(([d, n]) => `${d} ${n}`).join(", ")}`);

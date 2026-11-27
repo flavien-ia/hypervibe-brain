@@ -5,6 +5,12 @@
 // 127.0.0.1 only); this script installs it, starts it, opens it and stops it.
 // The view answers only who shows its token (2026-11-21): the page carries it
 // in a cookie, a program reads it in ~/.hypervibe-brain/live-token.json.
+// THE WINDOW IS OPENED WITH A CODE (2026-11-27): the page no longer gets its
+// cookie for the asking (any program of the computer could ask). `open` reads
+// the token, asks the server for a code that serves once, and opens the
+// window on the address with that code; the server gives the cookie against
+// it and takes the code out of the address. A window that already has its
+// cookie (the installed app, a page left open) needs none.
 //
 //   node scripts/live.mjs on [--dry-run]    start it with the session, and now
 //   node scripts/live.mjs off [--dry-run]   no longer with the session, and stop it
@@ -240,10 +246,22 @@ function uninstall() {
  *   standalone  a live view of this brain from before it lived in the plugin (it says nothing of itself)
  *   plugin      a live view of this brain started from a copy of the plugin: { pid, version, root, permanent }
  */
+/** The view's token, as this account's file keeps it ("" when there is none). */
+function viewToken() {
+  try {
+    const kept = JSON.parse(readFileSync(join(DIR, "live-token.json"), "utf8")).token;
+    return /^[0-9a-f]{64}$/.test(String(kept)) ? String(kept) : "";
+  } catch {
+    return "";
+  }
+}
 async function who() {
   let text = null;
   try {
-    text = await (await fetch(`http://127.0.0.1:${PORT}/api/ping`, { signal: AbortSignal.timeout(1500) })).text();
+    // With the token (2026-11-27): a view only says which brain it serves, from
+    // where and under which process number to who shows it.
+    const token = viewToken();
+    text = await (await fetch(`http://127.0.0.1:${PORT}/api/ping`, { headers: token ? { "x-brain-token": token } : {}, signal: AbortSignal.timeout(1500) })).text();
   } catch {
     text = null;
   }
@@ -265,8 +283,11 @@ async function who() {
   } catch {
     said = null;
   }
+  // A view that does not know our token says nothing of itself: it is not
+  // this account's (another account of the computer, another home folder).
+  if (said?.locked === true) return { kind: "other", brain: "another account's" };
   if (!said || !Number.isInteger(said.pid)) return { kind: "standalone", brain };
-  return { kind: "plugin", brain, pid: said.pid, version: String(said.version ?? ""), root: fwd(said.root ?? ""), permanent: said.permanent === true };
+  return { kind: "plugin", brain, pid: said.pid, version: String(said.version ?? ""), root: fwd(said.root ?? ""), permanent: said.permanent === true, unconnected: typeof said.unconnected === "string" ? said.unconnected : null };
 }
 
 /** Whether a view that answers runs this very copy of the plugin. */
@@ -458,20 +479,24 @@ function installedShortcut(menu, names) {
  * How the view opens on this computer, in a window of its own (no address
  * bar): the app installed from the page when there is one, else Chrome or
  * Edge in application mode, else the default browser.
- * @returns {Promise<{ how: "installed-app" | "app-window" | "browser", cmd: string, args: string[] }>}
+ * `url`: the address to open (the view's, with a code when the window needs
+ * its cookie). `app`: false to leave the installed app aside (its shortcut
+ * opens the view's plain address: it cannot carry a code).
+ * @param {string} [url] @param {{ app?: boolean }} [o]
+ * @returns {Promise<{ how: "installed-app" | "app-window" | "browser", cmd: string, args: string[], url: string }>}
  */
-async function windowPlan() {
-  const byDefault = OS === "windows" ? { how: "browser", cmd: "cmd", args: ["/c", "start", "", VIEW_URL] } : { how: "browser", cmd: OS === "mac" ? "open" : "xdg-open", args: [VIEW_URL] };
-  const options = [`--app=${VIEW_URL}`, "--window-size=1400,950"];
+async function windowPlan(url = VIEW_URL, { app = true } = {}) {
+  const byDefault = OS === "windows" ? { how: "browser", cmd: "cmd", args: ["/c", "start", "", url], url } : { how: "browser", cmd: OS === "mac" ? "open" : "xdg-open", args: [url], url };
+  const options = [`--app=${url}`, "--window-size=1400,950"];
   if (OS === "windows") {
     // The installed application, if it is: Chrome (or Edge) then created a real
     // shortcut, with the view's own icon. Starting it through that shortcut
     // keeps this icon in the taskbar. The shortcut carries the name the page
     // had when it was installed (either language), and the usual port.
-    if (PORT === DEFAULT_PORT) {
+    if (app && PORT === DEFAULT_PORT) {
       const menu = join(process.env.APPDATA ?? "", "Microsoft", "Windows", "Start Menu", "Programs");
       const lnk = installedShortcut(menu, await appNames());
-      if (lnk) return { how: "installed-app", cmd: "cmd", args: ["/c", "start", "", lnk] };
+      if (lnk) return { how: "installed-app", cmd: "cmd", args: ["/c", "start", "", lnk], url: VIEW_URL };
     }
     // The browser that already runs, Chrome first: a window in a browser that
     // already runs only costs its page.
@@ -487,16 +512,33 @@ async function windowPlan() {
       // never mind: the first one found will do
     }
     const exe = edge && running.includes("msedge.exe") && !running.includes("chrome.exe") ? edge : chrome ?? edge;
-    return exe ? { how: "app-window", cmd: exe, args: options } : byDefault;
+    return exe ? { how: "app-window", cmd: exe, args: options, url } : byDefault;
   }
   if (OS === "mac") {
-    const app = ["Google Chrome", "Microsoft Edge", "Chromium"].find((n) => existsSync(`/Applications/${n}.app`) || existsSync(join(process.env.HOME ?? "", "Applications", `${n}.app`)));
-    return app ? { how: "app-window", cmd: "open", args: ["-na", app, "--args", ...options] } : byDefault;
+    const browser = ["Google Chrome", "Microsoft Edge", "Chromium"].find((n) => existsSync(`/Applications/${n}.app`) || existsSync(join(process.env.HOME ?? "", "Applications", `${n}.app`)));
+    return browser ? { how: "app-window", cmd: "open", args: ["-na", browser, "--args", ...options], url } : byDefault;
   }
   // Linux: the first Chrome or Chromium of the PATH; otherwise the default browser.
   const folders = String(process.env.PATH ?? "").split(":").filter(Boolean);
   const exe = ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "microsoft-edge"].flatMap((n) => folders.map((d) => join(d, n))).find(existsSync);
-  return exe ? { how: "app-window", cmd: exe, args: options } : byDefault;
+  return exe ? { how: "app-window", cmd: exe, args: options, url } : byDefault;
+}
+
+/**
+ * The view's address with a code that gives the window its cookie, once
+ * (see the top). The plain address when no code could be had: a view of
+ * before the codes, or one that does not know this account's token.
+ */
+async function addressWithCode() {
+  const token = viewToken();
+  if (!token) return VIEW_URL;
+  try {
+    const r = await fetch(`http://127.0.0.1:${PORT}/api/code`, { method: "POST", headers: { "x-brain-token": token }, signal: AbortSignal.timeout(3000) });
+    const code = r.ok ? String((await r.json()).code ?? "") : "";
+    return /^[0-9a-f]{16,}$/.test(code) ? `${VIEW_URL}?code=${code}` : VIEW_URL;
+  } catch {
+    return VIEW_URL;
+  }
 }
 
 /** Opens the window; a browser that cannot be started leaves its place to the default one. */
@@ -507,7 +549,8 @@ function openWindow(plan) {
     child.on("error", () => otherwise?.());
     child.unref();
   };
-  launch(plan.cmd, plan.args, plan.how === "app-window" ? () => (OS === "windows" ? launch("cmd", ["/c", "start", "", VIEW_URL]) : launch(OS === "mac" ? "open" : "xdg-open", [VIEW_URL])) : undefined);
+  const url = plan.url ?? VIEW_URL;
+  launch(plan.cmd, plan.args, plan.how === "app-window" ? () => (OS === "windows" ? launch("cmd", ["/c", "start", "", url]) : launch(OS === "mac" ? "open" : "xdg-open", [url])) : undefined);
 }
 
 async function open() {
@@ -520,7 +563,24 @@ async function open() {
   }
   const started = await start();
   if (!started.ok) return started;
+  // The installed app opens from its shortcut, with the cookie it already
+  // has. Any other window is opened on the address with a code.
+  if (plan.how !== "installed-app") {
+    openWindow(await windowPlan(await addressWithCode()));
+    return { ...started, opened: plan.how };
+  }
+  const before = Date.now();
   openWindow(plan);
+  // AN INSTALLED APP THAT LOST ITS COOKIE (its data was cleared) shows the
+  // screen "not connected": the server saw a page asked for without a cookie.
+  // A window of the same browser is then opened with a code: the cookie it
+  // gets is the app's too, which connects by itself a few seconds later.
+  await sleep(2500);
+  const now = await who();
+  if (now.kind === "plugin" && now.unconnected && Date.parse(now.unconnected) >= before - 500) {
+    openWindow(await windowPlan(await addressWithCode(), { app: false }));
+    return { ...started, opened: plan.how, connected: "by a window opened with a code" };
+  }
   return { ...started, opened: plan.how };
 }
 

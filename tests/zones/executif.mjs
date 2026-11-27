@@ -70,7 +70,8 @@ try {
   r = run("adopt-guard", "envoi-guard.mjs");
   const settings = JSON.parse(readFileSync(join(HOME, ".claude", "settings.json"), "utf8"));
   const commands = settings.hooks.PreToolUse.flatMap((x) => x.hooks.map((h) => h.command));
-  const want = `node "${fwd(join(BRAIN, "executive", "guards", "envoi-guard.mjs"))}"`;
+  // Through the launcher beside the settings, which checks the guard's fingerprint at each run (2026-11-27).
+  const want = `node "${fwd(join(HOME, ".hypervibe-brain", "guard.mjs"))}" "${fwd(join(BRAIN, "executive", "guards", "envoi-guard.mjs"))}"`;
   check("it moves into the brain, the original gone, a copy kept", r.out?.ok === true && existsSync(join(BRAIN, "executive", "guards", "envoi-guard.mjs")) && !existsSync(join(HOME, ".claude", "hooks", "envoi-guard.mjs")) && existsSync(r.out?.backup ?? ""), r.raw);
   check("both its wirings now run it from the brain, at the same places", commands.filter((c) => c === want).length === 2 && commands.includes("node other.mjs") && settings.model === "x", JSON.stringify(commands));
   check("the timeout is kept", settings.hooks.PreToolUse[0].hooks[0].timeout === 30);
@@ -98,7 +99,8 @@ try {
   check("reading a guard: let through", hook("Bash", { command: `cat ${gfile}` }) === "pass" && hook("Bash", { command: `grep ask ${gfile}` }) === "pass");
   check("Edit of a skill of the floor: let through", hook("Edit", { file_path: fwd(join(BRAIN, "executive", "skills", "essai", "SKILL.md")) }) === "pass");
   check("the floor's own commands: let through", hook("Bash", { command: "node scripts/executive.mjs state" }) === "pass");
-  check("a check that reads the guards and writes its result elsewhere: let through", hook("Bash", { command: `node check.mjs ${gfile} > C:/tmp/out.txt` }) === "pass");
+  // (2026-11-27: a command that names the guards is let through only when it is one plain reading. Until then a check that wrote its result elsewhere passed, and so did a writer the list of words did not know.)
+  check("a program that is handed a guard and writes somewhere: refused, a plain reading piped into another: let through", hook("Bash", { command: `node check.mjs ${gfile} > C:/tmp/out.txt` }) === "deny" && hook("Bash", { command: `cat ${gfile} | head -5` }) === "pass" && hook("Bash", { command: `git -C ${fwd(BRAIN)} log --oneline -- executive/guards` }) === "pass");
   check("a redirection into the guards: refused", hook("Bash", { command: `node make.mjs > ${gfile}` }) === "deny");
 
   console.log("\nThe two locks in one program (2026-11-24)");

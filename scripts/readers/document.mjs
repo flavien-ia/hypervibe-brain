@@ -13,12 +13,28 @@
 // Reads only. The text is cut at 60 000 characters: a judge looks for what is
 // new and lasting, it does not copy.
 //
+// WHAT A JUDGE NEVER READS THIS WAY (2026-11-27, security audit). A root is
+// often wide (a whole synchronised folder, a folder of projects): a judge
+// turned by what it reads could ask for the brain's own files, a key kept
+// under the root, a recovery code, and then write it in the brain, which
+// leaves with the next save. So, whatever the root an address goes through
+// (the same refusals as brain_fetch, fetch.mjs, and a few more):
+//   - nothing inside the brain's folder, nor inside the plugin's settings on
+//     this computer (~/.hypervibe-brain);
+//   - nothing whose path has a name that starts with a dot (.env, .git, .ssh,
+//     .aws, .gnupg, .config/gcloud), nor a folder named danger-zone;
+//   - no file whose name says it holds a secret: a recovery code, a password,
+//     a key (*.pem, *.key, id_*);
+//   - nothing a link leads to outside the root.
+// Both the path as it is written and the path as the disk knows it are
+// checked, without regard to case where the disk has none.
+//
 // Born in the brain this plugin grew from (2026-11-08, with two libraries of
 // that brain's app), moved here without them on 2026-11-10.
 
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
-import { extname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { inflateRawSync } from "node:zlib";
 import { opened } from "./opened.mjs";
 
@@ -27,6 +43,42 @@ const arg = process.argv[2];
 if (!arg) {
   console.error("usage: document.mjs <address scheme://... or path>");
   process.exit(1);
+}
+
+const HOME = process.env.HVBRAIN_HOME || homedir();
+const CASELESS = process.platform === "win32" || process.platform === "darwin";
+const spelled = (p) => (CASELESS ? resolve(p).toLowerCase() : resolve(p));
+/** A path as the disk knows it; as it is written when nothing is there. */
+const onDisk = (p) => {
+  try {
+    return spelled(realpathSync.native(resolve(p)));
+  } catch {
+    return spelled(p);
+  }
+};
+/** The path from a folder down to what it holds: null when it is not inside. */
+const under = (dir, p) => {
+  const rel = relative(dir, p);
+  return /^\.\.([\\/]|$)/.test(rel) || isAbsolute(rel) ? null : rel;
+};
+// A name that says a secret: a recovery code, a password, a key.
+const SECRET_NAME = /(^|[^a-z])(recovery|r[eé]cup[eé]ration|passwords?|passwd|mots?[-_ ]de[-_ ]passe|secrets?|credentials?|private[-_ ]?key|api[-_ ]?keys?)([^a-z]|$)|\.(pem|key|pfx|p12|ppk|kdbx|keystore|jks)$|^id_[a-z0-9]+(\.pub)?$|^\.?env(\.|$)/i;
+const SECRET_FOLDER = /[\\/]\.(ssh|aws|gnupg|kube|docker|azure)([\\/]|$)|[\\/]\.config[\\/]gcloud([\\/]|$)/i;
+/**
+ * Why a path under a root is never read by a judge, or null. `base` and `p`
+ * spelled the same way (both as written, or both as the disk knows them).
+ * @param {string} base @param {string} p @param {string[]} kept the folders that are never read (the brain, the plugin's settings)
+ */
+function refusal(base, p, kept) {
+  const rel = under(base, p);
+  if (rel === null) return "an address cannot leave its root";
+  const names = rel.split(/[\\/]/).filter(Boolean);
+  if (names.some((s) => s.startsWith("."))) return "a file or a folder whose name starts with a dot is never read this way";
+  if (names.some((s) => /^danger-zone$/i.test(s))) return "a folder named danger-zone is never read";
+  if (SECRET_FOLDER.test(p)) return "a folder where keys are kept is never read this way";
+  if (kept.some((d) => under(d, p) !== null)) return "the brain's own folder and the plugin's settings are never read this way: a note is read with brain_get";
+  if (SECRET_NAME.test(basename(p))) return "a file whose name says it holds a secret (a key, a password, a recovery code) is never read this way";
+  return null;
 }
 
 /** An address of the brain (dropbox://, dev://) as a path of this computer. */
@@ -43,12 +95,25 @@ function pathOf(address) {
     if (judge) throw new Error("a judge reads a document by its address (scheme://path), never by a path of the disk");
     return bare;
   }
-  const conf = JSON.parse(readFileSync(join(process.env.HVBRAIN_HOME || homedir(), ".hypervibe-brain", "config.json"), "utf8"));
+  const raw = readFileSync(join(HOME, ".hypervibe-brain", "config.json"), "utf8");
+  const conf = JSON.parse(raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw);
   const root = conf.sourceRoots?.[m[1]];
   if (!root) throw new Error(`no root named ${m[1]}:// on this computer`);
   const path = resolve(root, decodeURIComponent(m[2]));
   const inside = relative(resolve(root), path);
   if (inside.startsWith("..") || isAbsolute(inside)) throw new Error("an address cannot leave its root");
+  if (judge) {
+    // As written first (nothing is touched on the disk for a path refused by
+    // its words alone), then as the disk knows it.
+    const brain = process.env.HVBRAIN_DIR || conf.brain;
+    const kept = [...(brain ? [brain] : []), join(HOME, ".hypervibe-brain")];
+    const written = refusal(spelled(root), spelled(path), kept.map(spelled));
+    if (written) throw new Error(written);
+    if (existsSync(path)) {
+      const real = refusal(onDisk(root), onDisk(path), kept.map(onDisk));
+      if (real) throw new Error(real);
+    }
+  }
   return path;
 }
 

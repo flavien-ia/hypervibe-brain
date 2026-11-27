@@ -55,7 +55,15 @@ node "${CLAUDE_SKILL_DIR}/../../scripts/computers.mjs" clone --url <the brain's 
    node "${CLAUDE_SKILL_DIR}/../../scripts/executive.mjs" place
    ```
 
-   Say that the skills will be there at the next session of Claude Code. A skill that holds a place of its own here (`left`): say it and leave it; `/brain:executive` brings it into the brain if they want.
+   On this computer nothing of it was approved yet, so the answer lists everything as `pending`: a skill or a guard that arrives with a brain never starts by itself. Tell them what each guard says it does (`node "${CLAUDE_SKILL_DIR}/../../scripts/executive.mjs" state`, `what`), then open the window where they approve them themselves (the approval is theirs to give, never yours):
+
+   ```bash
+   node "${CLAUDE_SKILL_DIR}/../../scripts/trust.mjs" window
+   ```
+
+   If no window opened (`opened: false`), give them the line of `byHand` to paste in a terminal of their own. Run `place` again afterwards and say that the skills will be there at the next session of Claude Code. A skill that holds a place of its own here (`left`): say it and leave it; `/brain:executive` brings it into the brain if they want.
+
+   The same window shows what else arrived with the brain and waits for them here: the data sources of its registry (which service each speaks to, with which keys) and the watched folders. `node "${CLAUDE_SKILL_DIR}/../../scripts/trust.mjs" state` lists what is left.
 6. Test it together: a capture here (`/brain:capture`), then on the other computer, "synchronise my brain" (`sync.mjs`), and the note is there.
 
 ## When something is off

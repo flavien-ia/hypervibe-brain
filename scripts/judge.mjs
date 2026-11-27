@@ -56,8 +56,10 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { HOME, PLUGIN_ROOT, ROOT, config, domainLabel, isFrench, readJsonFile, userConfig, writeFileAtomic } from "./lib.mjs";
+import { sourcePending as pendingApproval, watchedApproved } from "./trust.mjs";
+import { TOOLS } from "./tools.mjs";
 import { EVENTS, logEvent, readEvents, recentEvents } from "./journal.mjs";
 import { excludedBy, exclusionsOf } from "./exclude.mjs";
 import { interval, tickPassed } from "./pure.mjs";
@@ -67,6 +69,12 @@ import { keyOf, openedFile } from "./readers/opened.mjs";
 
 const DIR = join(HOME, ".hypervibe-brain", "judge");
 const SOURCES = () => join(ROOT, "sources");
+/**
+ * Why a judge waits for the person's approval on this computer, or null
+ * (trust.mjs). A judge whose instructions are gone is not "changed": it cannot
+ * run at all, and says so itself, as a plain error.
+ */
+const sourcePending = (name) => (existsSync(join(SOURCES(), name, "instructions.md")) ? pendingApproval(name) : null);
 const readJson = (f, d) => {
   try {
     return JSON.parse(readFileSync(f, "utf8"));
@@ -374,6 +382,11 @@ export function duePiles(now = new Date(), live = liveSources()) {
   for (const s of live) {
     const pile = readPile(s.name);
     if (!pile.items.length) continue;
+    // NOT APPROVED ON THIS COMPUTER (2026-11-27, trust.mjs): its instructions
+    // and its tools arrived with the brain, or changed since the person
+    // approved them here. It reads nothing, "now" or not; its pile keeps
+    // gathering, and the status says what waits for the person.
+    if (sourcePending(s.name)) continue;
     // "NOW" (the live view's button, 2026-11-08): the person asked for it,
     // the pile goes at the next beat, without waiting for the gathering nor
     // the hours. Asked less than an hour ago (nowAsked).
@@ -693,23 +706,53 @@ const rulePath = (p) => {
  *                           nothing is wrong, there is nothing to open.
  * The brain's MCP tools may be named as the plugin names them in a
  * conversation (mcp__plugin_brain_brain__x): they become mcp__brain__x.
- * A rule that would open everything (a bare "Read", "Bash", "Write"...) or
- * that names a root this computer does not have is REFUSED, and said.
- * Returns { rules, builtins (the built-in tools named), refused }.
+ *
+ * ONLY THE SHAPES THAT ARE KNOWN (2026-11-27, security audit). A rule was
+ * refused only when it was a bare tool: "Bash(*)", "Read(//**)", "Write(...)"
+ * and "WebFetch(domain:*)" went through, and a source.json that arrived by a
+ * pull gave its judge the whole computer. A rule is now taken only when it is
+ * one of these, and everything else is REFUSED and named, with the reason:
+ *   - a tool of the brain's own server (mcp__plugin_brain_brain__brain_search...);
+ *   - a command of the plugin, of a closed list: the two readers, fact.mjs and
+ *     capture.mjs, written "Bash(node {plugin}/scripts/<script>:*)";
+ *   - "Bash(printf:*)", by which the instructions hand a note's text to the
+ *     capture (printf prints, and nothing else);
+ *   - a program of the brain itself, "Bash(node {brain}/<path>.mjs [words]:*)":
+ *     the person's own code, which is part of what they approve for this judge
+ *     (trust.mjs follows it, and every file it imports);
+ *   - "Read(...)" under a watched folder ({watch}) or a root of this computer
+ *     ({root:<scheme>}), never climbing out of it (".."), and never a folder
+ *     that holds the brain or the plugin's settings (their keys are there).
+ * Returns { rules, builtins (the built-in tools named), refused (the rules as
+ * written), why (rule => the reason it was refused) }.
  */
+const PLUGIN_COMMANDS = ["readers/conversation.mjs", "readers/document.mjs", "fact.mjs", "capture.mjs"];
+const BRAIN_TOOLS = new Set(TOOLS.map((t) => t.name));
+/** The programs of the brain a judge's rules let it run ("Bash(node {brain}/x.mjs:*)"), as paths relative to the brain. */
+export function brainPrograms(allowedTools) {
+  const out = [];
+  for (const raw of (Array.isArray(allowedTools) ? allowedTools : []).map(String)) {
+    const m = /^Bash\(node \{brain\}\/([\w./-]+\.mjs)(?: [\w=.\/-]+)*:\*\)$/.exec(raw);
+    if (m && !m[1].split("/").includes("..")) out.push(m[1]);
+  }
+  return out;
+}
 export function judgeRules(allowedTools) {
   const roots = userConfig().sourceRoots ?? {};
   const rules = [];
   const refused = [];
+  /** @type {Record<string, string>} */
+  const why = {};
   let folders = null;
-  // The watched folders that exist here, under their real path (the one the
-  // document reader prints for a PDF, so the rule and the path agree whatever
-  // the case or the link the person typed).
+  // The watched folders the person approved on this computer and that exist
+  // here, under their real path (the one the document reader prints for a
+  // PDF, so the rule and the path agree whatever the case or the link the
+  // person typed).
   const watched = () => {
     if (folders) return folders;
     let list = [];
     try {
-      list = (config().sources?.watch ?? []).map(String);
+      list = watchedApproved();
     } catch {
       list = [];
     }
@@ -717,39 +760,94 @@ export function judgeRules(allowedTools) {
     for (const w of list) {
       try {
         const real = realpathSync.native(w);
-        folders.push({ path: rulePath(real), folder: statSync(real).isDirectory() });
+        folders.push({ path: rulePath(real), real, folder: statSync(real).isDirectory() });
       } catch {
         // not on this computer: no rule for it
       }
     }
     return folders;
   };
-  /** A rule as written, as the rules it stands for: itself, or one per watched folder. */
+  const spelled = (p) => {
+    let s = resolve(String(p));
+    try {
+      s = realpathSync.native(s);
+    } catch {
+      // not there: as it is written
+    }
+    return process.platform === "linux" ? s : s.toLowerCase();
+  };
+  const holds = (outer, inner) => {
+    const rel = relative(spelled(outer), spelled(inner));
+    return rel === "" || (!rel.startsWith("..") && !/^[a-z]:/i.test(rel) && !rel.startsWith("/"));
+  };
+  /** Why a folder may never be opened to a judge's Read, or null. */
+  const offLimits = (folder) => {
+    for (const kept of [ROOT, join(HOME, ".hypervibe-brain")]) {
+      if (holds(folder, kept)) return "it would open a folder that holds the brain or the plugin's settings, where keys are kept";
+      if (holds(kept, folder)) return "it would open the brain's own folder or the plugin's settings: a judge reads the brain through its tools";
+    }
+    return null;
+  };
+  /** A rule as written, as the rules it stands for and the folder each opens: itself, or one per watched folder. */
   const spread = (raw) => {
-    if (!raw.includes("{watch}")) return [raw];
+    if (!raw.includes("{watch}")) return [{ written: raw, base: null }];
     return watched().flatMap((w) => {
-      if (w.folder) return [raw.replaceAll("{watch}", w.path)];
+      if (w.folder) return [{ written: raw.replaceAll("{watch}", w.path), base: w.real }];
       // A single file is watched: "{watch}/**" is that file, any other shape has no meaning for it.
-      return raw.includes("{watch}/**") ? [raw.replaceAll("{watch}/**", w.path)] : [];
+      return raw.includes("{watch}/**") ? [{ written: raw.replaceAll("{watch}/**", w.path), base: w.real }] : [];
     });
   };
+  const refuse = (raw, reason) => {
+    if (!refused.includes(raw)) refused.push(raw);
+    why[raw] = reason;
+  };
+  /** Why a rule as written is not one of the known shapes, or null. */
+  const shape = (raw) => {
+    if (/^mcp__/.test(raw)) {
+      const m = /^mcp__(?:plugin_brain_brain|brain)__(\w+)$/.exec(raw);
+      return m && BRAIN_TOOLS.has(m[1]) ? null : "a judge only has the tools of the brain's own server";
+    }
+    if (raw === "Bash(printf:*)") return null;
+    if (/^Bash\(node \{plugin\}\//.test(raw)) {
+      return PLUGIN_COMMANDS.some((c) => raw === `Bash(node {plugin}/scripts/${c}:*)`) ? null : `the plugin's commands a judge may run are ${PLUGIN_COMMANDS.join(", ")}, written "Bash(node {plugin}/scripts/<script>:*)"`;
+    }
+    if (/^Bash\(node \{brain\}\//.test(raw)) {
+      const [program] = brainPrograms([raw]);
+      if (!program) return 'a program of the brain is written "Bash(node {brain}/<path>.mjs [plain words]:*)", with no ".." in its path';
+      return existsSync(join(ROOT, program)) ? null : `the brain holds no program ${program}`;
+    }
+    if (/^Read\(/.test(raw)) {
+      const m = /^Read\((\{watch\}|\{root:[a-z][a-z0-9+.-]*\})((?:\/[^()]*)?)\)$/i.exec(raw);
+      if (!m) return 'a judge reads files only under a watched folder or a root of this computer: "Read({watch}/**)", "Read({root:<name>}/<folder>/**)"';
+      if (m[2].split("/").includes("..")) return "a path that climbs out of its folder (..)";
+      return null;
+    }
+    return "not a rule a judge may have: a tool of the brain, a command of the plugin (the readers, fact.mjs, capture.mjs), a program of the brain, or Read under a watched folder or a root";
+  };
   for (const raw of (allowedTools ?? []).map(String)) {
-    for (const written of spread(raw)) {
+    const problem = shape(raw);
+    if (problem) {
+      refuse(raw, problem);
+      continue;
+    }
+    for (const { written, base } of spread(raw)) {
       let t = written.replaceAll("{plugin}", PLUGIN_ROOT.replaceAll("\\", "/")).replaceAll("{brain}", ROOT.replaceAll("\\", "/"));
       let missing = false;
+      // The folder a Read rule opens: the watched folder, or the root and what the rule writes after it, up to its first star.
+      let opened = base;
       t = t.replace(/\{root:([a-z][a-z0-9+.-]*)\}/gi, (_, scheme) => {
         if (!roots[scheme]) missing = true;
+        else if (/^Read\(/.test(raw)) opened = join(String(roots[scheme]), ...(/^Read\(\{root:[^}]+\}((?:\/[^()*?[\]{}]*)?)/i.exec(raw)?.[1] ?? "").split("/").slice(0, -1).filter(Boolean));
         return roots[scheme] ? rulePath(roots[scheme]) : "";
       });
       t = t.replace(/^mcp__plugin_brain_brain__/, "mcp__brain__");
-      // The brain's own tools pass as they are; a built-in tool needs a scope.
-      if (missing || (!t.startsWith("mcp__brain__") && !/^[A-Za-z]+\(.+\)$/.test(t))) {
-        if (!refused.includes(raw)) refused.push(raw);
-      } else if (!rules.includes(t)) rules.push(t);
+      if (missing) refuse(raw, "it names a root this computer does not have");
+      else if (/^Read\(/.test(raw) && opened && offLimits(opened)) refuse(raw, offLimits(opened));
+      else if (!rules.includes(t)) rules.push(t);
     }
   }
   const builtins = [...new Set(rules.filter((t) => !t.startsWith("mcp__")).map((t) => t.slice(0, t.indexOf("("))))];
-  return { rules, builtins, refused };
+  return { rules, builtins, refused, why };
 }
 
 /**
@@ -808,11 +906,31 @@ export function judgeHealth(name) {
   };
 }
 
-/** The environment without what would make Claude bill an API key instead of using the person's plan. */
-function withoutApiKey(env) {
-  const { ANTHROPIC_API_KEY: _key, ANTHROPIC_AUTH_TOKEN: _auth, ...rest } = env;
-  return rest;
+// ONLY WHAT A JUDGE NEEDS OF THE ENVIRONMENT (2026-11-27, security audit). A
+// judge was started with the whole environment of the hub: every key the
+// person's session holds (an API key, a database address) was in reach of a
+// command of the judge, which reads text nobody checked. It now gets the
+// path, the folders a program needs to start (home, temporary, the system's
+// own), the language, a proxy when there is one, the plugin's own variables
+// (HVBRAIN_*), and its token, added by the caller. NEVER AN API KEY
+// (2026-11-17): in `claude -p`, ANTHROPIC_API_KEY passes before the token, and
+// a judge would be billed on that key, token by token, without a word.
+const KEPT = new Set(["path", "pathext", "systemroot", "systemdrive", "windir", "comspec", "temp", "tmp", "tmpdir", "home", "userprofile", "homedrive", "homepath", "appdata", "localappdata", "programdata", "programfiles", "programfiles(x86)", "commonprogramfiles", "username", "user", "logname", "userdomain", "computername", "os", "processor_architecture", "number_of_processors", "lang", "lc_all", "lc_ctype", "lc_messages", "tz", "shell", "term", "xdg_config_home", "xdg_data_home", "xdg_cache_home", "xdg_runtime_dir", "https_proxy", "http_proxy", "no_proxy", "node_extra_ca_certs", "ssl_cert_file", "claude_config_dir", "claude_code_git_bash_path", "brain_live_port"]);
+export function judgeEnvironment(env = process.env) {
+  const out = {};
+  for (const [k, v] of Object.entries(env)) {
+    const name = k.toLowerCase();
+    // (The bench's stand-in for Claude reads its own variables.)
+    if (KEPT.has(name) || name.startsWith("hvbrain_") || (env.HVBRAIN_CLAUDE && name.startsWith("faux_claude_"))) out[k] = v;
+  }
+  return out;
 }
+/**
+ * The references of the items a judge was handed for this pass, kept while it
+ * runs: the capture takes the source of a judge's note from them, not from the
+ * judge (capture.mjs).
+ */
+export const batchFile = (name, home = HOME) => join(home, ".hypervibe-brain", "judge", `${String(name).replace(/[^a-z0-9_-]/gi, "")}.batch.json`);
 
 /** The empty folder a judge works in (see "A room of its own"). */
 function room() {
@@ -832,6 +950,15 @@ function room() {
 export function run(name, { sleptSince } = {}) {
   const s = liveSources().find((x) => x.name === name);
   if (!s) return { name, ok: false, error: "no live source of that name" };
+  // NOT APPROVED ON THIS COMPUTER (2026-11-27): it does not run, whoever asks.
+  // Said in its state, without counting a failure: nothing is broken, the
+  // person has something to read and approve (trust.mjs window).
+  const waits = sourcePending(name);
+  if (waits) {
+    const error = `not approved on this computer (${waits}): its instructions and its tools are read and approved by the person, in a terminal of their own (trust.mjs window)`;
+    writeJson(stateFile(name), { ...readState(name), lastRun: new Date().toISOString(), lastError: error });
+    return { name, ok: false, judged: 0, notApproved: true, error };
+  }
   // A "now" asked for one item (to try a repaired judge): read before it is spent.
   const one = askedOne(name);
   // Kept as it was written: a run that ends up waiting for the vault puts it back.
@@ -951,6 +1078,12 @@ export function run(name, { sleptSince } = {}) {
   ].join("\n");
   logEvent({ act: "signal", who: `source:${name}`, what: "running", items: items.length, ...(refused.length ? { refused } : {}) });
   rmSync(openedFile(name, HOME), { force: true });
+  // What it was handed, for the capture (see batchFile).
+  try {
+    writeJson(batchFile(name), { at: new Date().toISOString(), refs: items.map((i) => String(i.ref)) });
+  } catch {
+    // the capture then keeps the source the judge gives, as before
+  }
   const t0 = Date.now();
   // CLAUDE'S OWN KEY. A Claude run with nobody in front of it needs a lasting
   // token (`claude setup-token`), not the login of an interactive session,
@@ -1010,12 +1143,12 @@ export function run(name, { sleptSince } = {}) {
     windowsHide: true,
     timeout: set.timeoutMin * 60_000,
     maxBuffer: 64 * 1024 * 1024,
-    // NEVER AN API KEY (2026-11-17). In `claude -p`, ANTHROPIC_API_KEY passes
-    // before the token: a judge started by a hub whose environment holds one
-    // would be billed on that key, token by token, without a word. A judge
-    // runs on the person's plan, with their token, or not at all.
-    env: { ...withoutApiKey(process.env), HVBRAIN_DIR: ROOT, HVBRAIN_WHO: `ai:${name}`, ...(token ? { CLAUDE_CODE_OAUTH_TOKEN: token } : {}) },
+    // Only what it needs (judgeEnvironment): never an API key, never the
+    // keys of the person's session. A judge runs on the person's plan, with
+    // their token, or not at all.
+    env: { ...judgeEnvironment(), HVBRAIN_DIR: ROOT, HVBRAIN_WHO: `ai:${name}`, ...(token ? { CLAUDE_CODE_OAUTH_TOKEN: token } : {}) },
   });
+  rmSync(batchFile(name), { force: true });
   // Claude answers one JSON object (its text in "result", the tokens in
   // "usage"); anything else (the test bench's stand-in, an older Claude) is
   // taken as the text itself.
@@ -1198,5 +1331,5 @@ if (isMain) {
     const r = catchUp(a[1], a[2], a[3]);
     out(r);
     if (!r.ok) process.exitCode = 1;
-  } else out({ live: liveSources().map((s) => ({ name: s.name, waiting: waiting(s.name), ...(s.def.paused === true ? { paused: true } : {}), ...judgeHealth(s.name), ...limits(s), ...(hoursIgnored(s.def) ? { hoursIgnored: hoursIgnored(s.def), hours: judgeSettings(s.def).hours } : {}) })) });
+  } else out({ live: liveSources().map((s) => ({ name: s.name, waiting: waiting(s.name), ...(s.def.paused === true ? { paused: true } : {}), ...(sourcePending(s.name) ? { notApproved: sourcePending(s.name) } : {}), ...(judgeRules(s.def.allowedTools).refused.length ? { refusedTools: judgeRules(s.def.allowedTools).why } : {}), ...judgeHealth(s.name), ...limits(s), ...(hoursIgnored(s.def) ? { hoursIgnored: hoursIgnored(s.def), hours: judgeSettings(s.def).hours } : {}) })) });
 }

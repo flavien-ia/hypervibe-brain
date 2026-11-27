@@ -34,6 +34,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { HOME, ROOT, requireBrain } from "./lib.mjs";
 import { ensureRoot } from "./roots.mjs";
+import { approveWatch } from "./trust.mjs";
 
 requireBrain();
 const FILE = join(ROOT, "brain.json");
@@ -65,6 +66,15 @@ if (command === "source") {
   if (!["add", "remove"].includes(a1) || !a2) fail("usage: watch add|remove <folder>");
   const dir = fwd(a2);
   if (a1 === "add" && !existsSync(dir)) fail(`${dir} does not exist`);
+  // NEVER THE BRAIN, THE PLUGIN'S SETTINGS, NOR A FOLDER OF KEYS (2026-11-27):
+  // a watched folder is read by a background reader, and what it reads may end
+  // in a note.
+  if (a1 === "add") {
+    const low = (p) => fwd(p).toLowerCase().replace(/\/+$/, "");
+    const inside = (outer, inner) => low(inner) === low(outer) || low(inner).startsWith(`${low(outer)}/`);
+    for (const kept of [ROOT, join(HOME, ".hypervibe-brain")]) if (inside(kept, dir) || inside(dir, kept)) fail(`${dir} holds, or is inside, the brain or the plugin's settings: it cannot be watched`);
+    if (/(^|\/)\.(ssh|aws|gnupg|kube|docker|azure|config)(\/|$)/i.test(dir)) fail(`${dir} is a folder where keys are kept: it cannot be watched`);
+  }
   // ONLY THE WIDEST FOLDERS (2026-11-20). A watched folder is read with all
   // that is under it: a folder inside one already watched adds nothing (it is
   // said, and the list does not change), and a folder that holds some already
@@ -87,6 +97,10 @@ if (command === "source") {
   }
   if (!src.watch.length) delete src.watch;
   write();
+  // The folder the person has just asked to watch, on this computer, is
+  // approved here (trust.mjs); the others keep what they had. One that
+  // arrives with the brain on another computer waits for its approval there.
+  approveWatch(a1 === "add" && !watchNote?.included ? [dir] : [], "watched");
   if (a1 === "add") watchedRoot = ensureRoot(dir);
 } else if (command === "set") {
   if (!MODULES.includes(a1) || !["on", "off"].includes(a2)) fail(`usage: set <${MODULES.join("|")}> on|off`);

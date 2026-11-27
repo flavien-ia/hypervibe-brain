@@ -55,10 +55,15 @@ It creates `sources/<name>/` in the brain, with a `run.mjs` whose contract is wr
 node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" test <name>
 ```
 
-It runs the program, checks every note it would create, and writes nothing. Show the person the count and the three first notes, and the count and the three first catalogue entries (`entries`, `entrySample`) when it has some; adjust until they say "that's it". Then **their approval, on this computer**: a program that comes with the brain (a clone on another computer, a restored copy) never runs by itself, and a program that changed must be approved again. Explain it in one sentence, and on their yes:
+It runs the program, checks every note it would create, and writes nothing. Show the person the count and the three first notes, and the count and the three first catalogue entries (`entries`, `entrySample`) when it has some; adjust until they say "that's it". Then **their approval, on this computer**: a program that comes with the brain (a clone on another computer, a restored copy) never runs by itself, and a program that changed must be approved again (the program itself, and every file of the brain it uses). Explain it in one sentence. **The approval is theirs to give, never yours**: you open a window for them, where they see the program's name and its files and type yes.
 
 ```bash
-node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" trust <name>
+node "${CLAUDE_SKILL_DIR}/../../scripts/trust.mjs" window
+```
+
+If no window opened (`opened: false`), give them the line of `byHand` to paste in a terminal of their own. Once they say it is done (`trust.mjs state` no longer lists it):
+
+```bash
 node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" run <name>
 ```
 
@@ -74,9 +79,11 @@ A program that brings no note but must run with the brain every evening or week 
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" add <name> --kind step --every <day|week> --when <before|after> --description "<one sentence>" [--needs <ITEM>[,<ITEM>]]
-node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" trust <name>
+node "${CLAUDE_SKILL_DIR}/../../scripts/trust.mjs" window
 node "${CLAUDE_SKILL_DIR}/../../scripts/sources.mjs" run <name>
 ```
+
+(The window is where they approve the step themselves, as for a script; run it once they have.)
 
 What it prints is its report, kept with its last success or error, and read in the weekly review.
 

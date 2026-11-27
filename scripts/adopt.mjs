@@ -31,5 +31,11 @@ if (current && resolve(current) !== resolve(dir) && existsSync(join(current, "br
   process.exit(1);
 }
 const cfg = JSON.parse(readFileSync(join(dir, "brain.json"), "utf8"));
-setUserConfig({ brain: dir });
+// A BRAIN THAT ARRIVES IS UNDER THE APPROVALS FROM NOW (2026-11-27, trust.mjs):
+// its programs, its judges, its guards, its data registry and its watched
+// folders wait for the person's approval on this computer. Only a brain this
+// computer was already running (the same folder, named again) keeps what was
+// approved by the rule of before.
+const known = current && resolve(current) === resolve(dir);
+setUserConfig((c) => ({ brain: dir, ...(known || Object.keys(c.trustSince ?? {}).some((k) => resolve(k) === resolve(dir)) ? {} : { trustSince: { ...(c.trustSince ?? {}), [dir]: new Date().toISOString() } }) }));
 out({ ok: true, dir, name: cfg.name, lang: cfg.lang ?? null, stage: cfg.stage ?? null });

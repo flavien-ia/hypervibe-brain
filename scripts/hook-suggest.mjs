@@ -21,7 +21,10 @@
 // leaves.
 //
 // What it costs is written in the usage journal (~/.hypervibe-brain/usage.jsonl,
-// tool "(suggestion)"), like every call to the brain.
+// tool "(suggestion)"), like every call to the brain: the length of the
+// message and the notes suggested, never its words (2026-11-27: the first 160
+// characters of every message the person typed were kept there, in a file
+// nothing ever emptied).
 //
 // A LESSON AT THE MOMENT IT IS BORN (2026-11-22). When the message reads like
 // a correction or a rule ("stop doing that", "from now on..."), the hook adds
@@ -115,7 +118,7 @@ const seen = new Set(seenAll[session]?.slugs ?? []);
 function logUsage(line) {
   try {
     mkdirSync(DIR, { recursive: true });
-    appendFileSync(join(DIR, "usage.jsonl"), `${JSON.stringify({ at: new Date().toISOString(), client: "hook", conv: session.slice(0, 12) || undefined, tool: "(suggestion)", what: prompt.replace(/\s+/g, " ").slice(0, 160), in: prompt.length, ms: Date.now() - t0, ...line })}\n`, "utf8");
+    appendFileSync(join(DIR, "usage.jsonl"), `${JSON.stringify({ at: new Date().toISOString(), client: "hook", conv: session.slice(0, 12) || undefined, tool: "(suggestion)", in: prompt.length, ms: Date.now() - t0, ...line })}\n`, "utf8");
   } catch {
     // a comfort, never a failure
   }

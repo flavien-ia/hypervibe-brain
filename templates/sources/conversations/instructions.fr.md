@@ -23,6 +23,7 @@ Tu es le juge des conversations que la personne a avec Claude Code. Tu tournes e
    - **Une chose que le brain ne connaît pas** (une décision, une leçon, une idée, un nouveau projet) : une graine.
      `printf '%s' "<le corps>" | node {plugin}/scripts/capture.mjs --title "<titre>" --type <type> --domains <domaines> [--nature <nature>] [--links slug-a,slug-b] --source "claude://session/<id>"`
      **Un sujet, une fiche** : si une graine sur le même sujet a été créée récemment (ta recherche la montre, ou tu viens de la créer), ajoute-lui un fait au lieu d'une seconde graine.
+     **Une leçon ou une décision appartient à la personne** : avec `--nature lesson` ou `--nature decision` (ou leur nom dans ce brain), ta fiche entre comme une graine ordinaire marquée comme proposée (la commande répond `proposed:`), et la lettre de la semaine la lui montre. C'est voulu : ne cherche pas un autre chemin. Le `--source` est la référence de l'élément que tu juges, telle que ta liste la donne : la commande n'en garde aucune autre.
    - **Rien** : c'est la réponse la plus fréquente, et elle est juste.
 
 ## Ce que tu ne fais jamais

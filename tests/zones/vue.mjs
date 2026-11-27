@@ -151,12 +151,42 @@ async function main() {
 
   // ---------------------------------------------------------------- A. security
   check("audit 3: the token is kept in the hub's folder, 64 hex characters", /^[0-9a-f]{64}$/.test(token), read(join(HB, "live-token.json")));
-  const page = await ask("/", { noToken: true });
+  // THE PAGE NO LONGER GETS ITS COOKIE FOR THE ASKING (2026-11-27): a page
+  // asked for with neither a cookie nor a code is a screen that says how to
+  // open the view; the cookie is given against a code that serves once.
+  const bare = await ask("/", { noToken: true });
+  check("2026-11-27: a page asked for without a cookie nor a code gets no token, and a screen that says how to open the view", bare.status === 200 && !bare.headers.get("set-cookie") && !bare.text.includes(token) && /\/brain:live/.test(bare.text) && !/<script/i.test(bare.text), `${bare.headers.get("set-cookie")} ${bare.text.slice(0, 200)}`);
+  for (const doc of ["/index.html", "/history.html", "/legend.html"]) {
+    const other = await ask(doc, { noToken: true });
+    check(`2026-11-27: nor does ${doc}`, other.status === 200 && !other.headers.get("set-cookie") && /\/brain:live/.test(other.text));
+  }
+  const noCode = await ask("/api/code", { method: "POST", noToken: true });
+  check("2026-11-27: a code is only made for who shows the token", noCode.status === 401, String(noCode.status));
+  const made = await ask("/api/code", { method: "POST" });
+  const code = String(made.body?.code ?? "");
+  check("2026-11-27: with the token, a code is made", made.status === 200 && /^[0-9a-f]{32,}$/.test(code), made.text);
+  const badCode = await ask("/?code=0000", { noToken: true, redirect: "manual" });
+  check("2026-11-27: a code that was never made gives nothing", badCode.status === 200 && !badCode.headers.get("set-cookie") && /\/brain:live/.test(badCode.text));
+  const page = await ask(`/?code=${code}`, { noToken: true, redirect: "manual" });
   const cookie = String(page.headers.get("set-cookie") ?? "");
-  check("audit 3: the page comes with its token in a cookie no script reads and no other site sends", page.status === 200 && cookie.includes(token) && /HttpOnly/i.test(cookie) && /SameSite=Strict/i.test(cookie), cookie);
-  check("audit 2: no answer may be framed, nor taken for another type", page.headers.get("x-frame-options") === "DENY" && /frame-ancestors 'none'/.test(page.headers.get("content-security-policy") ?? "") && page.headers.get("x-content-type-options") === "nosniff");
+  check("audit 3: against its code, the page gets its token in a cookie no script reads and no other site sends, and the code leaves the address", page.status === 302 && page.headers.get("location") === "/" && cookie.includes(token) && /HttpOnly/i.test(cookie) && /SameSite=Strict/i.test(cookie), `${page.status} ${page.headers.get("location")} ${cookie}`);
+  const again = await ask(`/?code=${code}`, { noToken: true, redirect: "manual" });
+  check("2026-11-27: a code serves once", again.status === 200 && !again.headers.get("set-cookie"), `${again.status} ${again.headers.get("set-cookie")}`);
+  const known = await ask("/", { noToken: true, headers: { cookie: cookie.split(";")[0] } });
+  check("2026-11-27: a page that has its cookie is served, and keeps it for another year", known.status === 200 && /<script/i.test(known.text) && String(known.headers.get("set-cookie") ?? "").includes(token));
+  check("audit 2: no answer may be framed, nor taken for another type", bare.headers.get("x-frame-options") === "DENY" && /frame-ancestors 'none'/.test(bare.headers.get("content-security-policy") ?? "") && bare.headers.get("x-content-type-options") === "nosniff");
   const ping = await ask("/api/ping", { noToken: true });
   check("audit 3: the ping answers without the token (it says nothing of the brain)", ping.status === 200);
+  check("2026-11-27: without the token, the ping gives neither a folder nor a process number", ping.text.startsWith("brain-live") && !ping.text.includes(BRAIN.replaceAll("\\", "/")) && !ping.text.toLowerCase().includes(PLUGIN.replaceAll("\\", "/").toLowerCase()) && !/"pid"/.test(ping.text) && !/"root"/.test(ping.text), ping.text);
+  const fullPing = await ask("/api/ping");
+  const said = JSON.parse(fullPing.text.split("\n")[2] ?? "{}");
+  check("2026-11-27: with the token, it says which brain it serves, from where, and under which process", fullPing.text.split("\n")[1] === BRAIN.replaceAll("\\", "/") && Number.isInteger(said.pid) && typeof said.root === "string", fullPing.text);
+  check("2026-11-27: the token's file is kept for the person alone (an access list of their own on Windows, its mode elsewhere)", process.platform === "win32" ? said.tokenKept === "access list: this account only" : said.tokenKept === "mode 600", String(said.tokenKept));
+  if (process.platform === "win32") {
+    const acl = spawnSync("icacls", [join(HB, "live-token.json")], { encoding: "utf8", windowsHide: true }).stdout;
+    const entries = String(acl).split(/\r?\n/).filter((l) => /:\(/.test(l));
+    check("2026-11-27: on Windows, the token's file names one account, and inherits no other", entries.length === 1 && !/\(I\)/.test(entries[0]), acl);
+  }
   check("audit 2: the headers are on the answers of the API too", ping.headers.get("x-frame-options") === "DENY");
   const without = await ask("/api/map", { noToken: true });
   check("audit 3: a route of the API without the token is refused", without.status === 401, `${without.status} ${without.text.slice(0, 120)}`);

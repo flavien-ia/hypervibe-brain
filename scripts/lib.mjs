@@ -750,21 +750,132 @@ export function hypervibeVault(item, field) {
   return null;
 }
 
-/** The vault.mjs of every Hypervibe vault installed on this computer (none with HVBRAIN_VAULT=off). */
+/**
+ * The vault.mjs of every Hypervibe vault installed on this computer (none with
+ * HVBRAIN_VAULT=off).
+ *
+ * ONLY THE PLUGIN THE PLATFORM REGISTERED (2026-11-27, security audit). Every
+ * folder under ~/.claude/plugins was walked, and any scripts/vault/vault.mjs
+ * found there was run and believed: a file dropped in that folder by anything
+ * (a download, another plugin's cache) was asked for the person's keys' names
+ * and answered what it wanted in their place. A vault is now the one of a
+ * Hypervibe plugin that Claude Code's own registry lists
+ * (~/.claude/plugins/installed_plugins.json), at the place it lists it.
+ */
 export function hypervibeVaultScripts() {
   if (process.env.HVBRAIN_VAULT === "off") return [];
+  const listed = readJsonFile(join(HOME, ".claude", "plugins", "installed_plugins.json"), {}).value ?? {};
   const vaults = [];
-  const walk = (dir, depth) => {
-    if (depth > 6 || !existsSync(dir)) return;
-    for (const e of readdirSync(dir, { withFileTypes: true })) {
-      if (!e.isDirectory() || e.name === "node_modules" || e.name.startsWith(".git")) continue;
-      const p = join(dir, e.name);
-      if (existsSync(join(p, "scripts", "vault", "vault.mjs"))) vaults.push(join(p, "scripts", "vault", "vault.mjs"));
-      else walk(p, depth + 1);
+  for (const [key, installs] of Object.entries(listed.plugins ?? listed)) {
+    // "hypervibe@<marketplace>", or one of its editions ("hypervibe-<edition>@..."); never this plugin ("brain@...").
+    if (!/^hypervibe(-[a-z0-9-]+)?@/i.test(key)) continue;
+    for (const install of [].concat(installs ?? [])) {
+      const script = install?.installPath ? join(String(install.installPath), "scripts", "vault", "vault.mjs") : "";
+      if (script && existsSync(script) && !vaults.includes(script)) vaults.push(script);
     }
-  };
-  walk(join(HOME, ".claude", "plugins"), 0);
+  }
   return vaults;
+}
+
+/**
+ * THE COMPUTER'S OWN JOURNALS KEEP NINETY DAYS (2026-11-27). What each call
+ * to the brain cost (~/.hypervibe-brain/usage.jsonl) and which skill was used
+ * when (skills-used.jsonl) are kept for the live view, on this computer only;
+ * they grew for ever. At most once a day, the lines older than `days` leave,
+ * and so does the start of the person's messages that the suggestion hook
+ * wrote in the first one until 2026-11-27. A comfort: never throws.
+ * @returns {Record<string, number> | null} lines taken out or rewritten per file; null when it was done less than a day ago
+ */
+export function purgeLocalJournals({ days = 90, now = Date.now() } = {}) {
+  const dir = join(HOME, ".hypervibe-brain");
+  const mark = join(dir, "journals-purged.json");
+  try {
+    if (now - statSync(mark).mtimeMs < 86_400_000) return null;
+  } catch {
+    // never done
+  }
+  const limit = new Date(now - days * 86_400_000).toISOString();
+  /** @type {Record<string, number>} */
+  const out = {};
+  for (const name of ["usage.jsonl", "skills-used.jsonl"]) {
+    try {
+      const file = join(dir, name);
+      const lines = readFileSync(file, "utf8").split("\n").filter(Boolean);
+      let changed = 0;
+      const kept = [];
+      for (const line of lines) {
+        const at = /"at":"([^"]+)"/.exec(line)?.[1];
+        if (at && at < limit) {
+          changed++;
+          continue;
+        }
+        if (line.includes('"tool":"(suggestion)"') && line.includes('"what":')) {
+          try {
+            const { what: _text, ...rest } = JSON.parse(line);
+            kept.push(JSON.stringify(rest));
+            changed++;
+            continue;
+          } catch {
+            // a damaged line: kept as it is
+          }
+        }
+        kept.push(line);
+      }
+      if (changed) {
+        writeFileAtomic(file, kept.length ? `${kept.join("\n")}\n` : "");
+        out[name] = changed;
+      }
+    } catch {
+      // no such journal on this computer
+    }
+  }
+  try {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(mark, `${JSON.stringify({ at: new Date(now).toISOString() })}\n`, "utf8");
+  } catch {
+    // tried again at the next start
+  }
+  return out;
+}
+
+/**
+ * WHO ELSE MAY WRITE IN A FOLDER (2026-11-27). A brain holds what runs for
+ * the person (its sources, its guards) and what their AI reads as theirs: a
+ * folder another account of the computer may write in is a brain anybody
+ * there may change. On macOS and Linux, the folder's mode: writable by its
+ * group or by all. On Windows, its access list: an entry that allows writing
+ * to a group that is everybody (Everyone, Authenticated Users, Users). The
+ * groups are told by their identifiers, which the system's language does not
+ * change (icacls prints their names, translated: the list is asked of the
+ * system itself, through PowerShell, which gives the identifiers).
+ * @param {string} folder
+ * @returns {string | null} who else may write there, in a few words, or null (nobody, or it could not be read)
+ */
+export function writableByOthers(folder) {
+  try {
+    if (process.platform !== "win32") {
+      const mode = statSync(folder).mode;
+      if (mode & 0o002) return "every account of this computer";
+      if (mode & 0o020) return "the accounts of its group";
+      return null;
+    }
+    const script = "$a = (Get-Acl -LiteralPath $env:HVB_FOLDER).Access; foreach ($e in $a) { try { $s = $e.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value } catch { $s = [string]$e.IdentityReference }; Write-Output ($s + '|' + [string]$e.AccessControlType + '|' + [string]$e.FileSystemRights) }";
+    const r = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], { encoding: "utf8", windowsHide: true, timeout: 20_000, env: { ...process.env, HVB_FOLDER: resolve(folder) } });
+    if (r.status !== 0) return null;
+    const everybody = { "S-1-1-0": "every account of this computer", "S-1-5-11": "the other accounts of this computer", "S-1-5-32-545": "the other accounts of this computer" };
+    let found = null;
+    for (const line of String(r.stdout).split(/\r?\n/)) {
+      const [sid, kind, rights = ""] = line.trim().split("|");
+      if (!everybody[sid] || kind !== "Allow") continue;
+      // A right that writes, by its name, or as the number the system gives for a generic right (all, or write).
+      const n = Number(rights);
+      const writes = /FullControl|Modify|Write|CreateFiles|AppendData|Delete|ChangePermissions|TakeOwnership/.test(rights) || (Number.isInteger(n) && ((n >>> 0) & 0x50000000) !== 0);
+      if (writes && (!found || sid === "S-1-1-0")) found = everybody[sid];
+    }
+    return found;
+  } catch {
+    return null;
+  }
 }
 
 // A NOTE IS READ ONCE PER VERSION OF ITS FILE (2026-11-16). Reading the vault

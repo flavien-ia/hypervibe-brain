@@ -27,6 +27,8 @@ Before any number, what needs the person:
 
 - **This computer's settings cannot be read** (an alert with `settings: true`): the background program and the evening save are paused, and nothing is written over the file. Say which file (`~/.hypervibe-brain/config.json`) and that a copy of it was kept beside it (`config.json.bad`); repair it with the person, then everything resumes by itself.
 - **Git itself fails** (`gitError`): the saves cannot happen, which is not the same as "no git". Say the reason in plain words.
+- **Something waits for their approval on this computer** (`approvals`, or `pending` in the state of the executive floor): a guard, a skill, a program of their brain, a background reader, a data source or a watched folder that arrived with the brain, or changed since they approved it. **It does not run meanwhile**, and a guard that changed refuses what it guards until they have looked at it. Say what waits and why, in plain words, then open the window where they approve each one themselves (never you): `node "${CLAUDE_SKILL_DIR}/../../scripts/trust.mjs" window` (if no window opened, give them the line of `byHand`). `/brain:executive` says more for a guard or a skill.
+- **Their brain's folder can be changed by others** (`folderWritableBy`): other accounts of this computer may write in it, so anybody using the computer could change their notes and what runs for them. On a computer they use alone it is only worth knowing; on a shared one, suggest moving the brain inside their own folder (their home) or closing the folder to the others.
 
 ## Tell
 

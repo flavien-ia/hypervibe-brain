@@ -30,6 +30,17 @@
 // without opening the note. Every value is the brain's to change, in its
 // brain.json, under `suggest` (docs/reglages.md).
 //
+// A SUGGESTION SAYS WHAT IT IS (2026-11-27, security audit). A note slipped
+// in front of the AI was a title and a sentence, whoever wrote it: a seed a
+// background reader had drawn from a hostile document arrived as "the second
+// brain says", and one filed as a lesson arrived under "Lessons that may
+// apply", read as the person's own rule. Each line now says its status and,
+// for a seed, where it comes from ("seed, not validated, from <source>"). And
+// a seed is listed under the lessons only when it comes from the person's own
+// conversations (a capture they asked for, their AI's memory brought in): a
+// lesson a background reader drew from what it read waits for the person to
+// validate it, and is shown among the other notes meanwhile, as a seed.
+//
 // IT READS THE INDEX AS IT IS (2026-11-21): `db` is whatever index the caller
 // opened (engine.mjs, currentDb), and nothing here builds one. The vector of
 // the message is asked ONCE, for the notes and for the lessons, and kept
@@ -284,7 +295,7 @@ export async function suggest(db, prompt, { seen = new Set(), timeout = 800, ...
   const archived = new Set(db.prepare("SELECT slug FROM fiche WHERE status = 'archived'").all().map((r) => r.slug));
   const hidden = (config().search?.hidden ?? []).map((p) => `vault/${String(p).replace(/\\/g, "/").replace(/^\/+/, "")}`);
   const skip = (r) => !r.slug || seen.has(r.slug) || archived.has(r.slug) || hidden.some((p) => String(r.rel ?? "").replace(/\\/g, "/").startsWith(p));
-  const bodyOf = db.prepare("SELECT body, rel FROM fiche WHERE slug = ?");
+  const bodyOf = db.prepare("SELECT body, rel, status, source FROM fiche WHERE slug = ?");
 
   // The words half: the notes the message names, even in a short message.
   const named = s.names ? namedNotes(db, pre.all, s, skip, capitalsOf(prompt)) : [];
@@ -321,7 +332,7 @@ export async function suggest(db, prompt, { seen = new Set(), timeout = 800, ...
         const natures = db.prepare("SELECT DISTINCT nature FROM facet WHERE nature IS NOT NULL").all().map((r) => r.nature).filter((n) => natureOf(n) === "lesson");
         const found = [];
         for (const nature of natures) found.push(...(await search(db, text, { by: "meaning", vector, limit: s.lessons + 4, nature })));
-        learned = gateOf(found).sort((a, b) => b.rank - a.rank).slice(0, s.lessons);
+        learned = gateOf(found).filter(ruleOfThePerson).sort((a, b) => b.rank - a.rank).slice(0, s.lessons);
       } catch {
         learned = [];
       }
@@ -331,17 +342,45 @@ export async function suggest(db, prompt, { seen = new Set(), timeout = 800, ...
   // Named first, then by meaning; a note found both ways counts once, named.
   const lessonSlugs = new Set(learned.map((l) => l.slug));
   const pool = new Map();
-  for (const n of named) if (!lessonSlugs.has(n.slug)) pool.set(n.slug, { ...n, rank: 2 });
+  for (const n of named) if (!lessonSlugs.has(n.slug)) pool.set(n.slug, { ...n, ...bodyOf.get(n.slug), rank: 2 });
   for (const n of near.sort((a, b) => b.rank - a.rank)) if (!pool.has(n.slug) && !lessonSlugs.has(n.slug)) pool.set(n.slug, n);
   const picked = diversify([...pool.values()], { limit: s.notes, perType: s.perType, typeMargin: s.typeMargin });
-  const out = (r) => ({ slug: r.slug, title: r.title, type: r.type, ...(r.score !== undefined ? { score: r.score } : {}), ...(r.named ? { named: true } : {}), excerpt: closestSentence(r.body, pre.all, s.excerpt) });
+  const out = (r) => ({ slug: r.slug, title: r.title, type: r.type, status: r.status === "trusted" ? "trusted" : "seed", ...(r.status !== "trusted" && r.source ? { source: String(r.source) } : {}), ...(r.score !== undefined ? { score: r.score } : {}), ...(r.named ? { named: true } : {}), excerpt: closestSentence(r.body, pre.all, s.excerpt) });
   return { notes: picked.map(out), lessons: learned.map(out), ...(best !== undefined ? { best } : {}) };
 }
 
-/** The text slipped into the AI's context: titles, slugs and one sentence each. */
+/**
+ * Whether a lesson may be shown as a rule of the person's: a note they
+ * validated, or a seed that comes from their own conversations (a capture
+ * they asked for, "claude://chat/...", their AI's memory brought in,
+ * "claude://projects/...", or a source said in plain words). A seed whose
+ * source is an address a background reader was handed (a conversation it
+ * judged, a document, a mail) is not one until the person validates it.
+ */
+export function ruleOfThePerson(r) {
+  if (r.status === "trusted") return true;
+  const s = String(r.source ?? "").trim();
+  return /^claude:\/\/(chat|projects)(\/|$)/i.test(s) || !/^[a-z][a-z0-9+.-]*:\S/i.test(s);
+}
+
+/** A source in one short line, with nothing that would close the line it is quoted in. */
+const shortSource = (s) => String(s ?? "").replace(/\s+/g, " ").replace(/[()«»"`]/g, "").trim().slice(0, 80);
+
+/** The text slipped into the AI's context: titles, slugs, what each note is and one sentence each. */
 export function render({ notes, lessons }, { fr = true } = {}) {
   if (!notes.length && !lessons.length) return "";
-  const line = (r) => `- ${r.title} [${r.slug}]${r.type ? ` (${r.type})` : ""}${r.excerpt ? (fr ? ` : « ${r.excerpt} »` : `: "${r.excerpt}"`) : ""}`;
+  // What the note is, in clear: validated by the person, or a seed and where it comes from.
+  const standing = (r) => {
+    if (r.status === undefined) return "";
+    if (r.status === "trusted") return fr ? "validée" : "validated";
+    const from = shortSource(r.source);
+    return fr ? `graine, non validée${from ? `, d'après ${from}` : ""}` : `seed, not validated${from ? `, from ${from}` : ""}`;
+  };
+  const about = (r) => {
+    const said = [r.type, standing(r)].filter(Boolean).join(fr ? " ; " : "; ");
+    return said ? ` (${said})` : "";
+  };
+  const line = (r) => `- ${r.title} [${r.slug}]${about(r)}${r.excerpt ? (fr ? ` : « ${r.excerpt} »` : `: "${r.excerpt}"`) : ""}`;
   const out = [fr ? "Le second brain a peut-être de quoi éclairer cette demande (à ouvrir avec brain_get si c'est utile, sinon à ignorer) :" : "The second brain may have something on this request (open with brain_get if useful, otherwise ignore):"];
   if (notes.length) out.push(...notes.map(line));
   if (lessons.length) out.push(fr ? "Leçons qui pourraient s'appliquer :" : "Lessons that may apply:", ...lessons.map(line));

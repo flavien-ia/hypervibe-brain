@@ -89,6 +89,6 @@ node "${CLAUDE_SKILL_DIR}/../../scripts/lint.mjs"
 
 A short account, with the figures the ledgers gave: files counted, covered by a note, set aside and why, left; how many notes were written; where the backup and the archives are; whether the lock is on. Then the reflex to keep: what Claude learns is now written with `/brain:capture`, and a search of the brain comes before a task.
 
-Everything written is a seed with its source, and each write can be undone. To put the whole memory back where it was (and lift the lock): `node "${CLAUDE_SKILL_DIR}/../../scripts/memory.mjs" restore`, or `restore --backup` when the archives are gone. The notes already written stay in the brain: they are theirs to keep.
+Everything written is a seed with its source, and each write can be undone. To put the whole memory back where it was (and lift the lock): `node "${CLAUDE_SKILL_DIR}/../../scripts/memory.mjs" restore`, or `restore --backup` when the archives are gone. **Lifting the lock is theirs to do, never yours**: this command (and `lock off`) is refused when you run it. Give them the line with the plugin's real folder in place of the variable, and tell them to paste it in a terminal of their own. The notes already written stay in the brain: they are theirs to keep.
 
 Hand back to the skill that called you.

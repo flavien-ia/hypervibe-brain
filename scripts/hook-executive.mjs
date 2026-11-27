@@ -8,20 +8,25 @@
 // they get better); the guards do not. Refused, not asked: a confirmation the
 // AI words itself is the very thing a guard is there to avoid.
 //
-// What it covers: the tools that write a file, and a terminal command that
-// names the guards' folder together with a word that writes, moves or
-// deletes. What it does not: the platform's settings that wire a guard
-// (~/.claude/settings.json), which other tools must be able to change; a
-// command that builds the path from pieces. Said in docs/executive.md.
-// It imports nothing of the plugin but the other lock, to start fast; with no
-// floor, it costs one small file read.
+// What it covers (2026-11-27, lock-paths.mjs): every tool that names the file
+// it writes, the path worked out before it is compared (a segment that says
+// nothing, a link, another case no longer get through); a terminal command
+// that names the guards' folder or their wiring and is not one plain reading
+// (cat, grep, ls, git diff... with nothing chained and no redirection); and a
+// command that renames, moves or removes the floor's own folder, which would
+// take the guards with it. What it does not: the platform's settings that
+// wire a guard (~/.claude/settings.json), which other tools must be able to
+// change; a name no text of the command holds (built by a program the command
+// starts). Said in docs/executive.md.
+// It imports nothing of the plugin but the shared reading of paths, to start
+// fast; with no floor, it costs one small file read.
 //
 // The plugin runs it with the memory's lock in a single program,
 // hook-locks.mjs (2026-11-24, see hook-memory.mjs); it still runs alone.
 
 import { existsSync } from "node:fs";
-import { join } from "node:path";
-import { deny, readInput, readSettings } from "./hook-memory.mjs";
+import { isAbsolute, join } from "node:path";
+import { MOVES, commandOf, commandPaths, deny, isShell, pathsOf, plainRead, readInput, readSettings, spellings, under } from "./lock-paths.mjs";
 
 /** The brain whose guards are locked, or "" (none, or no floor in it). @param {any} settings */
 export function lockedBrain(settings) {
@@ -29,15 +34,15 @@ export function lockedBrain(settings) {
   return brain && existsSync(join(brain, "executive", "guards.json")) ? brain : "";
 }
 
-const norm = (p) => String(p).replaceAll("\\", "/").replace(/\/+/g, "/").toLowerCase();
-// A redirection counts only when it aims at the guards (2026-11-23: a check
-// that read the guards and wrote its own result elsewhere was refused).
-const REDIRECT = /(^|[^<0-9&])>{1,2}\s*["']?[^\s"'|;&<>]*executive[\\/]+guards/i;
-const WRITES = /\btee\b|\b(rm|mv|cp|del|erase|ren|rename|move|copy|truncate|chmod|unlink|rmdir|install|ln|mklink)\b|\bsed\s+(-[a-z]*\s+)*-i|\bperl\s+-[a-z]*i|\b(set|add|clear)-content\b|\bout-file\b|\b(remove|move|copy|rename|new)-item\b|writefile|appendfile|rmsync|unlinksync|renamesync|copyfile|cpsync|\bgit\s+(checkout|restore|rm|mv|reset|clean|stash|apply)\b/i;
+// The guards named by pieces in a command (a path joined in the code handed
+// to node, a variable): the floor's name, and "guards" as a name of its own.
+const NAMED = (command) => /executive/i.test(command) && /(^|[^a-z0-9_-])guards([^a-z0-9_-]|$)/i.test(command);
+// A path written from the brain's folder, whatever the folder the tool stands in.
+const RELATIVE = /(^|\/)executive\/(\.\/)*guards(\/|\.json$)/i;
 
 /**
  * The refusal for a write into the guards of the executive floor, or null.
- * @param {{ tool_name?: string, tool_input?: any }} input what Claude Code hands the hook
+ * @param {{ tool_name?: string, tool_input?: any, cwd?: string }} input what Claude Code hands the hook
  * @param {string} brain the brain whose guards are locked (lockedBrain)
  * @returns {string | null}
  */
@@ -45,17 +50,30 @@ export function executiveRefusal(input, brain) {
   if (!brain) return null;
   const tool = String(input?.tool_name ?? "");
   const args = input?.tool_input ?? {};
-  const floor = `${norm(brain).replace(/\/$/, "")}/executive/`;
-  // The guards' folder or their wiring, by the full path or by the brain-relative one.
-  const inGuards = (p) => {
-    const n = norm(p);
-    return n.startsWith(`${floor}guards/`) || n === `${floor}guards.json` || /(^|\/)executive\/guards(\/|\.json$)/.test(n);
-  };
-  let aimed = false;
-  if (/^(Write|Edit|MultiEdit|NotebookEdit)$/.test(tool)) aimed = inGuards(args.file_path ?? args.notebook_path ?? "");
-  else if (/^(Bash|PowerShell)$/.test(tool) || /run_in_terminal$/.test(tool)) {
-    const command = String(args.command ?? "");
-    aimed = REDIRECT.test(command) || (/executive[\\/]+guards/i.test(command) && WRITES.test(command));
+  const cwd = typeof input?.cwd === "string" && input.cwd ? input.cwd : undefined;
+  const floor = spellings(join(brain, "executive"));
+  const guards = spellings(join(brain, "executive", "guards"));
+  const wiring = spellings(join(brain, "executive", "guards.json"));
+  /** @param {string[]} list the spellings of one path */
+  const inGuards = (list) => list.some((p) => wiring.includes(p) || guards.some((g) => under(g, p)));
+  const isFloor = (list) => list.some((p) => floor.includes(p));
+  const command = commandOf(input);
+  // (The path written from the brain's folder counts for the file a tool names, not for any text a tool of another server carries.)
+  const named = ["file_path", "path", "notebook_path"].map((k) => args?.[k]).filter((p) => typeof p === "string" && p);
+  let aimed = pathsOf(isShell(tool) ? {} : input).some((p) => inGuards(spellings(p, cwd))) || (!isShell(tool) && named.some((p) => !isAbsolute(p) && RELATIVE.test(p.replaceAll("\\", "/"))));
+  let moved = false;
+  if (!aimed && command) {
+    const { paths, folders } = commandPaths(command, cwd);
+    // (A reading may send what it shows to a file outside the floor.)
+    aimed = (paths.some(inGuards) || folders.some(inGuards) || NAMED(command)) && !plainRead(command, (target) => !spellings(target, cwd).some((p) => floor.some((d) => under(d, p))), cwd);
+    // The floor's own folder renamed, moved or removed: the guards would go with it.
+    moved = !aimed && MOVES.test(command) && paths.some(isFloor);
+  }
+  if (moved) {
+    return (
+      "Refused: this would rename, move or remove the brain's executive floor (its executive folder), and the guards it holds with it. A guard frames what the AI does, so the AI never moves one, alone or with its folder. " +
+      "Tell the person what you would change and why: they do it by hand. Do not look for another way."
+    );
   }
   if (!aimed) return null;
   return (

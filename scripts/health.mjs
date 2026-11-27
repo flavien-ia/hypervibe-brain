@@ -24,6 +24,8 @@ import { existsSync, readdirSync, readFileSync, renameSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { INDEX, ROOT, config, hypervibeVault, readJsonFile, requireBrain, userConfig, writeFileAtomic } from "./lib.mjs";
 import { logEvent } from "./journal.mjs";
+import { envFileOf } from "./fetch.mjs";
+import { dataPending } from "./trust.mjs";
 
 requireBrain();
 const args = process.argv.slice(2);
@@ -42,7 +44,9 @@ const FR = (config().lang ?? config().format) === "fr";
 const say = (en, fr) => (FR ? fr : en);
 
 function readEnv(file, key) {
-  const p = isAbsolute(file) ? file : join(ROOT, file);
+  // Only ever a file inside the brain's folder (fetch.mjs, envFileOf).
+  const p = envFileOf(file);
+  if (!p) return { missing: say(`the file ${file} is outside the brain's folder: a key's .env lives in the brain, it was not read`, `le fichier ${file} est hors du dossier du brain : le .env d’une clé vit dans le brain, il n’a pas été lu`) };
   if (!existsSync(p)) return { missing: say(`the file ${file} no longer exists`, `le fichier ${file} n’existe plus`) };
   const m = new RegExp(`^${key}=["']?([^"'\\r\\n]+)`, "m").exec(readFileSync(p, "utf8"));
   return m ? { value: m[1] } : { missing: say(`${key} is no longer in ${file}`, `${key} n’est plus dans ${file}`) };
@@ -114,6 +118,15 @@ function connections() {
   const out = [];
   const bj = readJson(brainFile, {});
   for (const [scheme, def] of Object.entries(bj.data ?? {})) {
+    // NOT APPROVED ON THIS COMPUTER (2026-11-27, trust.mjs): nothing is asked
+    // of it, no key is read for it, and it is said as waiting, never as
+    // disconnected (the check before sent the person's keys to whatever
+    // address the registry named, each evening).
+    const waits = dataPending(scheme, def);
+    if (waits) {
+      out.push([`data:${scheme}`, def.tool ?? scheme, () => ({ ok: false, waiting: true, reason: say(`waits for your approval on this computer (${waits})`, `attend votre accord sur cet ordinateur (${waits})`) })]);
+      continue;
+    }
     if (def.adapter === "postgres") {
       if (def.projects) for (const [p, base] of Object.entries(def.projects)) out.push([`data:${scheme}/${p}`, base.label ?? `${scheme}://${p}`, () => checkPostgres(base)]);
       else out.push([`data:${scheme}`, def.tool ?? scheme, () => checkPostgres(def)]);
@@ -177,8 +190,9 @@ async function check(only) {
       r = { ok: false, reason: e.message };
     }
     const p = prev[key] ?? {};
-    // The vault locked or the network down says nothing about the connection itself.
-    if (!r.ok && (r.vault || r.network)) {
+    // The vault locked or the network down says nothing about the connection
+    // itself; nor does an entry that waits for the person's approval.
+    if (!r.ok && (r.vault || r.network || r.waiting)) {
       next[key] = { ...p, label, checkedAt: now, pending: r.reason };
       continue;
     }

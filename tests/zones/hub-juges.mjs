@@ -85,6 +85,9 @@ const state = (n) => readJ(join(SRC(n), "state.json"), {});
 const define = (n, d) => {
   mkdirSync(SRC(n), { recursive: true });
   writeFileSync(join(SRC(n), "source.json"), `${JSON.stringify(d, null, 2)}\n`, "utf8");
+  // A judge runs only once approved on this computer (trust.mjs, 2026-11-27):
+  // the bench approves the judges it defines, as the person would.
+  if (d.kind === "claude" && d.live === true && existsSync(join(SRC(n), "instructions.md"))) node("sources.mjs", ["trust", n]);
 };
 const patch = (n, extra) => define(n, { ...readJ(join(SRC(n), "source.json"), {}), ...extra });
 const hub = (extra = {}) => {
@@ -116,8 +119,9 @@ const scriptSource = (n, items, extra = []) => {
 };
 /** A judge (kind "claude", "live": true), its instructions written. */
 const judge = (n, extra = {}) => {
-  define(n, { name: n, kind: "claude", live: true, every: "week", gather: "0", hours: [0, 24], enabled: true, ...extra });
+  mkdirSync(SRC(n), { recursive: true });
   writeFileSync(join(SRC(n), "instructions.md"), "Read each item, then say what you did.\n", "utf8");
+  define(n, { name: n, kind: "claude", live: true, every: "week", gather: "0", hours: [0, 24], enabled: true, ...extra });
 };
 const toPile = (n, refs) => {
   for (const ref of refs) node("judge.mjs", ["add", "--source", n, "--ref", ref, "--title", `Item ${ref}`]);
@@ -262,9 +266,12 @@ try {
     const T1 = `sk-ant-oat01-${"a".repeat(80)}`;
     const T2 = `sk-ant-oat01-${"b".repeat(80)}`;
     const tokenFile = join(HB, "judge-token.json");
-    // A Hypervibe vault on this computer (a stand-in, in this fake home).
+    // A Hypervibe vault on this computer (a stand-in, in this fake home),
+    // registered as the platform registers a plugin: a vault.mjs found
+    // anywhere else is never taken for one (lib.mjs, 2026-11-27).
     const vaultDir = join(HOME, ".claude", "plugins", "faux-coffre", "scripts", "vault");
     mkdirSync(vaultDir, { recursive: true });
+    writeFileSync(join(HOME, ".claude", "plugins", "installed_plugins.json"), JSON.stringify({ version: 2, plugins: { "hypervibe@bench": [{ installPath: join(HOME, ".claude", "plugins", "faux-coffre") }] } }), "utf8");
     writeFileSync(join(vaultDir, "vault.mjs"), [
       'import { existsSync, readFileSync } from "node:fs";',
       'import { dirname, join } from "node:path";',
@@ -330,7 +337,7 @@ try {
   // ---------------------------------------------------------------- the judges
   console.log("\nA judge's pass, its pile and its limits (audit 2, 3, 4, 6, 7, 11, 15)");
   {
-    // A Claude that opens the first two items it is handed, then, with SLOW,
+    // A Claude that opens the first two items it is handed, then, with FAUX_CLAUDE_SLOW (a judge only gets the variables it needs, and the stand-in's own),
     // works on until the judge's time limit stops it.
     const slow = join(BASE, "slow-claude.mjs");
     const told = join(BASE, "slow-claude.jsonl");
@@ -340,13 +347,13 @@ try {
       'const refs = readFileSync(0, "utf8").split("\\n").map((l) => /^\\d+\\. .*\\((.+)\\)$/.exec(l.trim())?.[1]).filter(Boolean);',
       `appendFileSync(${JSON.stringify(told)}, JSON.stringify({ items: refs.length }) + "\\n");`,
       "for (const ref of refs.slice(0, 2)) opened(ref);",
-      'if (process.env.SLOW) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 30000);',
+      'if (process.env.FAUX_CLAUDE_SLOW) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 30000);',
       'console.log("Read them.");',
       "",
     ].join("\n"), "utf8");
     judge("lent", { proof: true, batch: 4, timeoutMin: 0.05, allowedTools: ["Bash(node {plugin}/scripts/readers/conversation.mjs:*)"] });
     toPile("lent", ["s1", "s2", "s3", "s4"].map((s) => `claude://session/${s}#2026-11-20T10:00:00.000Z`));
-    r = node("judge.mjs", ["run", "lent"], { env: { HVBRAIN_CLAUDE: slow, SLOW: "1" } });
+    r = node("judge.mjs", ["run", "lent"], { env: { HVBRAIN_CLAUDE: slow, FAUX_CLAUDE_SLOW: "1" } });
     const left = pile("lent").map((i) => i.ref.slice(17, 19));
     const seen = Object.keys(readJ(join(SRC("lent"), "seen.json"), {}));
     check(
@@ -355,7 +362,7 @@ try {
       `${r.out} ${JSON.stringify(left)} ${JSON.stringify(seen)}`,
     );
     check("and hands over half as many items the next time", state("lent").nextBatch === 2 && state("lent").failures === 1, JSON.stringify(state("lent")));
-    r = node("judge.mjs", ["run", "lent"], { env: { HVBRAIN_CLAUDE: slow, SLOW: "" } });
+    r = node("judge.mjs", ["run", "lent"], { env: { HVBRAIN_CLAUDE: slow, FAUX_CLAUDE_SLOW: "" } });
     const passes = read(told).trim().split("\n").map((l) => JSON.parse(l).items);
     check("the next pass is handed two items, and the batch grows back once a pass ends well", json(r.out).ok === true && passes[1] === 2 && state("lent").nextBatch === undefined && state("lent").failures === 0, `${r.out} ${JSON.stringify(passes)} ${JSON.stringify(state("lent"))}`);
 

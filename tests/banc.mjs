@@ -1458,6 +1458,8 @@ try {
       const before2 = readFileSync(bj2, "utf8");
       writeFileSync(join(BRAIN, "index", "fiches-clients.json"), JSON.stringify({ items: [{ id: "acme", nom: "Acme", ca: 1200 }] }), "utf8");
       writeFileSync(bj2, JSON.stringify({ ...JSON.parse(before2), data: { clients: { adapter: "file", file: "index/fiches-clients.json", array: "items", key: "id" } } }, null, 2), "utf8");
+      // (An entry of the registry is read only once approved on this computer, trust.mjs.)
+      node("trust.mjs", ["approve", "data", "clients"]);
       const f1 = json(node("query.mjs", ["fetch", "clients://acme"]).out);
       check("brain_fetch reads the data at an address, where it lives", f1?.data?.ca === 1200, JSON.stringify(f1));
       const f2 = json(node("query.mjs", ["fetch", "base://posts/1"]).out);
@@ -1553,7 +1555,13 @@ try {
         return d;
       }
     };
-    const define = (n, extra) => writeFileSync(join(sourceDir(n), "source.json"), JSON.stringify({ ...readJ(join(sourceDir(n), "source.json")), ...extra }, null, 2), "utf8");
+    // (A judge runs only once approved on this computer, trust.mjs, 2026-11-27:
+    // the bench approves the judges it defines, as the person would.)
+    const define = (n, extra) => {
+      const d = { ...readJ(join(sourceDir(n), "source.json")), ...extra };
+      writeFileSync(join(sourceDir(n), "source.json"), JSON.stringify(d, null, 2), "utf8");
+      if (d.kind === "claude" && d.live === true) node("sources.mjs", ["trust", n]);
+    };
     const state = (n) => readJ(join(sourceDir(n), "state.json"), {});
     const setState = (n, extra) => writeFileSync(join(sourceDir(n), "state.json"), JSON.stringify({ ...state(n), ...extra }), "utf8");
     const ago = (hours) => new Date(Date.now() - hours * 3600_000).toISOString();
@@ -2100,9 +2108,11 @@ try {
       r = tok(["check"], { env: none });
       check("check verifies that a token is found and has the shape of one, without any call", r.ok && same(json(r.out), { ok: true, found: "file", shape: "oauth" }), r.out);
 
-      // A Hypervibe vault on this computer (a stand-in, in the bench's own home).
+      // A Hypervibe vault on this computer (a stand-in, in the bench's own
+      // home), registered as the platform registers a plugin (lib.mjs, 2026-11-27).
       const vaultDir = join(HOME, ".claude", "plugins", "faux-coffre", "scripts", "vault");
       mkdirSync(vaultDir, { recursive: true });
+      writeFileSync(join(HOME, ".claude", "plugins", "installed_plugins.json"), JSON.stringify({ version: 2, plugins: { "hypervibe@bench": [{ installPath: join(HOME, ".claude", "plugins", "faux-coffre") }] } }), "utf8");
       writeFileSync(join(vaultDir, "vault.mjs"), [
         'import { existsSync, readFileSync, writeFileSync } from "node:fs";',
         'import { dirname, join } from "node:path";',
@@ -2855,6 +2865,7 @@ try {
     const bj = JSON.parse(keptBrain);
     bj.data = { ...(bj.data ?? {}), essai: { tool: "A service", adapter: "http", entities: { x: { base: "https://example.invalid", auth: { clientCredentials: { tokenUrl: "https://example.invalid/token", id: { vault: ["ESSAI", "client_id"] }, secret: { vault: ["ESSAI", "client_secret"] } } } } } } };
     writeFileSync(brainJson, JSON.stringify(bj, null, 2), "utf8");
+    node("trust.mjs", ["approve", "data", "essai"]);
     for (let i = 0; i < 3; i++) r = node("health.mjs", ["--only", "data:essai/x", "--json"], { env: { HVBRAIN_VAULT: "off" } });
     const state = JSON.parse(readFileSync(join(BRAIN, "index", "health.json"), "utf8"))["data:essai/x"];
     check("three checks with the vault locked: the service waits for its keys, it is not disconnected", r.ok && Boolean(state?.pending) && !state.fails && !state.disconnected && !json(r.out).disconnected?.some((d) => d.key === "data:essai/x"), JSON.stringify(state) + r.out.slice(0, 300));
@@ -3001,7 +3012,7 @@ try {
     const frDocuments = JSON.parse(frFile("documents", "source.json"));
     check(
       "with no folder watched, a {watch} rule is dropped without a word and the judge has no Read tool at all, while a missing root is still refused",
-      r.ok && JSON.stringify(json(r.out)) === JSON.stringify({ rules: ["mcp__brain__brain_get"], builtins: [], refused: ["Read({root:nowhere}/**)"] }),
+      r.ok && JSON.stringify({ rules: json(r.out).rules, builtins: json(r.out).builtins, refused: json(r.out).refused }) === JSON.stringify({ rules: ["mcp__brain__brain_get"], builtins: [], refused: ["Read({root:nowhere}/**)"] }) && /root this computer does not have/.test(json(r.out).why["Read({root:nowhere}/**)"]),
       r.out + r.err,
     );
     check(

@@ -29,7 +29,7 @@ import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { DEFAULT_TYPES, HOME, PLUGIN_ROOT, setUserConfig, today as localToday, userConfig } from "./lib.mjs";
+import { DEFAULT_TYPES, HOME, PLUGIN_ROOT, setUserConfig, today as localToday, userConfig, writableByOthers } from "./lib.mjs";
 import { LANGS, osLang, t } from "./i18n.mjs";
 const args = process.argv.slice(2);
 const opt = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : undefined);
@@ -97,7 +97,12 @@ if (SYNCED.test(dir) || SYNCED.test(real) || icloudDocs) {
 }
 if (existsSync(dir) && readdirSync(dir).length) fail(`${dir} exists and is not empty: choose another folder, a brain is never created on top of something`);
 if (CHECK) {
-  out({ ok: true, check: true, dir: dir.replace(/\\/g, "/") });
+  // Who else may write there (2026-11-27): the folder itself when it exists,
+  // else the first folder above it that does (a new folder takes its rights).
+  let at = dir;
+  while (!existsSync(at) && dirname(at) !== at) at = dirname(at);
+  const others = writableByOthers(at);
+  out({ ok: true, check: true, dir: dir.replace(/\\/g, "/"), ...(others ? { folderWritableBy: others } : {}) });
   process.exit(0);
 }
 mkdirSync(dir, { recursive: true });
@@ -144,9 +149,15 @@ writeFileSync(join(dir, "brain.json"), `${JSON.stringify({
   created: today,
   embeddings: { model: "text-embedding-3-small", dims: 512 },
 }, null, 2)}\n`, "utf8");
-setUserConfig({ brain: dir.replace(/\\/g, "/") });
+// A new brain is under the approvals from its first day (trust.mjs): nothing
+// in it is approved by itself, since nothing ran here before.
+setUserConfig((c) => ({ brain: dir.replace(/\\/g, "/"), trustSince: { ...(c.trustSince ?? {}), [dir.replace(/\\/g, "/")]: new Date().toISOString() } }));
 
 const result = { ok: true, dir: dir.replace(/\\/g, "/"), lang, format, domains, types, git: false, commit: false, identity: null };
+// A folder other accounts of the computer may write in (2026-11-27): said at
+// the creation, for the person to choose another place or to close this one.
+const openTo = writableByOthers(dir);
+if (openTo) result.folderWritableBy = openTo;
 if (!args.includes("--no-git")) {
   const git = (a) => execFileSync("git", a, { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], windowsHide: true }).trim();
   try {

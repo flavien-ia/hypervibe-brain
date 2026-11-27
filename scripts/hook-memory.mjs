@@ -10,10 +10,15 @@
 // hook is the one thing that holds.
 //
 // It refuses, it does not ask: there is no case where the write is wanted. It
-// covers the tools that write a file, and a terminal command (the shell tools,
-// and the terminal of the desktop app) that sends its output into such a folder. The archives (memory-archive-*) are not
-// concerned: they are read. Inert while the lock is off. It imports nothing
-// of the plugin, to start fast.
+// covers every tool that names the file it writes (Write, Edit, MultiEdit,
+// NotebookEdit, a tool of another server), and a terminal command (the shell
+// tools, and the terminal of the desktop app) that names such a folder and is
+// not a plain reading (lock-paths.mjs says how a path and a command are read,
+// since 2026-11-27: `cp`, a `cd` then a redirection, a write from node or
+// python went through the list of words it had before). The archives
+// (memory-archive-*) are not concerned: they are read. Inert while the lock
+// is off. It imports nothing of the plugin but the shared reading of paths,
+// to start fast.
 //
 // ONE PROGRAM FOR THE LOCKS (2026-11-24). The plugin runs this check and the
 // executive floor's (hook-executive.mjs) in a single program, hook-locks.mjs:
@@ -22,41 +27,35 @@
 // a lock that does not answer in time lets the action through unchecked. This
 // file still runs alone (node hook-memory.mjs), as before.
 
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { commandOf, commandPaths, deny, isShell, pathsOf, plainRead, readInput, readSettings, spellings } from "./lock-paths.mjs";
 
-/** The computer's settings of the brain, or {}. (A byte order mark at their head must not open the lock.) */
-export function readSettings() {
-  try {
-    const raw = readFileSync(join(process.env.HVBRAIN_HOME || homedir(), ".hypervibe-brain", "config.json"), "utf8");
-    return JSON.parse(raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw) ?? {};
-  } catch {
-    return {};
-  }
-}
+export { deny, readInput, readSettings };
 
-// ~/.claude/projects/<project>/memory/<file>, however the path is written.
-const MEMORY = /[\\/]\.claude[\\/]projects[\\/][^\\/"'\s]+[\\/]memory[\\/]/i;
+// ~/.claude/projects/<project>/memory and what it holds, on a path already
+// resolved (forward slashes, no "." nor ".." left in it).
+const MEMORY = /\/\.claude\/projects\/[^/]+\/memory(\/|$)/i;
+/** @param {string[]} list the spellings of one path */
+const isMemory = (list) => list.some((p) => MEMORY.test(p));
+// The same named in a command by pieces (a variable holds the start of the
+// path): the three names are there, "memory" as a folder of its own.
+const NAMED = (command) => /\.claude/i.test(command) && /projects/i.test(command) && /(^|[\\/"'\s=])memory([\\/"'\s]|$)/i.test(command);
 
 /**
  * The refusal for a write into a memory folder of Claude Code, or null.
- * @param {{ tool_name?: string, tool_input?: any }} input what Claude Code hands the hook
+ * @param {{ tool_name?: string, tool_input?: any, cwd?: string }} input what Claude Code hands the hook
  * @param {any} settings the computer's settings of the brain
  * @returns {string | null}
  */
 export function memoryRefusal(input, settings) {
   if (settings?.memory?.lock !== true) return null;
   const tool = String(input?.tool_name ?? "");
-  const args = input?.tool_input ?? {};
-  let aimed = false;
-  if (/^(Write|Edit|NotebookEdit)$/.test(tool)) aimed = MEMORY.test(String(args.file_path ?? args.notebook_path ?? ""));
-  else if (/^(Bash|PowerShell)$/.test(tool) || /run_in_terminal$/.test(tool)) {
-    const command = String(args.command ?? "");
-    // A redirection, a tee, or a writing cmdlet that aims at a memory folder.
-    // (The path must follow the chevron in one piece: a chevron inside a quoted
-    // text, followed further on by a path that is only read, is no redirection.)
-    aimed = />>?\s*["']?[^\s"'|;&<>]*[\\/]\.claude[\\/]projects[\\/][^\\/"'\s]+[\\/]memory[\\/]/i.test(command) || (/\b(tee|Set-Content|Add-Content|Out-File)\b/i.test(command) && MEMORY.test(command));
+  const cwd = typeof input?.cwd === "string" && input.cwd ? input.cwd : undefined;
+  const command = commandOf(input);
+  let aimed = pathsOf(isShell(tool) ? {} : input).some((p) => isMemory(spellings(p, cwd)));
+  if (!aimed && command) {
+    const { paths, folders } = commandPaths(command, cwd);
+    // (A reading may send what it shows to a file that is not in a memory folder.)
+    aimed = (paths.some(isMemory) || folders.some(isMemory) || NAMED(command)) && !plainRead(command, (target) => !isMemory(spellings(target, cwd)), cwd);
   }
   if (!aimed) return null;
   return (
@@ -64,18 +63,6 @@ export function memoryRefusal(input, settings) {
     "Write it in the brain with /brain:capture: a rule or a trap learnt is a note of nature lesson, a choice of theirs a decision, what a client or a reader said of their work a feedback. " +
     "Do not look for another way to write this file."
   );
-}
-
-/** The answer of a PreToolUse hook that refuses. @param {string} reason */
-export const deny = (reason) => JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason } });
-
-/** What Claude Code hands the hook, or null when it cannot be read (then nothing is refused). */
-export function readInput() {
-  try {
-    return JSON.parse(readFileSync(0, "utf8") || "{}");
-  } catch {
-    return null;
-  }
 }
 
 // Run alone (not imported by hook-locks.mjs).

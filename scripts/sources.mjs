@@ -28,6 +28,15 @@
 // THIS COMPUTER, and a script that changed since is not run again until it is
 // approved again. The approvals live in ~/.hypervibe-brain/config.json, never in
 // the brain.
+// ALL THAT RUNS, NOT ONLY run.mjs (2026-11-27, security audit; trust.mjs). The
+// approval covered the text of run.mjs alone: the files it imports or starts
+// (a connector of the brain's own scripts), a judge's instructions and the
+// tools its source.json gives it changed with a pull and ran the same day.
+// What is approved is now the source as a whole: what of its source.json
+// decides what runs, its instructions, its program and every file of the
+// brain that program imports or starts; a judge (kind "claude", "live": true)
+// is approved like a program. And `trust` is the person's own gesture, in a
+// terminal of theirs: the AI never runs it for them.
 //
 //   node scripts/sources.mjs list [--json]
 //   node scripts/sources.mjs add <name> --kind script|claude --every day|week|hour|30m --type <type> --domains a,b [--description "..."] [--updates] [--finished] [--zones <zone>[,<zone>]] [--entries replace] [--needs <ITEM>[,<ITEM>]]
@@ -37,7 +46,7 @@
 //        keep up to date, --zones: the machine zones it writes, see notes.mjs.
 //        --needs: the vault items its keys are read from; see "THE KEYS OF A SOURCE" below)
 //   node scripts/sources.mjs test <name>        run it, check its notes, write nothing
-//   node scripts/sources.mjs trust <name>       approve its script on this computer
+//   node scripts/sources.mjs trust <name>       (in the person's own terminal) approve it on this computer: a script, a step, a judge
 //   node scripts/sources.mjs run [<name>] [--due] [--phase after]   (without --phase: scripts and "before" steps)
 //   node scripts/sources.mjs mark <name> --ok [--created N] | --error "<what>"   (for "claude" sources)
 //   node scripts/sources.mjs enable|disable <name>
@@ -82,7 +91,7 @@ import { entryProblem, upsertEntries } from "./catalogue.mjs";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { PLUGIN_ROOT, ROOT, config, isFrench, isRunner, noteWritten, readJsonFile, readVault, requireBrain, requireRunner, setUserConfig, sha256, today, userConfig, writeFileAtomic } from "./lib.mjs";
+import { PLUGIN_ROOT, ROOT, config, isFrench, isRunner, noteWritten, readJsonFile, readVault, requireBrain, requireRunner, today, userConfig, writeFileAtomic } from "./lib.mjs";
 import { dequeue, enqueue, readQueue, vaultState } from "./vault-queue.mjs";
 import { checkNote, createNote, fileHash, refreshOwn, refreshSeed, slugIndex, writeZone } from "./notes.mjs";
 import { readDirectory, upsert, writeDirectory } from "./directory.mjs";
@@ -90,6 +99,7 @@ import { logEvent } from "./journal.mjs";
 import { interval, tickPassed } from "./pure.mjs";
 import { keepBefore } from "./before.mjs";
 import { ensureRoot } from "./roots.mjs";
+import { NOT_THE_PERSON, approveSource, personAsks, runsAlone, sourceTrusted } from "./trust.mjs";
 
 requireBrain();
 const args = process.argv.slice(2);
@@ -133,9 +143,8 @@ const textOf = (abs) => {
     return "";
   }
 };
-const trustKey = (n) => `${ROOT.replace(/\\/g, "/")}::${n}`;
-const scriptHash = (n) => (existsSync(join(DIR, n, "run.mjs")) ? sha256(readFileSync(join(DIR, n, "run.mjs"), "utf8").replace(/\r\n/g, "\n")) : null);
-const trusted = (n) => scriptHash(n) !== null && userConfig().trustedSources?.[trustKey(n)] === scriptHash(n);
+/** Approved on this computer, as it stands: its program, what it imports, its instructions, its tools (trust.mjs). */
+const trusted = (n) => existsSync(join(DIR, n, "run.mjs")) && sourceTrusted(n);
 // Where this plugin lives, said to every program of a source (HVBRAIN_PLUGIN):
 // a step that calls the plugin's own code finds it there, wherever an update
 // has put it (2026-11-16).
@@ -496,7 +505,7 @@ if (command === "list") {
   const rows = all().map((n) => {
     const d = def(n);
     const st = state(n);
-    return { name: n, kind: d.kind, every: d.every, type: d.type, enabled: d.enabled !== false, paused: d.paused === true, ...(d.live === true ? { live: true } : {}), trusted: ["script", "step"].includes(d.kind) ? trusted(n) : null, due: d.enabled !== false && d.paused !== true && due(n), lastSuccess: st.lastSuccess ?? null, lastError: st.lastError ?? null, notes: Object.keys(readJson(join(DIR, n, "seen.json"), {})).length, description: d.description ?? "" };
+    return { name: n, kind: d.kind, every: d.every, type: d.type, enabled: d.enabled !== false, paused: d.paused === true, ...(d.live === true ? { live: true } : {}), trusted: runsAlone(d) ? sourceTrusted(n) : null, due: d.enabled !== false && d.paused !== true && due(n), lastSuccess: st.lastSuccess ?? null, lastError: st.lastError ?? null, notes: Object.keys(readJson(join(DIR, n, "seen.json"), {})).length, description: d.description ?? "" };
   });
   if (args.includes("--json")) out({ ok: true, sources: rows });
   else if (!rows.length) console.log("no source of its own yet");
@@ -568,8 +577,13 @@ if (command === "list") {
     entrySample: x.items.filter((i) => i.kind === "entry").slice(0, 3).map((i) => ({ address: i.address, title: i.title, date: i.date, text: String(i.text ?? "").slice(0, 200) })),
   });
 } else if (command === "trust") {
-  if (!def(name) || !["script", "step"].includes(def(name).kind)) fail(`no script or step named "${name}"`);
-  setUserConfig({ trustedSources: { ...(userConfig().trustedSources ?? {}), [trustKey(name)]: scriptHash(name) } });
+  if (!def(name) || !runsAlone(def(name))) fail(`no script, step or judge named "${name}"`);
+  // The person's own gesture, in a terminal of theirs (trust.mjs).
+  if (!personAsks()) {
+    out(NOT_THE_PERSON());
+    process.exit(1);
+  }
+  approveSource(name, "person");
   out({ ok: true, name, trusted: true });
 } else if (command === "run") {
   // Running a source writes notes and state: the runner's work.
@@ -667,8 +681,10 @@ if (command === "list") {
   // computer's settings, so the same step arriving by a clone on another
   // computer does not run there, and a step changed since (its fingerprint no
   // longer matches) waits for a new approval.
+  // (2026-11-27: the judge too. Its instructions and its tools are the
+  // plugin's own, copied here at the person's word.)
   const watch = pair[1];
-  setUserConfig({ trustedSources: { ...(userConfig().trustedSources ?? {}), [trustKey(watch)]: scriptHash(watch) } });
+  for (const n of pair) approveSource(n, "installed");
   // A watched folder is named on the judge's pile by an address of this
   // computer's roots (roots.mjs): the folders watched before today get theirs.
   const folders = name === "documents" ? (cfg.sources?.watch ?? []).filter((f) => existsSync(f)).map((f) => ({ folder: f, ...ensureRoot(f) })) : undefined;
