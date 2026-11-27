@@ -32,3 +32,16 @@ jobs:
         run: node tests/banc-cloud.mjs
       - name: The update of the plugin
         run: node tests/banc-update.mjs
+      # Each part of the plugin, one after the other, all of them even when one
+      # fails (2026-11-27: the locks, the approvals and the switches had only ever
+      # run on the computer they were written on).
+      - name: Each part of the plugin
+        shell: bash
+        run: |
+          failed=""
+          for z in tests/zones/*.mjs; do
+            echo "::group::$z"
+            node "$z" || failed="$failed $z"
+            echo "::endgroup::"
+          done
+          if [ -n "$failed" ]; then echo "FAILED:$failed"; exit 1; fi
