@@ -90,7 +90,7 @@ export async function loadTools() {
       continue;
     }
     // Its colour is worked out at each paint (theme.js logoColor): a black or
-    // very dark logo is painted light on the night, a white one dark on the cream.
+    // very dark logo is painted in cream, to be seen on the disc of its tool.
     state.logos[id] = { path: new Path2D(logo.path), hex: logo.hex };
   }
 }

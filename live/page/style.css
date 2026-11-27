@@ -510,13 +510,6 @@ body.page-open #welcome, body.page-open #alerts { display: none; }
 body.page-open #build { display: none; }
 @media (max-width: 760px) { #build { top: auto; bottom: calc(30vh + 24px); left: 10px; right: 10px; width: auto; max-height: 30vh; } }
 
-/* THE SWITCH OF THE DESIGN (theme.js, 2026-11-23), under Display: two buttons, the chosen one as in the period's choices. */
-.design-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 2px 1px; color: var(--muted); font-size: 11px; }
-.design-choices { display: flex; gap: 2px; padding: 2px; border-radius: 7px; background: rgba(255, 255, 255, 0.05); }
-.design-choices button { border: 0; border-radius: 5px; background: none; padding: 3px 9px; color: var(--muted); font-size: 10.5px; cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s; }
-.design-choices button:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
-.design-choices button.active { background: rgba(255, 255, 255, 0.1); color: var(--text); }
-.design-choices button:focus-visible { outline: 2px solid #4aa3ff; outline-offset: 1px; }
 /* The ring of the skill under the pointer (executive.js, 2026-11-24): in its harness's colour, a dark edge on both sides, apart from the dot. */
 #piece-ring { position: absolute; z-index: 1; box-sizing: border-box; border: 2px solid var(--ring, #ffffff); border-radius: 50%; box-shadow: 0 0 0 1.5px var(--ring-edge, rgba(11, 12, 24, 0.9)), inset 0 0 0 1.5px var(--ring-edge, rgba(11, 12, 24, 0.9)); transform: translate(-50%, -50%); pointer-events: none; }
 #piece-ring[hidden] { display: none; }

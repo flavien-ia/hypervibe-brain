@@ -379,8 +379,8 @@ export function paintRing(c, floor = 0) {
     c.font = `${connected ? 600 : 400} ${place.small ? 9.5 : 10.5}px ${colors.font}`;
     const name = ringName(tool, place.small);
     place.nameWidth = c.measureText(name).width;
-    // (The chosen one in the colour of the selection; on the cream, in black over a yellow marker.)
-    if (tool.id === state.chosenTool) writeText(c, name, 0, 0, colors.selectionText, colors.selectionTextEdge ?? undefined, colors.selectionTextEdge ? 5 : undefined);
+    // (The chosen one in the colour of the selection.)
+    if (tool.id === state.chosenTool) writeText(c, name, 0, 0, colors.selectionText);
     else writeText(c, name, 0, 0, connected ? colors.toolName : colors.toolNameOff);
     c.restore();
   }

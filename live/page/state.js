@@ -64,8 +64,8 @@ export const REACH_PX = 12;
 export const CELL = 12;
 // The colours of the conversations (VIVID), of what is chosen (SELECTION), of
 // the "Written or modified" filter, of a contact, of the natures and of the two
-// sectors of the ring: they depend on the design (theme.js, 2026-11-23), and
-// are given from there as live bindings, under the names they always had.
+// sectors of the ring: they are those of the design (theme.js), given from
+// there under the names they always had.
 export { CONTACT_COLOR, NATURE_COLORS, SECTORS, SELECTION, VIVID, WRITTEN_COLOR } from "./theme.js";
 // A NOTE THAT WAS READ SHINES FOR THREE SECONDS, fading, then goes out (2026-11-08).
 export const READ_MS = 3000;
@@ -365,7 +365,7 @@ export function toolPlace(id) {
  * @returns {string}
  */
 export function conversationColor(conv) {
-  if (!conv) return colors.name === "night" ? "#e6e7f2" : colors.mark;
+  if (!conv) return colors.mark;
   let h = 0;
   for (const ch of conv) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return colors.vivid[h % colors.vivid.length];

@@ -280,7 +280,9 @@ async function pageChecks() {
   const fetched = [];
   /** @type {any} what the fake server answers next */
   let answer = { ok: true };
-  globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+  /** @type {[key: string, value: string][]} what the page asked this browser to remember */
+  const remembered = [];
+  globalThis.localStorage = { getItem: () => null, setItem(key, value) { remembered.push([key, value]); }, removeItem() {} };
   globalThis.fetch = async (url, init) => {
     fetched.push({ url: String(url), init });
     return { status: 200, ok: true, json: async () => (typeof answer === "function" ? answer(String(url), init) : answer) };
@@ -327,43 +329,83 @@ async function pageChecks() {
   const silent = await v.validateMany(["d"]);
   check("decision B: a server that does not answer leaves every seed as it was", silent.refused === 1 && state.noteById.get("d").status === "seed");
 
-  // THE TWO DESIGNS (2026-11-23): the night stays as it was painted, the
-  // Hypervibe design changes the colours the modules import (live bindings),
-  // reads on the night of its own design system, `#1A1410` (2026-11-27; it
-  // stood on the night design's grounds from 2026-11-24), and its stylesheet
-  // touches nothing without its attribute.
+  // ONE DESIGN, THREE GROUNDS (2026-11-27). The page had two designs chosen
+  // by a switch (2026-11-23); it has one now, the design system of Hypervibe,
+  // and what is chosen (in the settings) is the ground it stands on: a pure
+  // black, the night blue the view was born in, the night of the design
+  // system (`#1A1410`, the default). A surface is never a colour of its own:
+  // it is the chosen ground under the veil of cream. The contrasts are worked
+  // out here for the three grounds.
   const theme = await load("theme.js");
   const st = await load("state.js");
-  const nightKept = st.SELECTION === "#ffe500" && st.VIVID[0] === "#ff5a5f" && st.SECTORS.source?.color === "#3ee0c5" && theme.dataColor("#7ee36b", "domain") === "#7ee36b" && theme.fadeOf("#ffffff") === "rgba(0,0,0,0)" && theme.colors.textEdge === "rgba(11,12,24,0.8)";
-  check("design: the night is the default, with the colours the map always had", theme.themeName() === "night" && nightKept, JSON.stringify({ name: theme.themeName(), selection: st.SELECTION }));
-  theme.setTheme("hypervibe", { keep: false });
+  const channels = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const hexOf = (rgb) => `#${rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
   const lum = (hex) => {
-    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    const [r, g, b] = channels(hex).map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   };
   const ratio = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
-  // (2026-11-27) Hypervibe on the night of its design system: its texts on the page (#1A1410, NUIT.fond) and on a surface, that night under the design system's veil of cream at 6 % (NUIT.voile: a panel, a card, the heart of the map), the darker and the lighter.
-  const HV_NIGHT = "#1A1410";
+  const HV_INK = "#1A1410";
   const HV_CREAM = "#FAF8F5";
-  const channels = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-  /** The night under a veil of cream, as the three numbers of its colour. @param {number} veil */
-  const veiled = (veil) => channels(HV_NIGHT).map((v, i) => Math.round(v + (channels(HV_CREAM)[i] - v) * veil));
-  const HV_SURFACE = `#${veiled(0.06).map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-  const HV_GROUNDS = [HV_NIGHT, HV_SURFACE];
-  const hvTexts = { bubbleName: theme.colors.bubbleName, bubbleCount: theme.colors.bubbleCount, toolName: theme.colors.toolName, toolNameOff: theme.colors.toolNameOff, harnessName: theme.colors.harnessName, selectionText: theme.colors.selectionText, ...Object.fromEntries(["#FF6040", "#FFE500", "#00C896", "#4B7BFF", "#8B5CF6", "#FF4D6D"].map((v) => [v, theme.inkOf(v)])) };
-  const weak = Object.entries(hvTexts).flatMap(([k, c]) => HV_GROUNDS.filter((ground) => ratio(c, ground) < 4.5).map((ground) => `${k} ${c} on ${ground}: ${ratio(c, ground).toFixed(2)}`));
-  check("design: Hypervibe reaches the modules through their usual names, and its texts read on the night of its design system and on a surface (4.5:1)", st.SELECTION === "#FFE500" && st.SECTORS.base?.color === "#A783F6" && theme.colors.metaColor === HV_NIGHT && HV_SURFACE === "#27221e" && !weak.length, JSON.stringify({ weak, meta: theme.colors.metaColor, surface: HV_SURFACE }));
-  // The map: the disc of a tool, the edge of a text and the veil over a floor set back are that night; a pill and a plate are surfaces (the night under the veil of cream, worked out, almost opaque); nothing of the night blue is left in the palette.
-  const surfaceAt = (alpha) => `rgba(${veiled(0.06).join(",")},${alpha})`;
-  const blueLeft = JSON.stringify(theme.colors).match(/0b0c18|15162a|10111f|1c1d36|11,\s*12,\s*24|17,\s*15,\s*36/gi) ?? [];
-  check("design: the map of Hypervibe is painted on the night of its design system (the disc of a tool, the edge of a text, the veil, a pill and a plate as surfaces), no night blue left", theme.colors.disc === HV_NIGHT && theme.colors.textEdge === "rgba(26,20,16,0.8)" && theme.colors.veil === "rgba(26,20,16,0.9)" && theme.colors.pill === surfaceAt(0.88) && theme.colors.plate === surfaceAt(0.84) && theme.colors.pillText === HV_NIGHT && !blueLeft.length, JSON.stringify({ disc: theme.colors.disc, edge: theme.colors.textEdge, veil: theme.colors.veil, pill: theme.colors.pill, plate: theme.colors.plate, blueLeft }));
+  const HV_GREY = "#A39A90";
+  /** The three grounds, as the request named them; theme.js and the stylesheet must both say the same. */
+  const GROUNDS = { black: "#000000", blue: "#0b0c18", hypervibe: "#1A1410" };
+  const BLUE_HEART = "#1c1d36";
+  /** A ground under one veil of cream after another (0.06 a surface, 0.2 a border), as a colour. @param {string} ground @param {...number} veils */
+  const under = (ground, ...veils) => hexOf(veils.reduce((from, veil) => from.map((v, i) => v + (channels(HV_CREAM)[i] - v) * veil), channels(ground)));
+  const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+  const sameGrounds = JSON.stringify(Object.keys(theme.GROUNDS)) === JSON.stringify(Object.keys(GROUNDS)) && Object.entries(GROUNDS).every(([name, color]) => same(theme.GROUNDS[name].color, color)) && same(theme.GROUNDS.blue.heart, BLUE_HEART) && theme.GROUNDS.black.heart === null && theme.GROUNDS.hypervibe.heart === null;
+  check("design: one design, on the night of its design system unless another ground is chosen; the modules read its colours under their usual names", theme.groundName() === "hypervibe" && theme.DEFAULT_GROUND === "hypervibe" && sameGrounds && same(theme.colors.metaColor, GROUNDS.hypervibe) && st.SELECTION === "#FFE500" && st.VIVID[0] === "#FF6040" && st.SECTORS.source?.color === "#00C896" && st.SECTORS.base?.color === "#A783F6" && !("setTheme" in theme) && !("THEMES" in theme) && !("recolor" in theme), JSON.stringify({ ground: theme.groundName(), sameGrounds, grounds: theme.GROUNDS, selection: st.SELECTION }));
   theme.seedColors("domain", ["#4aa3ff", "#e0559b", "#ffc53d", "#3ee0c5", "#9b8cff", "#ff9f43", "#7ee36b", "#ff5a5f"]);
-  const swatches = ["#4aa3ff", "#e0559b", "#ffc53d", "#3ee0c5", "#9b8cff", "#ff9f43", "#7ee36b", "#ff5a5f"].map((c) => theme.dataColor(c, "domain"));
+  const swatchesOf = () => ["#4aa3ff", "#e0559b", "#ffc53d", "#3ee0c5", "#9b8cff", "#ff9f43", "#7ee36b", "#ff5a5f"].map((c) => theme.dataColor(c, "domain"));
+  const swatches = swatchesOf();
   const hvTokens = new Set(["#FF6040", "#FFE500", "#00C896", "#4B7BFF", "#8B5CF6", "#FF4D6D", "#FE866D", "#FEEA3D", "#3FD4AE", "#779AFD", "#A783F6", "#FE788F"]);
-  const dim = [...hvTokens].flatMap((c) => HV_GROUNDS.filter((ground) => ratio(c, ground) < 3).map((ground) => `${c} on ${ground}: ${ratio(c, ground).toFixed(2)}`));
-  check("design: eight domains stay eight colours of the design system, and each of its colours is seen on its night and on a surface (3:1)", new Set(swatches).size === 8 && swatches.every((c) => hvTokens.has(c)) && !dim.length && theme.dataColor("#9aa0b8", "domain") === "#A39A90", `${swatches.join(" ")} ${JSON.stringify(dim)}`);
-  theme.setTheme("night", { keep: false });
-  check("design: back to the night, the colours of before", st.SELECTION === "#ffe500" && theme.dataColor("#4aa3ff", "domain") === "#4aa3ff");
+  // On each ground: the texts on the ground and on a surface (4.5:1), the grey of the night under one veil more too;
+  // the colours of the domains on the ground and on a surface (3:1); a panel apart from the ground it lies on, by its
+  // surface and by its border of cream at 20 % (the pure black is where it matters); the map painted in that ground.
+  /** @type {string[]} */
+  const weak = [];
+  /** @type {string[]} */
+  const dim = [];
+  /** @type {string[]} */
+  const lost = [];
+  /** @type {string[]} */
+  const mispainted = [];
+  /** @type {Record<string, any>} */
+  const measured = {};
+  let heard = 0;
+  theme.onGroundChange(() => heard++);
+  for (const [name, ground] of Object.entries(GROUNDS)) {
+    theme.setGround(name, { keep: false });
+    const surface = under(ground, 0.06);
+    const texts = { cream: theme.colors.bubbleName, grey: theme.colors.bubbleCount, toolName: theme.colors.toolName, toolNameOff: theme.colors.toolNameOff, harnessName: theme.colors.harnessName, selectionText: theme.colors.selectionText, ...Object.fromEntries(["#FF6040", "#FFE500", "#00C896", "#4B7BFF", "#8B5CF6", "#FF4D6D"].map((v) => [`ink of ${v}`, theme.inkOf(v)])) };
+    for (const [k, c] of Object.entries(texts)) for (const [where, laid] of [["ground", ground], ["surface", surface]]) if (ratio(c, laid) < 4.5) weak.push(`${name}: ${k} ${c} on its ${where} ${laid}: ${ratio(c, laid).toFixed(2)}`);
+    if (ratio(HV_GREY, under(ground, 0.06, 0.06)) < 4.5) weak.push(`${name}: the grey under one veil over a surface: ${ratio(HV_GREY, under(ground, 0.06, 0.06)).toFixed(2)}`);
+    for (const c of hvTokens) for (const [where, laid] of [["ground", ground], ["surface", surface]]) if (ratio(c, laid) < 3) dim.push(`${name}: ${c} on its ${where}: ${ratio(c, laid).toFixed(2)}`);
+    const apart = { surface: ratio(surface, ground), border: ratio(under(ground, 0.2), ground), borderOfPanel: ratio(under(ground, 0.06, 0.2), surface) };
+    if (apart.surface < 1.08 || apart.border < 1.5 || apart.borderOfPanel < 1.5) lost.push(`${name}: ${JSON.stringify(apart)}`);
+    const [r, g, b] = channels(ground);
+    const surfaceAt = (alpha) => `rgba(${channels(ground).map((v, i) => Math.round(v + (channels(HV_CREAM)[i] - v) * 0.06)).join(",")},${alpha})`;
+    const painted = theme.groundName() === name && same(theme.colors.disc, ground) && same(theme.colors.guardEdge, ground) && same(theme.colors.metaColor, ground) && theme.colors.textEdge === `rgba(${r},${g},${b},0.8)` && theme.colors.veil === `rgba(${r},${g},${b},0.9)` && theme.colors.pill === surfaceAt(0.88) && theme.colors.plate === surfaceAt(0.84) && theme.colors.pillText === HV_INK && theme.colors.guardInk === HV_INK && st.SELECTION === "#FFE500" && swatchesOf().join() === swatches.join();
+    // No blue of the first design is painted on another ground than the night blue.
+    const blueLeft = name === "blue" ? [] : JSON.stringify(theme.colors).match(/0b0c18|15162a|10111f|1c1d36|11,\s*12,\s*24|17,\s*15,\s*36/gi) ?? [];
+    if (!painted || blueLeft.length) mispainted.push(`${name}: ${JSON.stringify({ disc: theme.colors.disc, edge: theme.colors.textEdge, veil: theme.colors.veil, pill: theme.colors.pill, plate: theme.colors.plate, blueLeft })}`);
+    measured[name] = { surface, cream: [ratio(HV_CREAM, ground), ratio(HV_CREAM, surface)].map((v) => v.toFixed(2)), grey: [ratio(HV_GREY, ground), ratio(HV_GREY, surface)].map((v) => v.toFixed(2)), apart: Object.fromEntries(Object.entries(apart).map(([k, v]) => [k, v.toFixed(2)])) };
+  }
+  check("grounds: the three surfaces are each ground under the veil of cream at 6 %, worked out, never written", measured.black.surface === "#0f0f0f" && measured.blue.surface === "#191a25" && measured.hypervibe.surface === "#27221e", JSON.stringify(measured));
+  check("grounds: on the black, the night blue and the night of Hypervibe, every text reads on the ground and on a surface (4.5:1), the grey under one veil more too", !weak.length, JSON.stringify({ weak, measured }));
+  check("grounds: eight domains stay eight colours of the design system whatever the ground, and each of its colours is seen on the three grounds and on their surfaces (3:1)", new Set(swatches).size === 8 && swatches.every((c) => hvTokens.has(c)) && !dim.length && theme.dataColor("#9aa0b8", "domain") === HV_GREY, `${swatches.join(" ")} ${JSON.stringify(dim)}`);
+  check("grounds: a panel stays apart from each ground, the pure black too, by its surface (1.08:1 at least) and by its border of cream (1.5:1 at least)", !lost.length, JSON.stringify({ lost, measured }));
+  check("grounds: the map is painted in the chosen ground (the disc of a tool, the edge of a text, the veil, the edge of a guard, the window's bar; a pill and a plate as its surfaces), and each listener is told", !mispainted.length && heard === 3, JSON.stringify({ mispainted, heard }));
+  // Showing a ground remembers nothing unless asked; choosing one is kept under the page's own key; a name that is no ground (the design of before) changes nothing.
+  const keptBefore = remembered.length;
+  theme.setGround("night");
+  theme.setGround("hypervibe", { keep: false });
+  const quiet = remembered.length === keptBefore && theme.groundName() === "hypervibe";
+  theme.setGround("black");
+  const kept = remembered.at(-1)?.join("=") === "brain-live:ground=black" && theme.groundName() === "black";
+  theme.setGround("hypervibe", { keep: false });
+  check("grounds: a chosen ground is remembered under brain-live:ground, a ground only shown is not, and a name that is no ground changes nothing", quiet && kept && theme.groundName() === "hypervibe" && same(theme.colors.disc, GROUNDS.hypervibe), JSON.stringify({ quiet, kept, last: remembered.at(-1) }));
   /** The selectors of a rule's head, split on the commas outside brackets ("a, :where(b, c)" is two). @param {string} head */
   const topLevel = (head) => {
     const out = [""];
@@ -377,35 +419,60 @@ async function pageChecks() {
   };
   const hvCss = read(join(PAGE, "theme-hypervibe.css")).replace(/\/\*[\s\S]*?\*\//g, "");
   const loose = hvCss.split("}").map((rule) => rule.split("{")[0].trim()).filter((head) => head && !head.startsWith("@media") && head !== "@font-face").flatMap((head) => topLevel(head.replace(/^@media[^{]*\{/, ""))).map((s) => s.trim()).filter((s) => s && !s.startsWith(':root[data-theme="hypervibe"]'));
-  check("design: every rule of the Hypervibe stylesheet waits for its attribute (the night is untouched)", hvCss.length > 2000 && !loose.length, loose.slice(0, 5).join(" | "));
-  // (2026-11-27) The grounds are the night of the design system: the stylesheet names it once (#1A1410), gives it to the page and to the full pages (--bg), to the map (its own rule, a little lighter at its heart, where the veil of cream fades out) and to the disc of a tool; a surface is that night under the veil of cream at 6 %, mixed by the browser from the two tokens, and the panels of the map are that surface (--panel). Before, it stood on the night design's grounds, value for value.
+  // The stylesheet stays a layer over base.css and style.css: each of its rules is written under the root's attribute, which gives it its weight; the markup of the three pages carries that attribute, and no script of the page sets it or takes it away any more.
+  const pageSources = ["index.html", "history.html", "legend.html"].map((f) => read(join(PAGE, f)));
+  const scripts = ["theme.js", "theme-early.js", "icones-hypervibe.js", "main.js", "storage.js"].map((f) => read(join(PAGE, f))).join("\n");
+  const alwaysOn = pageSources.every((html) => /<html lang="en" data-theme="hypervibe">/.test(html)) && !/dataset\.theme|data-theme/.test(scripts);
+  check("design: every rule of the design's stylesheet is written under the root's attribute, which the markup of the three pages carries and no script changes", hvCss.length > 2000 && !loose.length && alwaysOn, JSON.stringify({ loose: loose.slice(0, 5), alwaysOn }));
+  // (2026-11-27) The grounds: the stylesheet names the three once each (and the heart of the night blue), as theme.js does; --bg is the one in use, the night of the design system unless the root says another; it is under the page and the full pages, the map (a little lighter at its heart), a field and the disc of a tool. A surface is --bg under the veil of cream at 6 %, mixed by the browser, and the panels of the map are that surface (--panel): no surface is written for a ground.
   const cssVar = (css, name) => new RegExp(`${name}:\\s*([^;]+);`).exec(css)?.[1]?.trim();
+  const groundRules = [...hvCss.matchAll(/([^{}]*\[data-ground="[a-z]+"\][^{}]*)\{([^{}]*)\}/g)].map((m) => `${m[1].trim()} { ${m[2].trim()} }`);
   const grounds = {
-    night: cssVar(hvCss, "--hv-night") === HV_NIGHT,
+    named: same(cssVar(hvCss, "--ground-black"), theme.GROUNDS.black.color) && same(cssVar(hvCss, "--ground-blue"), theme.GROUNDS.blue.color) && same(cssVar(hvCss, "--ground-blue-heart"), theme.GROUNDS.blue.heart) && same(cssVar(hvCss, "--ground-hypervibe"), theme.GROUNDS.hypervibe.color),
+    byDefault: cssVar(hvCss, "--bg") === "var(--ground-hypervibe)" && cssVar(hvCss, "--hv-heart") === "var(--hv-surface)",
+    chosen: groundRules.length === 2 && groundRules[0] === ':root[data-theme="hypervibe"][data-ground="black"] { --bg: var(--ground-black); }' && groundRules[1] === ':root[data-theme="hypervibe"][data-ground="blue"] { --bg: var(--ground-blue); --hv-heart: var(--ground-blue-heart); }',
     veil: cssVar(hvCss, "--hv-veil") === "rgba(250, 248, 245, 0.06)" && cssVar(hvCss, "--hv-cream") === HV_CREAM,
-    surface: cssVar(hvCss, "--hv-surface") === "color-mix(in srgb, var(--hv-cream) 6%, var(--hv-night))",
-    panel: /^color-mix\(in srgb, var\(--hv-surface\) \d+%, transparent\)$/.test(cssVar(hvCss, "--hv-panel") ?? "") && /^color-mix\(in srgb, var\(--hv-surface\) \d+%, transparent\)$/.test(cssVar(hvCss, "--hv-card") ?? ""),
-    page: cssVar(hvCss, "--bg") === "var(--hv-night)" && cssVar(hvCss, "--panel") === "var(--hv-panel)",
-    fieldAndDisc: cssVar(hvCss, "--hv-field") === "var(--hv-night)" && cssVar(hvCss, "--hv-disc") === "var(--hv-night)",
-    map: /:root\[data-theme="hypervibe"\] #scene \{ background: radial-gradient\(ellipse at 50% 45%, var\(--hv-veil\) 0%, rgba\(250, 248, 245, 0\) 70%\), var\(--hv-night\); \}/.test(hvCss),
+    surface: cssVar(hvCss, "--hv-surface") === "color-mix(in srgb, var(--hv-cream) 6%, var(--bg))" && cssVar(hvCss, "--hv-raised") === "color-mix(in srgb, var(--hv-cream) 12%, var(--bg))",
+    panel: /^color-mix\(in srgb, var\(--hv-surface\) \d+%, transparent\)$/.test(cssVar(hvCss, "--hv-panel") ?? "") && /^color-mix\(in srgb, var\(--hv-surface\) \d+%, transparent\)$/.test(cssVar(hvCss, "--hv-card") ?? "") && cssVar(hvCss, "--panel") === "var(--hv-panel)" && cssVar(hvCss, "--hv-modal") === "var(--hv-surface)",
+    fieldAndDisc: cssVar(hvCss, "--hv-field") === "var(--bg)" && cssVar(hvCss, "--hv-disc") === "var(--bg)",
+    map: /:root\[data-theme="hypervibe"\] #scene \{ background: radial-gradient\(ellipse at 50% 45%, var\(--hv-heart\) 0%, var\(--bg\) 70%\); \}/.test(hvCss),
     card: /:root\[data-theme="hypervibe"\] #panel \{[^}]*background: var\(--hv-card\)/.test(hvCss),
+    behind: /\.modal-backdrop \{ background: color-mix\(in srgb, var\(--bg\) 60%, transparent\); \}/.test(hvCss) && /#piece-ring \{ --ring-edge: color-mix\(in srgb, var\(--bg\) 90%, transparent\); \}/.test(hvCss) && /\.history-page \{ background: var\(--bg\);/.test(hvCss),
+    // The sheets under it give the page no colour of their own any more: base.css names none of the variables the design gives.
+    base: !/--bg:|--panel:|--text:/.test(read(join(PAGE, "base.css"))),
   };
-  // No night blue left, and no ground of its own: outside the icons drawn in the fields (data:), every colour written in full is a token of the design system or the black of a mask, and a dark ground is the night, written once.
+  // Nothing written for a ground but its own colour: outside the icons drawn in the fields (data:), every colour written in full is a token of the design system, one of the grounds (each written once) or the black of a mask, and no dark colour is written as rgb().
   const written = hvCss.replace(/url\("data:[^"]*"\)/g, "");
-  const HV_TOKENS = new Set([HV_NIGHT, HV_CREAM, "#A39A90", "#FF6040", "#FE866D", "#FFE500", "#FEEA3D", "#00C896", "#3FD4AE", "#4B7BFF", "#779AFD", "#8B5CF6", "#A783F6", "#FF4D6D", "#000"].map((c) => c.toLowerCase()));
+  const GROUND_COLORS = [...Object.values(GROUNDS), BLUE_HEART].map((c) => c.toLowerCase());
+  const HV_TOKENS = new Set([...GROUND_COLORS, HV_CREAM, HV_GREY, "#FF6040", "#FE866D", "#FFE500", "#FEEA3D", "#00C896", "#3FD4AE", "#4B7BFF", "#779AFD", "#8B5CF6", "#A783F6", "#FF4D6D", "#000"].map((c) => c.toLowerCase()));
   const strangers = [...new Set([...written.matchAll(/#[0-9a-f]{3,8}\b/gi)].map((m) => m[0].toLowerCase()))].filter((c) => !HV_TOKENS.has(c));
-  const darks = [...new Set([...written.matchAll(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/g)].filter((m) => Math.max(Number(m[1]), Number(m[2]), Number(m[3])) < 120).map((m) => `${m[1]},${m[2]},${m[3]}`))].filter((c) => c !== "26,20,16" && c !== "0,0,0");
-  check("design: Hypervibe stands on the night of its design system, #1A1410 (the page, the map, the full pages, a field, the disc of a tool), its surfaces are that night under the veil of cream, and no night blue nor ground of its own is written", Object.values(grounds).every(Boolean) && written.split("--hv-night:").length === 2 && !strangers.length && !darks.length, JSON.stringify({ grounds, strangers, darks }));
-  // The grey of the night, on what the stylesheet lays over a surface: one veil more (a control in a panel, a pill in the card) leaves it above 4.5:1, the hollow would not; so a group of the filters has no veil of its own, and a pill of the card takes the veil.
-  const stack = (...veils) => `#${veils.reduce((ground, veil) => ground.map((v, i) => v + (channels(HV_CREAM)[i] - v) * veil), channels(HV_NIGHT)).map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
-  const greyOn = { surface: ratio("#A39A90", stack(0.06)), veilOnSurface: ratio("#A39A90", stack(0.06, 0.06)), hollowOnSurface: ratio("#A39A90", stack(0.06, 0.12)) };
+  const darks = [...new Set([...written.matchAll(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/g)].filter((m) => Math.max(Number(m[1]), Number(m[2]), Number(m[3])) < 120).map((m) => `${m[1]},${m[2]},${m[3]}`))].filter((c) => c !== "0,0,0");
+  const twice = GROUND_COLORS.filter((c) => written.toLowerCase().split(c).length !== 2);
+  check("grounds: the stylesheet names the three grounds as theme.js does, --bg carries the chosen one (the page, the map, the full pages, a field, the disc of a tool), every surface is mixed from --bg and the cream, and no colour is written for a ground but its own, once", Object.values(grounds).every(Boolean) && !strangers.length && !darks.length && !twice.length, JSON.stringify({ grounds, groundRules, strangers, darks, twice }));
+  // The grey of the night, on what the stylesheet lays over a surface: one veil more (a control in a panel, a pill in the card) leaves it above 4.5:1 on the three grounds; on the night of Hypervibe the hollow would not, so a group of the filters has no veil of its own, and a pill of the card takes the veil.
+  const greyOn = Object.fromEntries(Object.entries(GROUNDS).map(([name, ground]) => [name, { surface: ratio(HV_GREY, under(ground, 0.06)), veilOnSurface: ratio(HV_GREY, under(ground, 0.06, 0.06)), hollowOnSurface: ratio(HV_GREY, under(ground, 0.06, 0.12)) }]));
   const flat = /:root\[data-theme="hypervibe"\] \.filter-group \{[^}]*background: none; \}/.test(hvCss) && /:root\[data-theme="hypervibe"\] #panel \.tag \{[^}]*background: var\(--hv-veil\);/.test(hvCss) && /:root\[data-theme="hypervibe"\] \.notice\.warn \.say,\s*:root\[data-theme="hypervibe"\] \.held-box small \{ color: var\(--hv-cream\); \}/.test(hvCss);
-  check("design: in Hypervibe the grey of the night stays above 4.5:1 on a surface and under one veil more, and nothing lays a second veil or the hollow under it", greyOn.surface >= 4.5 && greyOn.veilOnSurface >= 4.5 && greyOn.hollowOnSurface < 4.5 && flat, JSON.stringify({ greyOn, flat }));
+  check("grounds: the grey of the night stays above 4.5:1 on a surface and under one veil more on the three grounds, and nothing lays a second veil or the hollow under it", Object.values(greyOn).every((g) => g.surface >= 4.5 && g.veilOnSurface >= 4.5) && greyOn.hypervibe.hollowOnSurface < 4.5 && flat, JSON.stringify({ greyOn, flat }));
+  // The ground is set before the first paint, on the three pages: theme-early.js, run here as the browser runs it, against what a browser may remember (a ground, the design of before, nothing, no local storage at all), then told of a ground chosen in another window.
+  const early = read(join(PAGE, "theme-early.js"));
+  /** @param {string | null | Error} kept what the browser remembers under the page's key @returns {{ ground: string | undefined, hear: (value: string | null) => string | undefined }} */
+  const earlyOn = (kept) => {
+    /** @type {{ dataset: Record<string, string> }} */
+    const root = { dataset: {} };
+    /** @type {((ev: { key: string, newValue: string | null }) => void)[]} */
+    const heard = [];
+    const storage = { getItem: (/** @type {string} */ key) => { if (kept instanceof Error) throw kept; return key === "brain-live:ground" ? kept : "night"; } };
+    new Function("document", "localStorage", "addEventListener", early)({ documentElement: root }, storage, (/** @type {string} */ type, /** @type {any} */ fn) => { if (type === "storage") heard.push(fn); });
+    return { ground: root.dataset.ground, hear: (value) => { for (const fn of heard) fn({ key: "brain-live:ground", newValue: value }); return root.dataset.ground; } };
+  };
+  const earlyGrounds = [["black", "black"], ["blue", "blue"], ["hypervibe", "hypervibe"], ["night", "hypervibe"], [null, "hypervibe"], [new Error("no local storage"), "hypervibe"]].filter(([kept, want]) => earlyOn(kept).ground !== want).map(([kept]) => String(kept));
+  const elsewhere = earlyOn(null).hear("blue") === "blue" && earlyOn("black").hear(null) === "hypervibe";
+  check("grounds: the ground a browser remembers is on the root before the first paint (the default for the design of before, for nothing, without local storage), and a ground chosen in another window is followed", !earlyGrounds.length && elsewhere && /"brain-live:ground"/.test(early) && !/brain-live:theme/.test(early), JSON.stringify({ earlyGrounds, elsewhere }));
   // The rainbow band: at the very top of every page, thick enough to be seen, above a dialog; the pages without the map carry the stylesheet and its early script.
   const band = /:root\[data-theme="hypervibe"\] body::before \{([^}]*)\}/.exec(hvCss)?.[1] ?? "";
-  const pagesDressed = ["index.html", "history.html", "legend.html"].every((f) => { const html = read(join(PAGE, f)); return html.includes("theme-hypervibe.css") && html.indexOf("theme-early.js") < html.indexOf("</head>"); });
-  check("design: the rainbow band is at the top of every page of Hypervibe, 5 px high, above everything", /position: fixed/.test(band) && /top: 0/.test(band) && /height: 5px/.test(band) && Number(/z-index: (\d+)/.exec(band)?.[1]) > 50 && /--hv-rainbow/.test(band) && pagesDressed, band);
-  // The icons of the design system: Phosphor duotone on 256, filled; every icon the module puts in has its paths; nothing on the night.
+  const pagesDressed = pageSources.every((html) => html.includes("theme-hypervibe.css") && html.indexOf("theme-early.js") < html.indexOf("</head>") && html.indexOf("theme-hypervibe.css") > html.indexOf("base.css"));
+  check("design: the rainbow band is at the top of every page of the view, 5 px high, above everything", /position: fixed/.test(band) && /top: 0/.test(band) && /height: 5px/.test(band) && Number(/z-index: (\d+)/.exec(band)?.[1]) > 50 && /--hv-rainbow/.test(band) && pagesDressed, band);
+  // The icons of the design system: Phosphor duotone on 256, filled; every icon the module puts in has its paths.
   const icons = await load("icones-hypervibe.js");
   const iconSrc = read(join(PAGE, "icones-hypervibe.js"));
   const named = [...iconSrc.matchAll(/\["[^"]*[^a-z"][^"]*", "([a-z]+)"\]/g), ...iconSrc.matchAll(/"[^"]": "([a-z]+)"/g), ...iconSrc.matchAll(/\["([a-z]+)", "[^"]+"\]/g)].map((m) => m[1]);
@@ -414,17 +481,18 @@ async function pageChecks() {
   const svg = icons.iconSvg("reglages", { size: 20 });
   const wellFormed = Object.values(icons.PICTOS).every((p) => /^M[\d.,\-\sA-Za-z]+Z$/.test(p.trait) && (p.fond === null || /^M[\d.,\-\sA-Za-z]+Z$/.test(p.fond)));
   check("design: the icons of Hypervibe are those of its design system (Phosphor duotone, filled on 256), each one the page asks for is there", named.length >= 15 && legendIcons.length >= 5 && !absent.length && wellFormed && /viewBox="0 0 256 256"/.test(svg) && /fill="currentColor"/.test(svg) && /opacity="0.2"/.test(svg) && !/stroke=/.test(svg), JSON.stringify({ absent, named: named.length, legendIcons }));
-  check("design: on the night, the icons module adds nothing (it only acts under the attribute)", /const on = \(\) => [^;]*dataset\.theme === "hypervibe"/.test(iconSrc) && /if \(!on\(\)\) return;/.test(iconSrc) && /\.hv-night-icon,\s*:root\[data-theme="hypervibe"\] \.hv-glyph-text \{ display: none !important; \}/.test(hvCss), "");
-  // (2026-11-24) The fonts are carried by the view: each url() of the stylesheet is a woff2 of page/fonts/, with its licence; the server gives them their type; the night loads none.
+  // (2026-11-27) One design: the module dresses every page it is started on, and has nothing left that took its icons away; the icon the markup draws is hidden beside the one of the design system.
+  check("design: the icons module no longer waits for a design nor undoes its work, and the drawn icon it replaces is hidden", !/undress|hv-night-icon|const on = /.test(iconSrc) && /drawn\.classList\.add\("hv-replaced"\)/.test(iconSrc) && /\.hv-replaced,\s*:root\[data-theme="hypervibe"\] \.hv-glyph-text \{ display: none !important; \}/.test(hvCss), "");
+  // (2026-11-24) The fonts are carried by the view: each url() of the stylesheet is a woff2 of page/fonts/, with its licence; the server gives them their type; the sheets under it load none.
   // (2026-11-24) The other url() are icons of the design system drawn inside a field, written in the stylesheet itself (data:, an SVG): nothing from the network either.
   const allUrls = [...hvCss.matchAll(/url\("([^"]+)"\)/g)].map((m) => m[1]);
   const urls = allUrls.filter((u) => !u.startsWith("data:"));
   const inline = allUrls.filter((u) => u.startsWith("data:"));
   const fontsHere = urls.length === 4 && urls.every((u) => /^fonts\/[a-z0-9-]+\.woff2$/.test(u) && existsSync(join(PAGE, u))) && existsSync(join(PAGE, "fonts", "LICENSE.md")) && existsSync(join(PAGE, "fonts", "LICENSE-Geist.txt")) && inline.every((u) => u.startsWith("data:image/svg+xml,") && !/https?:%2F%2F|https?:\/\/(?!www\.w3\.org\/2000\/svg)/.test(u));
   const typed = /"\.woff2": "font\/woff2"/.test(read(join(REPO, "live", "server.mjs")));
-  const nightFonts = /@font-face|url\(/.test(read(join(PAGE, "style.css")) + read(join(PAGE, "base.css")));
-  check("design: the fonts of Hypervibe are in the view, with their licences and their type, and the night loads none", fontsHere && typed && !nightFonts, JSON.stringify({ urls, typed, nightFonts }));
-  // (2026-11-24) A hover never moves anything: in the Hypervibe design, a rule under :hover changes colours, a
+  const otherFonts = /@font-face|url\(/.test(read(join(PAGE, "style.css")) + read(join(PAGE, "base.css")));
+  check("design: the fonts of the design are in the view, with their licences and their type, and no other sheet loads any", fontsHere && typed && !otherFonts, JSON.stringify({ urls, typed, otherFonts }));
+  // (2026-11-24) A hover never moves anything: in the design of the page, a rule under :hover changes colours, a
   // background, a shadow, an outline, an opacity, never a border's width, a padding, a margin, a size, a place or a
   // font (cards were seen to grow and scroll bars to come under the pointer). And a card that scrolls (a card that holds
   // a table) draws no edge 1 px outside its box, which made it scroll both ways. (A transform of a pseudo-element
@@ -434,20 +502,35 @@ async function pageChecks() {
   const hoverRules = [...hvCss.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter((m) => m[1].includes(":hover")).length;
   const ringOutside = /:is\(\.card,[^)]*\)::before \{[^}]*inset: -1px/.test(hvCss);
   const scrollingCardsBare = /#usage \.card:has\(> \.table\)::before \{ content: none; \}/.test(hvCss) && /\.card:has\(> \.table\) \{ overflow-x: auto; \}/.test(read(join(PAGE, "style.css")));
-  check("design: in Hypervibe, a hover changes no border, padding, margin, size, place or font, and a card that scrolls has no edge outside its box", hoverRules >= 20 && !hoverMoves.length && (!ringOutside || scrollingCardsBare), JSON.stringify({ hoverRules, hoverMoves: hoverMoves.slice(0, 8), ringOutside, scrollingCardsBare }));
+  check("design: a hover changes no border, padding, margin, size, place or font, and a card that scrolls has no edge outside its box", hoverRules >= 20 && !hoverMoves.length && (!ringOutside || scrollingCardsBare), JSON.stringify({ hoverRules, hoverMoves: hoverMoves.slice(0, 8), ringOutside, scrollingCardsBare }));
   const index = read(join(PAGE, "index.html"));
   await layoutChecks(PAGE, load);
-  check("design: the switch is in the filters box, with both designs, and the design is set before the first paint", /data-theme-choice="night"/.test(index) && /data-theme-choice="hypervibe"/.test(index) && index.indexOf("theme-early.js") < index.indexOf("</head>"), "");
+  // (2026-11-27) The switch of the design is gone from the filters box, with its rules and its storage key; the ground is chosen in the settings, under Appearance: three options of one radio group, each with its dot, its name and its tooltip, a help beside the name of the setting.
+  const settingsSection = index.slice(index.indexOf('<section id="settings"'), index.indexOf("</section>", index.indexOf('<section id="settings"')));
+  const filtersSection = index.slice(index.indexOf('<section id="filters"'), index.indexOf("</section>", index.indexOf('<section id="filters"')));
+  const options = [...settingsSection.matchAll(/<button type="button" role="radio" data-ground-choice="([a-z]+)"[^>]*data-i18n-tip="([A-Za-z]+)"[^>]*><span class="ground-dot" aria-hidden="true"><\/span><span data-i18n="([A-Za-z]+)">/g)].map((m) => m.slice(1, 4).join(":"));
+  const choice = {
+    options: options.join() === "black:groundBlackTip:groundBlack,blue:groundBlueTip:groundBlue,hypervibe:groundHypervibeTip:groundHypervibe",
+    group: /<div class="setting-card" id="settings-appearance">\s*<h3 data-i18n="appearance">/.test(settingsSection) && /class="ground-choice" role="radiogroup" data-i18n-label="groundLabel"/.test(settingsSection) && /data-i18n="groundTitle"[^\n]*class="help-mark" tabindex="0" data-i18n-tip="groundTip"/.test(settingsSection),
+    styled: /:is\(\.group, \.period-choices, \.model-choice, \.ground-choice,/.test(hvCss) && ["black", "blue", "hypervibe"].every((g) => hvCss.includes(`[data-ground-choice="${g}"] .ground-dot { background: var(--ground-${g}); }`)),
+    noSwitch: !/data-theme-choice|design-row|design-choices|designTitle/.test(index + hvCss + read(join(PAGE, "style.css"))) && !/data-ground/.test(filtersSection),
+    storage: /"ground"\} StorageKey/.test(read(join(PAGE, "storage.js"))) && !/"theme"\} StorageKey|\| "theme"/.test(read(join(PAGE, "storage.js"))),
+  };
+  check("grounds: the choice of the ground is in the settings (three options, each with its dot, its name and its tooltip), and no switch of the design is left in the page", Object.values(choice).every(Boolean), JSON.stringify({ choice, options }));
 
   // The dictionaries: the same keys in the two languages, and no plural between brackets.
   const en = (await load("i18n/en.js")).default;
   const fr = (await load("i18n/fr.js")).default;
   const missing = Object.keys(en).filter((k) => !(k in fr));
   check("the page's dictionaries have the same keys in both languages", !missing.length && Object.keys(fr).every((k) => k in en), missing.join(", "));
-  // (2026-11-27) The switch and the legend say the ground of each design: the night blue for the night, its own warm black for Hypervibe.
-  const saysBlue = /night blue|bleu nuit/i;
-  const ofHypervibe = (/** @type {string} */ text) => text.slice(text.search(/Hypervibe (lays|pose)/));
-  check("design: the switch and the legend no longer say that Hypervibe stands on the night blue", !saysBlue.test(en.designHypervibeTip + fr.designHypervibeTip) && /warm black/.test(en.designHypervibeTip) && /noir chaud/.test(fr.designHypervibeTip) && saysBlue.test(en.designNightTip) && saysBlue.test(fr.designNightTip) && !saysBlue.test(ofHypervibe(en.legendDesignText)) && !saysBlue.test(ofHypervibe(fr.legendDesignText)) && /rgb\(26,20,16\)/.test(read(join(PAGE, "legend.js"))), "");
+  // (2026-11-27) The words of the ground, in both languages: the name of the setting, its three choices as they were asked, a tooltip for the setting and for each choice; the legend says where it is chosen, and no longer tells of two designs (its item, its drawing and the words of the switch are gone).
+  const groundKeys = ["appearance", "groundTitle", "groundLabel", "groundTip", "groundBlack", "groundBlackTip", "groundBlue", "groundBlueTip", "groundHypervibe", "groundHypervibeTip"];
+  const worded = groundKeys.every((k) => typeof en[k] === "string" && en[k].trim() && typeof fr[k] === "string" && fr[k].trim());
+  const namedAsAsked = fr.appearance === "Apparence" && fr.groundBlack === "Noir" && fr.groundBlue === "Bleu nuit" && fr.groundHypervibe === "Nuit Hypervibe" && en.groundBlack === "Black" && en.groundBlue === "Night blue" && en.groundHypervibe === "Hypervibe night";
+  const formerWords = ["designTitle", "designLabel", "designNight", "designNightTip", "designHypervibe", "designHypervibeTip", "legendDesignTitle", "legendDesignText"].filter((k) => k in en || k in fr);
+  const legendSrc = read(join(PAGE, "legend.js"));
+  const legendFollows = /<b>Appearance<\/b>/.test(en.legendSettingsText) && /<b>Apparence<\/b>/.test(fr.legendSettingsText) && !/legendDesign|recolor|#15162a|#0b0c18|rgb\(11,12,24\)/i.test(legendSrc) && /fill="var\(--bg\)"/.test(legendSrc);
+  check("grounds: the setting, its three choices and their tooltips are worded in both languages, the legend says where the ground is chosen and draws the disc of a tool in it, and the words of the two designs are gone", worded && namedAsAsked && !formerWords.length && legendFollows, JSON.stringify({ worded, namedAsAsked, formerWords, legendFollows }));
   /** @param {Record<string, any>} dict */
   const outputs = (dict) => Object.entries(dict).flatMap(([k, f]) => {
     if (typeof f !== "function") return [[k, String(f)]];

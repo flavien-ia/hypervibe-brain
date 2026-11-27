@@ -122,14 +122,14 @@ export async function chooseNote(slug, { fly = false } = {}) {
   // The map's status first: it is the one the person may just have changed.
   if (!n.status && note.status) n.status = note.status;
   const links = [...(note.links ?? []), ...(note.backlinks ?? [])].filter((x, i, all) => all.findIndex((other) => other.slug === x.slug) === i);
-  // (2026-11-24) The nature's pill carries its colour in --c too: the Hypervibe design draws it as a tint and a dot of
-  // that colour, not a coloured border (theme-hypervibe.css); the night keeps its border.
+  // (2026-11-24) The nature's pill carries its colour in --c: the design draws it as a tint and a dot of that colour,
+  // never as a coloured border (theme-hypervibe.css).
   panelContent.innerHTML = `
       ${head}
       ${note.created ? `<p class="meta">${escapeHtml(t("noteCreated", note.created, note.updated))}</p>` : ""}
       <p class="live-mark" id="note-live" hidden></p>
       <p class="status-row">${statusRow(slug)}</p>
-      ${note.nature ? `<p class="tag nature-tag" style="border:1px solid ${NATURE_COLORS[note.nature] ?? colors.mark};--c:${NATURE_COLORS[note.nature] ?? colors.mark}">${escapeHtml(t("natureName", note.nature))}</p>` : ""}
+      ${note.nature ? `<p class="tag nature-tag" style="--c:${NATURE_COLORS[note.nature] ?? colors.mark}">${escapeHtml(t("natureName", note.nature))}</p>` : ""}
       ${note.data?.length ? `<h3>${t("dataElsewhere")}</h3><ul class="links">${note.data.map((address) => `<li><code>${escapeHtml(address)}</code></li>`).join("")}</ul>` : ""}
       <div class="body">${note.error ? `<p class="meta">${escapeHtml(note.error)}</p>` : note.body ? renderBody(note.body) : ""}</div>
       ${note.source ? `<p class="meta">${escapeHtml(t("noteSource", note.source))}</p>` : ""}

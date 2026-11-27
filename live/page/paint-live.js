@@ -46,13 +46,11 @@ function lightUp(c, points, color, px) {
 }
 
 /**
- * Strokes the path just drawn as what is chosen: in yellow; on the cream, the
- * yellow over a black edge, else it would not show (theme.js, 2026-11-23).
+ * Strokes the path just drawn as what is chosen: in yellow.
  * @param {CanvasRenderingContext2D} c
  * @param {number} width
  */
 function strokeChosen(c, width) {
-  if (colors.selectionEdge) { c.strokeStyle = colors.selectionEdge; c.lineWidth = width * 2.2; c.stroke(); }
   c.strokeStyle = SELECTION; c.lineWidth = width; c.stroke();
 }
 
@@ -379,7 +377,6 @@ export function paintLive() {
       }
       c.globalAlpha = 0.25; c.fillStyle = SELECTION; c.beginPath(); c.arc(s.x, s.y, 14 * px, 0, Math.PI * 2); c.fill();
       c.globalAlpha = 1; c.beginPath(); c.arc(s.x, s.y, 5 * px, 0, Math.PI * 2); c.fill();
-      if (colors.selectionEdge) { c.strokeStyle = colors.selectionEdge; c.lineWidth = 1.2 * px; c.stroke(); }
     }
   }
   if (state.hoverNote && state.hoverNote !== state.selection) {
@@ -404,7 +401,7 @@ export function paintLive() {
   c.globalAlpha = 1;
   if (state.selection) {
     const p = layout.at.get(state.selection), n = state.noteById.get(state.selection);
-    if (p && n) { const e = toScreen(p); c.font = `700 13px ${colors.font}`; writeText(c, shorten(n.title, 50), e.x + 11, e.y + 4.5, colors.selectionText, colors.selectionTextEdge ?? undefined, colors.selectionTextEdge ? 6 : undefined); }
+    if (p && n) { const e = toScreen(p); c.font = `700 13px ${colors.font}`; writeText(c, shorten(n.title, 50), e.x + 11, e.y + 4.5, colors.selectionText); }
   }
 
   // The skills in use glow in the crown of the harnesses (executive.js).

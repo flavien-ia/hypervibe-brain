@@ -7,5 +7,5 @@ import { legendHtml } from "./legend.js";
 
 await startLanguage({ fresh: true });
 $("#legend-body").innerHTML = legendHtml();
-// The icons of the design system, when the page wears the Hypervibe design (2026-11-24).
+// The icons of the design system (2026-11-24).
 startIcons();

@@ -9,12 +9,12 @@
 //   brain-live:build-hidden      the start whose panel the person hid (when it began): a new start shows it again
 //   brain-live:layers            what is ticked in the filters box, as JSON:
 //                                { [the control's id, or "nature-<nature>"]: checked or value }
-//   brain-live:theme             the design of the page: "hypervibe", else the default (theme.js;
-//                                read before the first paint by theme-early.js)
+//   brain-live:ground            the ground of the page: "black", "blue" or "hypervibe", the default
+//                                (theme.js; read before the first paint by theme-early.js)
 
 const PREFIX = "brain-live:";
 
-/** @typedef {"lang" | "filters" | "activity-folded" | "layers" | "floors" | "build-folded" | "build-hidden" | "theme"} StorageKey */
+/** @typedef {"lang" | "filters" | "activity-folded" | "layers" | "floors" | "build-folded" | "build-hidden" | "ground"} StorageKey */
 
 /**
  * What the page remembered under a key, or null.
@@ -40,6 +40,17 @@ export function remember(key, value) {
   } catch {
     // no local storage: nothing is kept
   }
+}
+
+/**
+ * Tells when another window of the view keeps a new value under a key (the
+ * browser's storage event, which the window that wrote never receives).
+ * @param {StorageKey} key
+ * @param {(value: string | null) => void} fn
+ */
+export function onRememberedElsewhere(key, fn) {
+  if (typeof addEventListener !== "function") return;
+  addEventListener("storage", (ev) => { if (ev.key === PREFIX + key) fn(ev.newValue); });
 }
 
 // THE FRENCH KEYS OF BEFORE (2026-11-10). Until the English pass the page kept
@@ -68,8 +79,17 @@ const FORMER_KEYS = [
   },
 ];
 
-/** Takes over the preferences kept under the French keys of before; a key already rewritten is left alone. */
+/**
+ * Takes over the preferences kept under the French keys of before; a key already rewritten is left alone.
+ * And forgets the design the page once let choose ("brain-live:theme", 2026-11-23 to 2026-11-27): there is one
+ * design now, and nothing reads that key any more.
+ */
 export function takeOverFormerKeys() {
+  try {
+    localStorage.removeItem(`${PREFIX}theme`);
+  } catch {
+    // no local storage: nothing was kept
+  }
   for (const { from, to, convert } of FORMER_KEYS) {
     try {
       const former = localStorage.getItem(PREFIX + from);

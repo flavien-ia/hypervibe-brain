@@ -31,8 +31,8 @@ import { CROWN, ISO, crownShown, familyColor, setWorld, squash, state, toScreen,
 import { recall, remember } from "./storage.js";
 import { GUARD_COLOR, SKILL_COLOR, colors, fadeOf, inkOf } from "./theme.js";
 
-// The colour of the floor (the person's own skills, the guards) depends on
-// the design: theme.js (2026-11-23).
+// The colour of the floor (the person's own skills, the guards) is the
+// design's: theme.js (2026-11-23).
 export { GUARD_COLOR, SKILL_COLOR } from "./theme.js";
 /** The executive floor is floor 1 (state.js). */
 const UP = 1;

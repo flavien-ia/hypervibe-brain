@@ -186,7 +186,7 @@ function markUndone(id, at) {
 addEventListener("keydown", (ev) => { if (ev.key === "Escape") closeTooltip(); });
 
 await startLanguage({ fresh: true });
-// The icons of the design system, when the page wears the Hypervibe design (2026-11-24).
+// The icons of the design system (2026-11-24).
 startIcons();
 try {
   const answer = await getHistory(toolId);

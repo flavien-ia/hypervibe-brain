@@ -119,7 +119,7 @@ export function visibleSeeds() {
 }
 
 /** The colour of the seeds on the map, when their filter is ticked (not one of the natures': a seed may be a lesson or a decision too). */
-// (Its value depends on the design: theme.js, 2026-11-23.)
+// (A colour of the design: theme.js, 2026-11-23.)
 export { SEED_COLOR } from "./theme.js";
 
 /** How many notes one request validates (the server takes 300 at most). */
