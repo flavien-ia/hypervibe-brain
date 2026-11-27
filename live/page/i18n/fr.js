@@ -247,7 +247,7 @@ const fr = {
   designNight: "Nuit",
   designNightTip: "Le design d’origine de la vue : bleu nuit, fait pour regarder le brain vivre",
   designHypervibe: "Hypervibe",
-  designHypervibeTip: "Le design system d’Hypervibe sur le même bleu nuit : un texte crème, les couleurs de son arc-en-ciel, ses icônes et ses propres polices. La page se souvient du choix.",
+  designHypervibeTip: "Le design system d’Hypervibe sur sa propre nuit, un noir chaud : un texte crème, les couleurs de son arc-en-ciel, ses icônes et ses propres polices. La page se souvient du choix.",
   writtenFailed: "lecture impossible",
   seeds: "Seulement les graines",
   seedsTip: "Les fiches écrites par la machine que tu n’as pas encore validées. Le reste s’efface. Ouvre-en une pour la valider (V), puis passe à la suivante (N).",
@@ -696,7 +696,7 @@ const fr = {
   legendSeedsTitle: "Le filtre Graines",
   legendSeedsText: "En vert d’eau : les fiches écrites par la machine que tu n’as pas encore validées, avec leur nombre ; le reste s’efface. Avec d’autres filtres cochés, seules comptent les graines qu’ils laissent allumées, par exemple les décisions écrites cette semaine. Une graine se valide sur sa fiche, une par une, une fois lue.",
   legendDesignTitle: "Le design de la page",
-  legendDesignText: "Sous <b>Affichage</b>, <b>Nuit</b> ou <b>Hypervibe</b> change d’un coup le design de toute la page, sans la recharger, et la page s’en souvient. Nuit est le design d’origine de la vue, en bleu nuit. Hypervibe pose son design system sur le même bleu nuit : un texte crème, les couleurs de son arc-en-ciel à pleine force, une bande arc-en-ciel en haut de chaque page, ses icônes, et ses polices, Archivo pour les titres et Geist pour le texte, portées par la vue elle-même (sans réseau). Chaque couleur garde son sens : ce qui est blanc sur la nuit y est crème, et ce qui est choisi reste jaune.",
+  legendDesignText: "Sous <b>Affichage</b>, <b>Nuit</b> ou <b>Hypervibe</b> change d’un coup le design de toute la page, sans la recharger, et la page s’en souvient. Nuit est le design d’origine de la vue, en bleu nuit. Hypervibe pose son design system sur sa propre nuit, un noir chaud : un texte crème, les couleurs de son arc-en-ciel à pleine force, une bande arc-en-ciel en haut de chaque page, ses icônes, et ses polices, Archivo pour les titres et Geist pour le texte, portées par la vue elle-même (sans réseau). Chaque couleur garde son sens : ce qui est blanc sur la nuit y est crème, et ce qui est choisi reste jaune.",
   // Le panneau de la construction, pendant /brain:start (build.js, 2026-11-23).
   buildTitle: "Construction du brain",
   buildCount: (done, all) => `${done} sur ${all}`,

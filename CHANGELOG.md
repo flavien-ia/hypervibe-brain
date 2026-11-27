@@ -1,5 +1,9 @@
 # Changelog
 
+## Not released yet
+
+- **The Hypervibe design of the live view stands on the night of its own design system.** The page, the map and the full pages (settings, usage, legend, index, history) are painted on its warm black `#1A1410` instead of the night blue of the Night design; panels, cards, tooltips and dialogs are that night under the design system's veil of cream, and every text keeps a contrast of 4.5:1 or more. The Night design does not change.
+
 ## 0.16.2 (2026-11-24)
 
 - **Your brain keeps what your AI knows how to do.** `/brain:executive` moves your own skills and guards (hooks) into your brain, beside your notes: Claude Code still calls each skill by its /command, your AI may improve a skill but can never change a guard, and a second computer gets them all back.

@@ -7,7 +7,8 @@
 // on 2026-11-21 (a tool in both sectors, the amber key, the seeds and their
 // validation, the card of a note, the notices, the clock at the half hour).
 // The colours of the drawings are those the map paints on the night (theme.js);
-// on the Hypervibe design, theme.js recolor translates them (2026-11-23).
+// on the Hypervibe design, theme.js recolor translates them (2026-11-23), the
+// disc of a tool into the night of its design system (2026-11-27).
 
 import { $ } from "./dom.js";
 import { escapeHtml } from "./format.js";
@@ -58,9 +59,10 @@ const DRAWINGS = {
   index: `<path d="M22 14h30M22 24h30M22 34h30" fill="none" stroke="#9aa0b8" stroke-width="2" stroke-linecap="round"/><circle cx="13" cy="14" r="2" fill="#9aa0b8"/><circle cx="13" cy="24" r="2" fill="#9aa0b8"/><circle cx="13" cy="34" r="2" fill="#9aa0b8"/>`,
   notices: `<rect x="6" y="10" width="52" height="28" rx="6" fill="rgba(250,178,25,.08)" stroke="#fab219" stroke-opacity=".7"/><path d="M13 20h38M13 28h26" fill="none" stroke="#9aa0b8" stroke-width="2" stroke-linecap="round"/>`,
   install: `<rect x="10" y="10" width="44" height="30" rx="5" fill="rgba(255,229,0,.12)" stroke="#ffe500"/><path d="M32 16v13M26 24l6 6 6-6" fill="none" stroke="#ffe500" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
-  // The switch of the design (2026-11-24): the two designs side by side on the same night blue,
-  // Hypervibe with its rainbow band, its cream and its colours. (In rgb(): recolor leaves them as they are in both designs.)
-  design: `<rect x="5" y="12" width="26" height="24" rx="5" fill="rgb(11,12,24)" stroke="rgb(154,160,184)" stroke-opacity=".6"/><circle cx="13" cy="21" r="2.2" fill="rgb(74,163,255)"/><circle cx="22" cy="28" r="2.2" fill="rgb(224,85,155)"/><rect x="33" y="12" width="26" height="24" rx="5" fill="rgb(11,12,24)" stroke="rgb(250,248,245)" stroke-opacity=".35"/><g><rect x="35" y="13.5" width="4.4" height="2.4" fill="rgb(255,96,64)"/><rect x="39.4" y="13.5" width="4.4" height="2.4" fill="rgb(255,229,0)"/><rect x="43.8" y="13.5" width="4.4" height="2.4" fill="rgb(0,200,150)"/><rect x="48.2" y="13.5" width="4.4" height="2.4" fill="rgb(75,123,255)"/><rect x="52.6" y="13.5" width="4.4" height="2.4" fill="rgb(139,92,246)"/></g><circle cx="41" cy="24" r="2.2" fill="rgb(255,229,0)"/><circle cx="50" cy="29" r="2.2" fill="rgb(255,77,109)"/>`,
+  // The switch of the design (2026-11-24): the two designs side by side, each on its own night (2026-11-27: the night
+  // blue, then the warm black of the design system), Hypervibe with its rainbow band, its cream and its colours.
+  // (In rgb(): recolor leaves them as they are in both designs.)
+  design: `<rect x="5" y="12" width="26" height="24" rx="5" fill="rgb(11,12,24)" stroke="rgb(154,160,184)" stroke-opacity=".6"/><circle cx="13" cy="21" r="2.2" fill="rgb(74,163,255)"/><circle cx="22" cy="28" r="2.2" fill="rgb(224,85,155)"/><rect x="33" y="12" width="26" height="24" rx="5" fill="rgb(26,20,16)" stroke="rgb(250,248,245)" stroke-opacity=".35"/><g><rect x="35" y="13.5" width="4.4" height="2.4" fill="rgb(255,96,64)"/><rect x="39.4" y="13.5" width="4.4" height="2.4" fill="rgb(255,229,0)"/><rect x="43.8" y="13.5" width="4.4" height="2.4" fill="rgb(0,200,150)"/><rect x="48.2" y="13.5" width="4.4" height="2.4" fill="rgb(75,123,255)"/><rect x="52.6" y="13.5" width="4.4" height="2.4" fill="rgb(139,92,246)"/></g><circle cx="41" cy="24" r="2.2" fill="rgb(255,229,0)"/><circle cx="50" cy="29" r="2.2" fill="rgb(255,77,109)"/>`,
   keys: `<rect x="20" y="12" width="24" height="24" rx="5" fill="none" stroke="#9aa0b8" stroke-width="2"/><path d="M36 17 L28 31" fill="none" stroke="#e8e9f5" stroke-width="2" stroke-linecap="round"/>`,
 };
 

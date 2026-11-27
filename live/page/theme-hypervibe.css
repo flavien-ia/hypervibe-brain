@@ -4,14 +4,21 @@
    page keeps its own design (base.css, style.css), untouched, and loads no
    font. The tokens are those of the design system of Hypervibe
    (src/lib/design/tokens.ts and src/app/globals.css of the app), in its
-   night, laid on the GROUNDS OF THE NIGHT DESIGN (2026-11-24; it was first
-   drawn on the cream, then on the warm black of the design system's
-   scenes): the night blue of the page and of its panels, as base.css and
-   style.css paint them, under cream text and the grey of the night for what
-   is secondary (5.9:1 at least, on the lightest panel), panels drawn by a
-   border of cream at 20 %, each colour written in its vivid value (the blue
-   and the violet a quarter lighter, to stay above 4.5:1 on the panels), what
-   is chosen in blue with a dark text, the yellow for the one main action, the
+   night, laid on THE NIGHT OF THE DESIGN SYSTEM ITSELF (2026-11-27, as it
+   was asked; it was first drawn on the cream, then on this warm black, then
+   on 2026-11-24 on the night blue of the night design): its warm black
+   #1A1410 (NUIT.fond, --color-night) under the page, the map, the full
+   pages and the disc of a tool. A surface laid on it (a panel, a card, a
+   tooltip, a dialog) is that night under the design system's veil of cream
+   (NUIT.voile, 6 %), mixed by the browser from the two tokens: never a
+   brown of its own. One veil over a surface at most (a control or a pill
+   inside a panel), so that the grey of the night stays readable; a
+   field is the night itself under a strong border, as the design system's
+   Champ. Cream text and the grey of the night for what is secondary (5.6:1
+   at least on a surface, 4.8:1 on a veil over it), panels drawn by a border
+   of cream at 20 %, each colour written in its vivid value (the blue and the
+   violet a quarter lighter, to stay above 4.5:1 on a surface), what is
+   chosen in blue with a dark text, the yellow for the one main action, the
    secondary buttons as the site's night buttons. One rainbow band at the very
    top of every page of the view.
 
@@ -65,23 +72,28 @@
 }
 
 :root[data-theme="hypervibe"] {
-  /* The grounds: those of the night design, value for value (base.css, style.css). */
-  --hv-night: #0b0c18;
-  --hv-panel: rgba(16, 17, 32, 0.9);
-  --hv-surface: #10111f;
-  --hv-card: rgba(12, 13, 26, 0.96);
-  --hv-raised: #1b1c33;
-  --hv-modal: #16172d;
-  --hv-field: #0e0f1e;
-  --hv-disc: #15162a;
-  /* The design system's night: its texts, its borders, its veils. */
+  /* The grounds (2026-11-27): the night of the design system, and that night under its veils of cream. The veil
+     (6 %) makes a surface, the hollow (12 %) what is set back in the night; the browser mixes them with the night
+     where a ground must be opaque (what floats over the map, a shadow that cuts a bar in two), so no colour is
+     written here but the two tokens. The panels of the map let it show through a little, blurred, as on the night
+     design (90 %, 96 % for the card on the right). */
+  --hv-night: #1A1410;
+  --hv-veil: rgba(250, 248, 245, 0.06);
+  --hv-hollow: rgba(250, 248, 245, 0.12);
+  --hv-hover: rgba(250, 248, 245, 0.08);
+  --hv-surface: color-mix(in srgb, var(--hv-cream) 6%, var(--hv-night));
+  --hv-raised: color-mix(in srgb, var(--hv-cream) 12%, var(--hv-night));
+  --hv-panel: color-mix(in srgb, var(--hv-surface) 90%, transparent);
+  --hv-card: color-mix(in srgb, var(--hv-surface) 96%, transparent);
+  --hv-modal: var(--hv-surface);
+  --hv-field: var(--hv-night);
+  --hv-disc: var(--hv-night);
+  /* The design system's night: its texts, its borders. */
   --hv-cream: #FAF8F5;
   --hv-grey: #A39A90;
   --hv-border: rgba(250, 248, 245, 0.2);
   --hv-border-hover: rgba(250, 248, 245, 0.4);
   --hv-border-strong: rgba(250, 248, 245, 0.5);
-  --hv-hover: rgba(250, 248, 245, 0.08);
-  --hv-veil: rgba(250, 248, 245, 0.06);
   --hv-coral: #FF6040; --hv-coral-light: #FE866D;
   --hv-yellow: #FFE500; --hv-yellow-light: #FEEA3D;
   --hv-teal: #00C896; --hv-teal-light: #3FD4AE;
@@ -102,7 +114,9 @@
   --hv-mark-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath fill='%23FAF8F5' d='M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z'/%3E%3C/svg%3E");
   --hv-mark-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23A39A90'%3E%3Cpath opacity='0.2' d='M208,96l-80,80L48,96Z'/%3E%3Cpath d='M215.39,92.94A8,8,0,0,0,208,88H48a8,8,0,0,0-5.66,13.66l80,80a8,8,0,0,0,11.32,0l80-80A8,8,0,0,0,215.39,92.94ZM128,164.69,67.31,104H188.69Z'/%3E%3C/svg%3E");
   --hv-mark-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23A39A90'%3E%3Cpath opacity='0.2' d='M192,112a80,80,0,1,1-80-80A80,80,0,0,1,192,112Z'/%3E%3Cpath d='M229.66,218.34,179.6,168.28a88.21,88.21,0,1,0-11.32,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z'/%3E%3C/svg%3E");
-  /* The variables the page already reads (base.css); --bg and --panel keep the night's. */
+  /* The variables the page already reads (base.css): the page and the full pages on the night, the panels of the map on a surface. */
+  --bg: var(--hv-night);
+  --panel: var(--hv-panel);
   --border: var(--hv-border);
   --text: var(--hv-cream);
   --muted: var(--hv-grey);
@@ -179,6 +193,13 @@
   outline: none; border-color: transparent;
   box-shadow: 0 0 0 1px var(--hv-coral), 0 0 0 2px var(--hv-yellow), 0 0 0 3px var(--hv-teal), 0 0 0 4px var(--hv-blue), 0 0 0 5px var(--hv-violet);
 }
+
+/* ---------------------------------------------------------------- the map */
+
+/* The map (2026-11-27): the night of the design system, a little lighter at its heart, where the veil of cream fades
+   out towards the edges. The ring of the skill under the pointer keeps a dark edge, in that night. */
+:root[data-theme="hypervibe"] #scene { background: radial-gradient(ellipse at 50% 45%, var(--hv-veil) 0%, rgba(250, 248, 245, 0) 70%), var(--hv-night); }
+:root[data-theme="hypervibe"] #piece-ring { --ring-edge: rgba(26, 20, 16, 0.9); }
 
 /* ---------------------------------------------------------------- the icons (icones-hypervibe.js) */
 
@@ -262,7 +283,7 @@
 :root[data-theme="hypervibe"] .exclude-add input::placeholder { color: var(--hv-grey); }
 /* The search's results: the design system's menu (ListeMenu, 2026-11-24), floating on the night with its border,
    a radius of 12, lines of 8 that light up in the night's hover; the line the keyboard is on, in blue (a choice). */
-:root[data-theme="hypervibe"] #results { padding: 8px; border: 1px solid var(--hv-border); border-radius: 12px; background: var(--hv-raised); box-shadow: var(--hv-shadow-float); }
+:root[data-theme="hypervibe"] #results { padding: 8px; border: 1px solid var(--hv-border); border-radius: 12px; background: var(--hv-surface); box-shadow: var(--hv-shadow-float); }
 :root[data-theme="hypervibe"] #results li { border-radius: 8px; cursor: pointer; }
 :root[data-theme="hypervibe"] #results li:hover { background: var(--hv-hover); }
 :root[data-theme="hypervibe"] #results li.active { background: rgba(75, 123, 255, 0.18); }
@@ -286,7 +307,9 @@
 :root[data-theme="hypervibe"] #filters-head { color: var(--hv-cream); font-weight: 600; }
 :root[data-theme="hypervibe"] #filters-head:hover { background: var(--hv-hover); }
 :root[data-theme="hypervibe"] #filters-arrow { display: inline-flex; color: var(--hv-grey); }
-:root[data-theme="hypervibe"] .filter-group { border-color: var(--hv-border); border-radius: 8px; background: var(--hv-veil); }
+/* A group of the filters is drawn by its border alone (2026-11-27): the box is already a surface, and the choices inside
+   a group carry the one veil laid over it (a second one took the grey of their words under 4.5:1). */
+:root[data-theme="hypervibe"] .filter-group { border-color: var(--hv-border); border-radius: 8px; background: none; }
 :root[data-theme="hypervibe"] .filter-title { color: var(--hv-grey); }
 :root[data-theme="hypervibe"] .check { background: none; color: var(--hv-cream); }
 :root[data-theme="hypervibe"] .check:hover { color: var(--hv-cream); background: var(--hv-hover); }
@@ -361,9 +384,13 @@
 :root[data-theme="hypervibe"] .notice { border-color: transparent; border-radius: 12px; background: var(--hv-veil); }
 :root[data-theme="hypervibe"] .notice.warn,
 :root[data-theme="hypervibe"] .held-box { border-color: transparent; border-radius: 12px; background: rgba(255, 229, 0, 0.15); }
+/* On that tint of yellow, over a surface, the grey of the night fell to 3.8:1: its second line is written in cream
+   too, set back by its weight alone (2026-11-27). */
+:root[data-theme="hypervibe"] .notice.warn .say,
+:root[data-theme="hypervibe"] .held-box small { color: var(--hv-cream); }
 /* What floats over the map: the design system's Notification, the night with its border, the colour of its state in a halo. */
-:root[data-theme="hypervibe"] #welcome .notice { border-color: var(--hv-border); border-radius: 20px; background: rgba(12, 13, 26, 0.85); }
-:root[data-theme="hypervibe"] #alerts .notice { border-color: var(--hv-border); border-radius: 20px; background-color: rgba(27, 28, 51, 0.97); box-shadow: var(--hv-shadow-float); }
+:root[data-theme="hypervibe"] #welcome .notice { border-color: var(--hv-border); border-radius: 20px; background: color-mix(in srgb, var(--hv-surface) 85%, transparent); }
+:root[data-theme="hypervibe"] #alerts .notice { border-color: var(--hv-border); border-radius: 20px; background-color: var(--hv-surface); box-shadow: var(--hv-shadow-float); }
 :root[data-theme="hypervibe"] #alerts .notice.warn,
 :root[data-theme="hypervibe"] #welcome .notice.warn { background-image: radial-gradient(circle at 0 0, rgba(255, 229, 0, 0.28), rgba(255, 229, 0, 0) 60%); }
 :root[data-theme="hypervibe"] .held-note,
@@ -392,10 +419,12 @@
 
 /* ---------------------------------------------------------------- the card on the right */
 
-:root[data-theme="hypervibe"] #panel { padding: 24px; }
+:root[data-theme="hypervibe"] #panel { padding: 24px; background: var(--hv-card); }
 /* A pill of the card: the design system's PastilleNeutre on the night (2026-11-24), the night's hollow, the word in
-   grey; a nature is its Etiquette, a tint of its colour at 15 % with a dot of it, never a coloured border. */
-:root[data-theme="hypervibe"] #panel .tag { padding: 4px 12px; border: 0; border-radius: 999px; background: rgba(250, 248, 245, 0.12); color: var(--hv-grey); font-weight: 500; }
+   grey; a nature is its Etiquette, a tint of its colour at 15 % with a dot of it, never a coloured border. (The card
+   is a surface, the night under a first veil: a second veil over it makes the hollow, 12 % counted from the night,
+   and leaves the grey at 4.8:1; the hollow laid over the surface took it to 4.0:1. 2026-11-27.) */
+:root[data-theme="hypervibe"] #panel .tag { padding: 4px 12px; border: 0; border-radius: 999px; background: var(--hv-veil); color: var(--hv-grey); font-weight: 500; }
 :root[data-theme="hypervibe"] #panel .tag.nature-tag { display: inline-flex; align-items: center; gap: 8px; border: 0 !important; background: color-mix(in srgb, var(--c, var(--hv-grey)) 15%, transparent); color: var(--hv-cream); font-family: var(--hv-display-font); font-size: 11px; font-weight: 700; font-stretch: 125%; font-variation-settings: "wdth" 125; letter-spacing: 0.06em; text-transform: uppercase; }
 :root[data-theme="hypervibe"] #panel .tag.nature-tag::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--hv-grey)); }
 /* A status pill: a tint of its colour, the word in its light value. */
@@ -411,10 +440,11 @@
 
 /* ---------------------------------------------------------------- what floats: tooltip, box under the pointer, dialogs, toast */
 
-:root[data-theme="hypervibe"] .tooltip { border: 1px solid var(--hv-border); border-radius: 8px; background: var(--hv-raised); box-shadow: var(--hv-shadow-float); }
-:root[data-theme="hypervibe"] .tooltip::after { border-color: var(--hv-border); background: var(--hv-raised); }
-:root[data-theme="hypervibe"] #hover { border-color: var(--hv-border); border-radius: 8px; background: var(--hv-raised); box-shadow: var(--hv-shadow-float); }
-:root[data-theme="hypervibe"] .modal-backdrop { background: rgba(5, 6, 14, 0.66); }
+:root[data-theme="hypervibe"] .tooltip { border: 1px solid var(--hv-border); border-radius: 8px; background: var(--hv-surface); box-shadow: var(--hv-shadow-float); }
+:root[data-theme="hypervibe"] .tooltip::after { border-color: var(--hv-border); background: var(--hv-surface); }
+:root[data-theme="hypervibe"] #hover { border-color: var(--hv-border); border-radius: 8px; background: var(--hv-surface); box-shadow: var(--hv-shadow-float); }
+/* Behind a dialog: the dark veil of the design system's Fenetre, its night at 60 % (2026-11-27). */
+:root[data-theme="hypervibe"] .modal-backdrop { background: rgba(26, 20, 16, 0.6); }
 /* A dialog: the design system's Fenetre on the night (2026-11-24), a radius of 20, its border, the rainbow band of
    4 px at its top and a halo of violet in its corner, both painted in its own ground (nothing added around it). */
 :root[data-theme="hypervibe"] .modal { border-color: var(--hv-border); border-radius: 20px; background: var(--hv-rainbow) top / 100% 4px no-repeat, radial-gradient(circle at 100% 0, rgba(139, 92, 246, 0.22), rgba(139, 92, 246, 0) 45%), var(--hv-modal); box-shadow: var(--hv-shadow-float); }
@@ -426,7 +456,7 @@
 :root[data-theme="hypervibe"] .modal-read-head { border-bottom-color: var(--hv-border); }
 :root[data-theme="hypervibe"] .modal-read-body pre { background: var(--hv-veil); }
 /* The short message of what the page could not do: the night, its border, a halo of coral. */
-:root[data-theme="hypervibe"] .toast { border-color: var(--hv-border); border-radius: 12px; background: radial-gradient(circle at 0 0, rgba(255, 96, 64, 0.3), rgba(255, 96, 64, 0) 60%), var(--hv-raised); box-shadow: var(--hv-shadow-float); }
+:root[data-theme="hypervibe"] .toast { border-color: var(--hv-border); border-radius: 12px; background: radial-gradient(circle at 0 0, rgba(255, 96, 64, 0.3), rgba(255, 96, 64, 0) 60%), var(--hv-surface); box-shadow: var(--hv-shadow-float); }
 
 /* ---------------------------------------------------------------- the cards (carte.tsx) */
 
@@ -520,7 +550,7 @@
    blue, the pill tinted in blue at 10 %. */
 :root[data-theme="hypervibe"] #index-sources button { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 12px; border: 1px solid var(--hv-border-strong); border-radius: 999px; background: var(--hv-veil); color: var(--hv-cream); font-weight: 500; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
 :root[data-theme="hypervibe"] #index-sources button::before { content: ""; flex: none; box-sizing: border-box; width: 16px; height: 16px; border: 1px solid var(--hv-border-strong); border-radius: 50%; background: transparent no-repeat center / 10px 10px; }
-:root[data-theme="hypervibe"] #index-sources button:hover { background: rgba(250, 248, 245, 0.12); }
+:root[data-theme="hypervibe"] #index-sources button:hover { background: var(--hv-hollow); }
 :root[data-theme="hypervibe"] #index-sources button.active { border-color: var(--hv-blue-light); background: rgba(75, 123, 255, 0.1); color: var(--hv-blue-light); }
 :root[data-theme="hypervibe"] #index-sources button.active::before { border-color: var(--hv-blue); background-color: var(--hv-blue); background-image: var(--hv-mark-check); }
 :root[data-theme="hypervibe"] #index-sources button small { color: inherit; opacity: 0.8; font-family: var(--hv-mono-font); }
@@ -535,9 +565,11 @@
 :root[data-theme="hypervibe"] .help-mark:hover,
 :root[data-theme="hypervibe"] .help-mark:focus { border-color: transparent; color: var(--hv-cream); }
 /* A path never read: a pill of the design system (PastilleNeutre: the night's hollow, no border), its cross an icon. */
-:root[data-theme="hypervibe"] .exclude-chip { border-color: transparent; background: rgba(250, 248, 245, 0.12); }
+:root[data-theme="hypervibe"] .exclude-chip { border-color: transparent; background: var(--hv-hollow); }
 :root[data-theme="hypervibe"] .exclude-remove:hover,
 :root[data-theme="hypervibe"] .exclude-remove:focus-visible { background: var(--hv-hover); color: var(--hv-cream); }
+/* The disc of a tool, as on the map: the night itself (2026-11-27). */
+:root[data-theme="hypervibe"] .source-pick .ring { background: var(--hv-disc); }
 :root[data-theme="hypervibe"] .source-pick:hover { color: var(--hv-cream); }
 /* The tool chosen in the settings: a choice, so in blue (2026-11-24), its ring and its name. */
 :root[data-theme="hypervibe"] .source-pick.active { color: var(--hv-blue-light); }

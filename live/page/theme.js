@@ -2,13 +2,14 @@
 //
 // THE DESIGN CAN BE SWITCHED (2026-11-23). The page was drawn in one design,
 // a dark night blue ("night", the default). A second one follows the design
-// system of Hypervibe on the same night blue: cream text, the six colours of
-// its rainbow, its own fonts (Archivo and Geist, served from page/fonts/),
-// its icons (icones-hypervibe.js). The panels follow an attribute of the root
-// (`data-theme="hypervibe"`, styled by theme-hypervibe.css); the canvases
-// read their colours here. (It was first drawn on the cream, then on the warm
-// black of the design system's scenes; on 2026-11-24 it took the
-// grounds of the night instead.)
+// system of Hypervibe in its own night, a warm black: cream text, the six
+// colours of its rainbow, its own fonts (Archivo and Geist, served from
+// page/fonts/), its icons (icones-hypervibe.js). The panels follow an
+// attribute of the root (`data-theme="hypervibe"`, styled by
+// theme-hypervibe.css); the canvases read their colours here. (It was first
+// drawn on the cream, then on the warm black of the design system's scenes,
+// then on 2026-11-24 on the grounds of the night design; on 2026-11-27 it was
+// asked to stand on the night of its own design system, `#1A1410`.)
 //
 // The colours the other modules import (SELECTION, VIVID, SECTORS...) are
 // live bindings: `setTheme` gives them their new values, and a module that
@@ -30,14 +31,16 @@ export const THEMES = ["night", "hypervibe"];
 
 // The design system of Hypervibe (src/lib/design/tokens.ts of the app), in
 // its night (NUIT, the scenes and the layers that float): the cream as text,
-// the grey of the night for what is secondary. Its grounds are not its warm
-// black but those of the night design, the night blue `#0b0c18` and the disc
-// `#15162a` (2026-11-24): the cream and the grey stay above 5.9:1 on them. On
-// the night, the design system writes a colour in its vivid value
-// (CONTRASTES_NUIT). Two of them stay under 4.5:1 on the lighter blue of the
-// panels (the blue, the violet): their text is the vivid colour lightened by
-// a quarter of cream, `light`, which also gives the map more colours than
-// six, all of the same family.
+// the grey of the night for what is secondary. Its ground is the night of the
+// design system (NUIT.fond, `--color-night`, `#1A1410`, 2026-11-27): the
+// page, the map and the disc of a tool. A surface laid on it is that night
+// under the design system's veil of cream (NUIT.voile, 6 %), worked out here
+// (`veiled`), never a colour of its own. The cream stays above 14.8:1 and
+// the grey above 5.6:1 on the night and on a surface. On the night, the
+// design system writes a colour in its vivid value (CONTRASTES_NUIT). Two of
+// them stay under 4.5:1 on a surface (the blue, the violet): their text is
+// the vivid colour lightened by a quarter of cream, `light`, which also
+// gives the map more colours than six, all of the same family.
 const HV = {
   coral: { vivid: "#FF6040", light: "#FE866D" },
   yellow: { vivid: "#FFE500", light: "#FEEA3D" },
@@ -45,13 +48,28 @@ const HV = {
   blue: { vivid: "#4B7BFF", light: "#779AFD" },
   violet: { vivid: "#8B5CF6", light: "#A783F6" },
   rose: { vivid: "#FF4D6D", light: "#FE788F" },
-  // The grounds of the night design (NIGHT below, base.css): the page, the disc of a tool.
-  night: "#0b0c18",
-  surface: "#15162a",
+  // The night of the design system (2026-11-27): the page, the map, the disc of a tool.
+  night: "#1A1410",
   cream: "#FAF8F5",
   greyNight: "#A39A90",
   grey: "#635B53",
 };
+/** The veil of cream the design system lays on its night to make a surface (NUIT.voile). */
+const HV_VEIL = 0.06;
+/**
+ * The night of Hypervibe under a veil of cream, as one colour: a surface of
+ * the design system painted on a canvas, where nothing can be laid over
+ * anything (2026-11-27).
+ * @param {number} veil the share of cream, from 0 to 1
+ * @param {number} [alpha] how opaque the colour is
+ * @returns {string}
+ */
+function veiled(veil, alpha = 1) {
+  const night = /** @type {[number, number, number]} */ (rgbOf(HV.night));
+  const cream = /** @type {[number, number, number]} */ (rgbOf(HV.cream));
+  const [r, g, b] = night.map((v, i) => Math.round(v + (cream[i] - v) * veil));
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 /** The six colours, in the order of the rainbow, then the rose. */
 const HUES = [HV.coral, HV.yellow, HV.teal, HV.blue, HV.violet, HV.rose];
 
@@ -175,10 +193,13 @@ const NIGHT = {
   metaColor: "#0b0c18",
 };
 
-// THE MAP IN THE NIGHT OF HYPERVIBE (2026-11-24). The night blue of the
-// night design, cream instead of lavender white, the colours of the design
-// system at full strength (the yellow of what is chosen reads again as it is),
-// Archivo for the names in capitals and Geist for the rest. Each meaning
+// THE MAP IN THE NIGHT OF HYPERVIBE (2026-11-24, on its own night since
+// 2026-11-27). The warm black of the design system (theme-hypervibe.css
+// paints it under the map, a little lighter at its heart), cream instead of
+// lavender white, the colours of the design system at full strength (the
+// yellow of what is chosen reads again as it is), Archivo for the names in
+// capitals and Geist for the rest. A pill and a plate are surfaces: that
+// night under the veil of cream, almost opaque (`veiled`). Each meaning
 // keeps its hue, so that the legend's words stay true: the memory in pink
 // (rose), the decisions in yellow, the seeds in mint, the sources in teal, the
 // data in violet, the guards in orange (coral), the key in yellow.
@@ -201,9 +222,9 @@ const HYPERVIBE = {
   skill: HV.violet.light,
   guard: HV.coral.vivid,
   usage: { you: HV.blue.vivid, judge: HV.coral.vivid, judgeReread: "#A33A22", warning: HV.yellow.vivid },
-  textEdge: "rgba(11,12,24,0.8)",
+  textEdge: "rgba(26,20,16,0.8)",
   textEdgeWidth: 3,
-  disc: HV.surface,
+  disc: HV.night,
   brainRing: "rgba(250,248,245,0.2)",
   bubbleFill: "rgba(250,248,245,0.035)",
   bubbleStroke: "rgba(250,248,245,0.22)",
@@ -223,7 +244,7 @@ const HYPERVIBE = {
   mark: HV.cream,
   rim: "rgba(250,248,245,0.85)",
   neighbourLine: "rgba(250,248,245,0.38)",
-  veil: "rgba(11,12,24,0.9)",
+  veil: "rgba(26,20,16,0.9)",
   misplaced: HV.coral.vivid,
   skillName: "rgba(250,248,245,0.85)",
   hookName: "rgba(250,248,245,0.75)",
@@ -234,9 +255,9 @@ const HYPERVIBE = {
   guardEdge: HV.night,
   floorKnowledge: HV.greyNight,
   floorTools: HV.blue.light,
-  pill: "rgba(17,15,36,0.88)",
+  pill: veiled(HV_VEIL, 0.88),
   pillText: HV.night,
-  plate: "rgba(17,15,36,0.84)",
+  plate: veiled(HV_VEIL, 0.84),
   plateEdge: "rgba(167,131,246,0.55)",
   metaColor: HV.night,
 };
@@ -356,8 +377,9 @@ function hslOf([r, g, b]) {
 }
 
 // The swatches a colour of the brain is brought to, in the night of
-// Hypervibe: the six vivid colours first, then their light values, so that
-// eight domains stay eight colours.
+// Hypervibe (each above 3:1 on its night and on a surface): the six vivid
+// colours first, then their light values, so that eight domains stay eight
+// colours.
 const SWATCHES = [
   ...HUES.map((t) => ({ color: t.vivid, light: false })),
   ...HUES.map((t) => ({ color: t.light, light: true })),
@@ -413,7 +435,7 @@ export function dataColor(color, kind) {
  * A colour as a text on the map or on a panel: the night writes it as it is;
  * Hypervibe writes a colour of its design system in its vivid value, except
  * the blue and the violet, written in their light value (above 4.5:1 on its
- * panels); any other colour is lightened.
+ * night and on a surface); any other colour is lightened.
  * @param {string} color
  * @returns {string}
  */
@@ -457,7 +479,7 @@ export function logoColor(hex) {
 // in Hypervibe each is translated by this table, the meaning kept.
 /** @type {Record<string, string>} */
 const LEGEND_COLORS = {
-  "#15162a": HV.surface, "#0b0c18": HV.night, "#ffffff": HV.cream, "#fff": HV.cream, "#e8e9f5": HV.cream,
+  "#15162a": HV.night, "#0b0c18": HV.night, "#ffffff": HV.cream, "#fff": HV.cream, "#e8e9f5": HV.cream,
   "#3ee0c5": HV.teal.vivid, "#4aa3ff": HV.blue.vivid, "#7ec8ff": HV.blue.light, "#3987e5": HV.blue.vivid,
   "#9aa0d0": HV.greyNight, "#9aa0b8": HV.greyNight, "#e0559b": HV.rose.vivid, "#ff7ae0": HV.rose.vivid,
   "#ffc53d": HV.yellow.vivid, "#b39dff": HV.violet.light, "#a78bfa": HV.violet.light,

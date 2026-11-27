@@ -302,7 +302,7 @@ const en = {
   designNight: "Night",
   designNightTip: "The view's own design: night blue, made to watch the brain live",
   designHypervibe: "Hypervibe",
-  designHypervibeTip: "The design system of Hypervibe on the same night blue: cream text, the colours of its rainbow, its icons and its own fonts. The page remembers the choice.",
+  designHypervibeTip: "The design system of Hypervibe on its own night, a warm black: cream text, the colours of its rainbow, its icons and its own fonts. The page remembers the choice.",
   justNow: "just now",
   secondsAgo: (n) => `${n} s ago`,
   minutesAgo: (n) => `${n} min ago`,
@@ -742,7 +742,7 @@ const en = {
   legendSeedsTitle: "The Seeds filter",
   legendSeedsText: "In mint green: the notes the machine wrote that you have not validated yet, with their number; the rest fades. With other filters ticked, only the seeds they leave lit count, for instance the decisions written this week. A seed is validated on its card, one at a time, once read.",
   legendDesignTitle: "The design of the page",
-  legendDesignText: "Under <b>Display</b>, <b>Night</b> or <b>Hypervibe</b> switches the design of the whole page at once, without reloading, and the page remembers it. Night is the view's own design, in night blue. Hypervibe lays its design system on the same night blue: cream text, the colours of its rainbow at full strength, a rainbow band at the top of every page, its icons, and its fonts, Archivo for the titles and Geist for the text, carried by the view itself (no network needed). Each colour keeps its meaning: what is white on the night is cream there, and what is chosen stays yellow.",
+  legendDesignText: "Under <b>Display</b>, <b>Night</b> or <b>Hypervibe</b> switches the design of the whole page at once, without reloading, and the page remembers it. Night is the view's own design, in night blue. Hypervibe lays its design system on its own night, a warm black: cream text, the colours of its rainbow at full strength, a rainbow band at the top of every page, its icons, and its fonts, Archivo for the titles and Geist for the text, carried by the view itself (no network needed). Each colour keeps its meaning: what is white on the night is cream there, and what is chosen stays yellow.",
   // The panel of the building, while /brain:start goes on (build.js, 2026-11-23).
   buildTitle: "Building the brain",
   buildCount: (done, all) => `${done} of ${all}`,
