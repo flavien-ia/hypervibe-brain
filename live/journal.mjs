@@ -119,8 +119,14 @@ export const hubDir = () => join(process.env.HVBRAIN_HOME || homedir(), ".hyperv
  * @returns {(file: string) => JournalEvent[]} the events kept of a file, in the order of the file
  */
 export function journalReader(keeping) {
-  /** @type {Map<string, { read: number, events: JournalEvent[] }>} file -> the bytes already read, and their events */
+  /** @type {Map<string, { read: number, tail: string, events: JournalEvent[] }>} file -> the bytes already read, the last of them, and their events */
   const journals = new Map();
+  /** @param {number} fd @param {number} from @param {number} to @returns {string} the bytes of a file between two places */
+  const bytesAt = (fd, from, to) => {
+    const b = Buffer.alloc(Math.max(0, to - from));
+    const n = b.length ? readSync(fd, b, 0, b.length, from) : 0;
+    return b.subarray(0, n).toString("latin1");
+  };
   return (file) => {
     let size = 0;
     try {
@@ -131,13 +137,21 @@ export function journalReader(keeping) {
     }
     let j = journals.get(file);
     // A file made shorter or replaced is read again from the start.
-    if (!j || size < j.read) j = { read: 0, events: [] };
+    if (!j || size < j.read) j = { read: 0, tail: "", events: [] };
     if (size > j.read) {
       const keep = keeping();
       /** @type {number | null} */
       let fd = null;
       try {
         fd = openSync(file, "r");
+        // REPLACED AND NO SHORTER (2026-11-27): the computer's live journal is
+        // written again once a day without its old lines, and what was added
+        // since the last reading can make the new file as long as the old one
+        // was. Its size alone then said "the same file, grown", and the
+        // reading went on from the old place, in a file where every line had
+        // moved. The last bytes read are looked for where they were: a line
+        // carries its instant and a random id, another file has others there.
+        if (j.read > 0 && bytesAt(fd, j.read - j.tail.length, j.read) !== j.tail) j = { read: 0, tail: "", events: [] };
         const buffer = Buffer.alloc(size - j.read);
         readSync(fd, buffer, 0, buffer.length, j.read);
         // A last line still being written waits for the next reading.
@@ -153,6 +167,7 @@ export function journalReader(keeping) {
             }
           }
           j.read += end + 1;
+          j.tail = bytesAt(fd, Math.max(0, j.read - 96), j.read);
         }
       } catch {
         // unreadable right now: the next call tries again

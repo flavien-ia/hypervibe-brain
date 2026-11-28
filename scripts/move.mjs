@@ -28,7 +28,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { HOME, PLUGIN_ROOT, setUserConfig, userConfig } from "./lib.mjs";
+import { HOME, PLUGIN_ROOT, saidWrong, setUserConfig, userConfig } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const out = (o) => console.log(JSON.stringify(o));
@@ -180,7 +180,7 @@ setUserConfig((c) => {
 try {
   if (existsSync(join(to, "executive", "guards.json"))) {
     const placed = spawnSync(process.execPath, [join(PLUGIN_ROOT, "scripts", "executive.mjs"), "place", "--brain", to], { encoding: "utf8", windowsHide: true, timeout: 120_000 });
-    done.executive = placed.status === 0 ? (JSON.parse(placed.stdout).done ?? []).length : String(placed.stdout || placed.stderr).trim().slice(0, 200);
+    done.executive = placed.status === 0 ? (JSON.parse(placed.stdout).done ?? []).length : String(placed.stdout || saidWrong(placed.stderr)).trim().slice(0, 200);
   }
 } catch (e) {
   done.executive = String(e?.message ?? e).slice(0, 200);

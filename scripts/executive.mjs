@@ -110,7 +110,26 @@ const PLATFORM_HOOKS = join(PLATFORM, "hooks");
 const SETTINGS = join(PLATFORM, "settings.json");
 const INSTALLED = join(PLATFORM, "plugins", "installed_plugins.json");
 const fwd = (p) => String(p).replaceAll("\\", "/");
-const same = (a, b) => fwd(resolve(a)).toLowerCase() === fwd(resolve(b)).toLowerCase();
+const CASELESS = process.platform === "win32" || process.platform === "darwin";
+/** A path as the disk knows it (its links followed, its long names); as it is written when nothing is there. */
+const onDisk = (p) => {
+  try {
+    return realpathSync.native(resolve(p));
+  } catch {
+    return resolve(p);
+  }
+};
+// TWO PATHS ARE COMPARED AS THE DISK KNOWS THEM, BOTH OF THEM (2026-11-27).
+// The place a link leads to was read from the disk and compared with the
+// brain's folder as it is written: on a Mac, where the temporary folder
+// (/var/folders/...) is itself a link to /private/var/folders/..., a skill
+// just linked to the brain was never seen as linked, and neither was one of
+// a brain reached through a link or a short name on any system. And only
+// where the disk has no case is another case the same folder.
+const same = (a, b) => {
+  const [x, y] = [onDisk(a), onDisk(b)].map(fwd);
+  return x === y || (CASELESS && x.toLowerCase() === y.toLowerCase());
+};
 
 /** The name and description a skill declares at the head of its SKILL.md. */
 export function skillHead(dir) {
@@ -135,7 +154,8 @@ function placement(name) {
   }
   if (!st.isSymbolicLink()) return "other";
   try {
-    return same(realpathSync(at), join(SKILLS, name)) ? "linked" : "other";
+    realpathSync.native(at); // a link that leads nowhere is not a link to the brain
+    return same(at, join(SKILLS, name)) ? "linked" : "other";
   } catch {
     return "other";
   }
@@ -745,7 +765,9 @@ function move(from, to) {
 /** The link the platform reads, to the skill in the brain. */
 function link(name) {
   mkdirSync(PLATFORM_SKILLS, { recursive: true });
-  symlinkSync(join(SKILLS, name), join(PLATFORM_SKILLS, name), "junction");
+  // (A whole path: off Windows the "junction" is a symbolic link, and one
+  // written from where the command stood would be read from the link's folder.)
+  symlinkSync(resolve(SKILLS, name), join(PLATFORM_SKILLS, name), "junction");
 }
 
 export function adoptSkill(name, { shared = false } = {}) {

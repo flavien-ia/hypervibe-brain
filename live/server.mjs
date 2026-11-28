@@ -270,6 +270,16 @@ const tokenCookie = () => `${COOKIE}=${token()}; Path=/; Max-Age=31536000; HttpO
  * (granted first, the inherited entries removed only once that worked: the
  * other order could leave a file nobody reads). Done at each start: a file of
  * before the rule gets it too.
+ *
+ * WHAT "ALONE" MEANS ON WINDOWS (2026-11-27, the bench on a computer whose
+ * account is an administrator). A file made by such an account is born with
+ * entries of its own for the system (SYSTEM) and for the administrators,
+ * which are not inherited and so stay. They are let be: both read any file
+ * of the computer whatever its list says, and a backup needs the first. The
+ * rule is that no OTHER ORDINARY ACCOUNT and no group that is everybody
+ * (Everyone, Authenticated Users, Users) is on the list: an entry of their
+ * own for one of these groups is removed too, by its identifier, which the
+ * system's language does not change.
  * @returns {string} how the file is kept
  */
 function keepForThePersonAlone() {
@@ -282,7 +292,7 @@ function keepForThePersonAlone() {
     if (!who) return "profile folder";
     /** @param {string[]} a */
     const icacls = (a) => spawnSync("icacls", [TOKEN_FILE, ...a], { encoding: "utf8", windowsHide: true, timeout: 30_000 }).status === 0;
-    return icacls(["/grant:r", `${who}:(F)`]) && icacls(["/inheritance:r"]) ? "access list: this account only" : "profile folder";
+    return icacls(["/grant:r", `${who}:(F)`]) && icacls(["/inheritance:r"]) && icacls(["/remove:g", "*S-1-1-0", "*S-1-5-11", "*S-1-5-32-545"]) ? "access list: this account only" : "profile folder";
   } catch {
     return "profile folder";
   }
@@ -1468,7 +1478,9 @@ function readExecutive() {
   try {
     floor = JSON.parse(r.stdout);
   } catch {
-    return { ok: false, skills: [], guards: [], harnesses: [], error: String(r.stderr || r.error?.message || "no answer").slice(0, 300) };
+    // (Without the two lines Node 22 writes whenever SQLite is loaded: they stood in the place of the reason.)
+    const wrong = String(r.stderr ?? "").split("\n").filter((l) => l.trim() && !/ExperimentalWarning|trace-warnings/.test(l)).join("\n").trim();
+    return { ok: false, skills: [], guards: [], harnesses: [], error: String(wrong || r.error?.message || "no answer").slice(0, 300) };
   }
   // WHICH TOOLS A SKILL USES (2026-11-23): the tools of the ring its SKILL.md
   // names. A harness acts on a tool directly (an invoice in Pennylane, a

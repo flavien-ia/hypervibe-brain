@@ -599,6 +599,19 @@ export function parseFrontmatter(text) {
 export const sha256 = (s) => createHash("sha256").update(s).digest("hex");
 
 /**
+ * WHAT A PROGRAM SAID WENT WRONG, WITHOUT WHAT NODE SAYS WHEN ALL IS WELL
+ * (2026-11-27). Node 22 writes two lines on the error stream of every program
+ * that loads SQLite ("ExperimentalWarning: SQLite is an experimental
+ * feature", then a line about --trace-warnings); Node 24 no longer does. So
+ * the error stream of a program of the plugin is never empty there, and never
+ * JSON: an answer is read from the standard output alone, and a message taken
+ * from the error stream goes through here, or those two lines stand in the
+ * place of what went wrong once the message is cut.
+ * @param {unknown} stderr
+ */
+export const saidWrong = (stderr) => String(stderr ?? "").split("\n").filter((l) => l.trim() && !/ExperimentalWarning|trace-warnings/.test(l)).join("\n").trim();
+
+/**
  * Reads one note. The text is normalised to LF BEFORE hashing: git on Windows
  * checks files out with CRLF, and a hash that depends on line endings makes a
  * fresh clone believe every note changed (and re-embed all of them).

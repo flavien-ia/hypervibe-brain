@@ -24,18 +24,26 @@ jobs:
       - name: Syntax of every script
         shell: bash
         run: for f in scripts/*.mjs tests/*.mjs live/*.mjs live/i18n/*.mjs live/page/*.js live/page/i18n/*.js; do node --check "$f"; done
+      # Every bench runs, even when the one before it failed (2026-11-27: on
+      # Node 22.16 the third one stopped, and neither the fourth nor any part
+      # of the plugin was tried there; one run must say everything that fails).
       - name: The whole journey of a brain
+        if: ${{ !cancelled() }}
         run: node tests/banc.mjs
       - name: Two computers, one brain
+        if: ${{ !cancelled() }}
         run: node tests/banc-sync.mjs
       - name: The cloud copy, without Cloudflare
+        if: ${{ !cancelled() }}
         run: node tests/banc-cloud.mjs
       - name: The update of the plugin
+        if: ${{ !cancelled() }}
         run: node tests/banc-update.mjs
       # Each part of the plugin, one after the other, all of them even when one
       # fails (2026-11-27: the locks, the approvals and the switches had only ever
       # run on the computer they were written on).
       - name: Each part of the plugin
+        if: ${{ !cancelled() }}
         shell: bash
         run: |
           failed=""

@@ -24,7 +24,7 @@
 //
 // It imports nothing of the plugin, to start fast.
 
-import { readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -113,8 +113,27 @@ export function onDisk(p, cwd) {
   }
   return spelled(p, cwd);
 }
-/** Both spellings of a path. @returns {string[]} */
-export const spellings = (p, cwd) => [...new Set([spelled(p, cwd), onDisk(p, cwd)])];
+/**
+ * A path written with backslashes, on a system whose own separator is the
+ * slash, read with slashes; null when there is nothing to read another way.
+ * PowerShell takes both separators on every system (`Rename-Item \tmp\brain\executive`
+ * renames /tmp/brain/executive on Linux and on a Mac), and Node there reads a
+ * backslash as a letter of the name (2026-11-27, the bench on Linux).
+ * @param {string} p
+ */
+const slashed = (p) => (!WINDOWS && String(p).includes("\\") ? String(p).replaceAll("\\", "/") : null);
+/**
+ * The spellings of a path: as written and as the disk knows it, and both
+ * again with its backslashes read as separators where they are not (see
+ * `slashed`).
+ * @returns {string[]}
+ */
+export const spellings = (p, cwd) => {
+  const out = new Set([spelled(p, cwd), onDisk(p, cwd)]);
+  const other = slashed(p);
+  if (other !== null) for (const s of [spelled(other, cwd), onDisk(other, cwd)]) out.add(s);
+  return [...out];
+};
 /** Whether `p` is `dir` or lies under it (both spelled the same way). */
 export const under = (dir, p) => p === dir || p.startsWith(`${dir}/`);
 
@@ -207,7 +226,11 @@ export function commandPaths(command, cwd) {
     if (CD.test(words[0])) {
       const to = words.slice(1).find((w) => !/^[-/][A-Za-z]+$/.test(w) || /[\\/]/.test(w.slice(1)));
       if (to) {
-        at = resolve(at, plain(to));
+        const from = at;
+        at = resolve(from, plain(to));
+        // (Written with backslashes where they are no separator: the folder that exists is the one meant.)
+        const other = slashed(to);
+        if (other !== null && !existsSync(at) && existsSync(resolve(from, plain(other)))) at = resolve(from, plain(other));
         folders.push(spellings(at));
       }
     }
@@ -344,8 +367,13 @@ export function plainRead(command, safeTarget = () => false, cwd = undefined) {
     i++;
     const where = String(target.word);
     if (/^(\/dev\/null|\$null|nul)$/i.test(where)) continue;
-    // A target a variable or a pattern makes cannot be told: refused.
-    if (/[$%*?`~{}]/.test(where) || !safeTarget(where)) return false;
+    // A target a variable or a pattern makes cannot be told: refused. (A tilde
+    // is one only at the head of the word, where a shell reads a home folder:
+    // further in it is a letter of a name, and Windows writes its short names
+    // with one, C:/Users/RUNNER~1/... 2026-11-27, the bench on a computer whose
+    // temporary folder is named that way: a plain reading sent to a file
+    // there was refused.)
+    if (/[$%*?`{}]|^~/.test(where) || !safeTarget(where)) return false;
   }
   return stages.every((words) => {
     if (!words.length) return false;

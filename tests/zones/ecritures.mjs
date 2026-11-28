@@ -154,7 +154,10 @@ try {
     const EACH = 60;
     const writer = (tag) => modAsync(`import { logEvent } from ${url("journal.mjs")}; const ids = []; for (let i = 0; i < ${EACH}; i++) { ids.push(logEvent({ act: "write", who: "ai:zone", note: "n", what: "fact", mark: "writer-${tag}" })); await new Promise((r) => setTimeout(r, Math.random() * 12)); } console.log(JSON.stringify(ids));`);
     const noise = modAsync(`import { appendFileSync } from "node:fs"; for (let i = 0; i < 150; i++) { appendFileSync(process.argv[1], JSON.stringify({ at: process.argv[2], id: "noise" + i, computer: "zone", brain: process.argv[3], act: "signal", who: "source:x", what: "running" }) + "\\n"); await new Promise((r) => setTimeout(r, 6)); }`, [EVENTS, old, KEY]);
-    const folder = () => modAsync(`import { rmSync } from "node:fs"; import { foldEvents } from ${url("journal.mjs")}; let n = 0; for (let i = 0; i < 25; i++) { rmSync(process.argv[1], { force: true }); n += foldEvents(); await new Promise((r) => setTimeout(r, 15)); } console.log(n);`, [join(HB, "events-pruned")]);
+    // (The mark of the daily tidying is removed before each fold, so that each one tidies. Three programs remove the
+    // same file at the same moment: on Windows the second is refused for an instant, EPERM, and that is the check's
+    // own doing, not the journal's: tried again, and a removal that still fails only means another one did it.)
+    const folder = () => modAsync(`import { rmSync } from "node:fs"; import { foldEvents } from ${url("journal.mjs")}; let n = 0; for (let i = 0; i < 25; i++) { try { rmSync(process.argv[1], { force: true, maxRetries: 10, retryDelay: 10 }); } catch {} n += foldEvents(); await new Promise((r) => setTimeout(r, 15)); } console.log(n);`, [join(HB, "events-pruned")]);
     const done = await Promise.all([...[...Array(WRITERS).keys()].map((i) => writer(i)), noise, folder(), folder(), folder()]);
     rmSync(join(HB, "events-pruned"), { force: true });
     const last = fold();
@@ -168,6 +171,33 @@ try {
     check("an old line of another brain of this computer, not folded yet, is kept for it", times(live, "otherbrain1") === 1);
     r = mod(`import { readEvents } from ${url("journal.mjs")}; const all = readEvents({ act: "write" }).filter((e) => String(e.mark ?? "").startsWith("writer-")); console.log(JSON.stringify({ n: all.length, unique: new Set(all.map((e) => e.id)).size }));`);
     check("read back, each event is there once", r.ok && json(r.out).n === ids.length && json(r.out).unique === ids.length, r.out);
+
+    // The live file replaced under the same number while a program still holds what it read of it (2026-11-27).
+    // On Linux a new file is often given the number of one just removed: a fold that had read the live file, then
+    // found "the same file, grown" after two other folds had replaced it, read on from where it had stopped, in a
+    // file where everything had moved. Written again in place here, which keeps its number on every system: one
+    // line of the middle leaves, new ones are added until the file is no smaller, its first line is unchanged.
+    r = mod(
+      `import { readFileSync, writeFileSync } from "node:fs"; import { logEvent, readEvents } from ${url("journal.mjs")};
+      const live = process.argv[1];
+      const mine = (mark) => readEvents({ act: "write" }).filter((e) => e.mark === mark).map((e) => e.id);
+      const first = [1, 2, 3].map(() => logEvent({ act: "write", who: "ai:zone", note: "n", what: "fact", mark: "same-number" }));
+      const before = mine("same-number").length;
+      const size = readFileSync(live).length;
+      const lines = readFileSync(live, "utf8").split("\\n").filter(Boolean);
+      const model = JSON.parse(lines.at(-1));
+      const added = [];
+      let text = "";
+      do {
+        added.push("samenumber" + added.length);
+        text = [lines[0], ...lines.slice(2), ...added.map((id) => JSON.stringify({ ...model, id, mark: "same-number-after" }))].join("\\n") + "\\n";
+      } while (Buffer.byteLength(text) < size);
+      writeFileSync(live, text, "utf8");
+      const after = mine("same-number-after");
+      console.log(JSON.stringify({ before, added: added.length, after: after.length, all: added.every((id) => after.includes(id)), kept: first.every((id) => mine("same-number").includes(id)) }));`,
+      [EVENTS],
+    );
+    check("a live file replaced under the same number is read whole again, not from where the reading had stopped", r.ok && json(r.out).before === 3 && json(r.out).after === json(r.out).added && json(r.out).all && json(r.out).kept, r.out);
 
     // A fold cut short between the journal and its mark.
     const log = (mark) => json(mod(`import { logEvent } from ${url("journal.mjs")}; console.log(JSON.stringify([1, 2, 3].map(() => logEvent({ act: "write", who: "ai:zone", note: "n", what: "fact", mark: process.argv[1] }))));`, [mark]).out);

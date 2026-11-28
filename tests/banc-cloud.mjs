@@ -234,8 +234,13 @@ try {
     const withFault = (n) => {
       rmSync(join(FAKE, "faults"), { force: true });
       writeFileSync(p, readFileSync(p, "utf8").replace(/whales\.|seals\./, (m) => (m === "whales." ? "seals." : "whales.")), "utf8");
-      const f = spawnSync("node", [join(SCRIPTS, "cloud.mjs"), "sync"], { env: { ...env, FAKE_CF_FAIL: `r2 object put:${n}`, HVBRAIN_RETRY_WAITS: "10,10" }, encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
-      return { ok: f.status === 0, out: `${f.stdout}${f.stderr}`, faults: calls().filter((c) => c.call === "fault").length };
+      // (Through `run`, as every other call: what the program answers is read
+      // alone, and what it says beside only when it failed. Read together, the
+      // answer was followed by the warning Node 22 writes when SQLite is
+      // loaded, "ExperimentalWarning: SQLite is an experimental feature", and
+      // was no longer JSON: the bench stopped there on Node 22.16, 2026-11-27.)
+      const f = run("cloud.mjs", ["sync"], "", { FAKE_CF_FAIL: `r2 object put:${n}`, HVBRAIN_RETRY_WAITS: "10,10" });
+      return { ok: f.ok, out: f.out, faults: calls().filter((c) => c.call === "fault").length };
     };
     const before = calls().filter((c) => c.call === "fault").length;
     const once = withFault(1);

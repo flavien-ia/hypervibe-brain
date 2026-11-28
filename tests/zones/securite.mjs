@@ -9,7 +9,7 @@
 //   node tests/zones/securite.mjs
 
 import { spawn, spawnSync } from "node:child_process";
-import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -34,7 +34,9 @@ const check = (name, cond, detail = "") => {
   }
 };
 const fwd = (p) => String(p).replaceAll("\\", "/");
-const clean = (s) => String(s ?? "").split("\n").filter((l) => !/ExperimentalWarning|trace-warnings/.test(l)).join("\n").trim();
+/** Whether the disk of this system has no case (its default: a Mac's disk can be given one, a Linux folder can lose it). */
+const CASELESS = process.platform === "win32" || process.platform === "darwin";
+const clean = (s) =>String(s ?? "").split("\n").filter((l) => !/ExperimentalWarning|trace-warnings/.test(l)).join("\n").trim();
 const base = {
   ...process.env, HVBRAIN_HOME: HOME, HVBRAIN_DIR: "", HVBRAIN_VAULT: "off", HVBRAIN_NO_WINDOW: "1", HVBRAIN_NO_OPEN: "1", HVBRAIN_CLAUDE: "no-claude-for-the-zone", HVBRAIN_WHO: "", HVBRAIN_RULES_BLOCK: "off",
   OPENAI_API_KEY: "", EMBEDDINGS_API_KEY: "", EMBEDDINGS_BASE_URL: "", CLAUDE_CODE_OAUTH_TOKEN: "",
@@ -286,6 +288,11 @@ try {
     check("approved, it does", rules(["Read({watch}/**)"])?.rules.length === 1);
     r = node("components.mjs", ["watch", "add", BRAIN], { env: { HVBRAIN_DIR: BRAIN } });
     check("the brain's own folder cannot be watched", !r.ok && /cannot be watched/.test(r.all), r.all);
+    // (2026-11-27: nor through a link to it. The two folders were compared by their text alone.)
+    symlinkSync(BRAIN, join(BASE, "a-link-to-the-brain"), "junction");
+    r = node("components.mjs", ["watch", "add", join(BASE, "a-link-to-the-brain")], { env: { HVBRAIN_DIR: BRAIN } });
+    check("nor through a link that leads to it", !r.ok && /cannot be watched/.test(r.all), r.all);
+    rmSync(join(BASE, "a-link-to-the-brain"), { force: true });
 
     // A computer of before the rule: what ran there is approved once, the rest waits.
     const OLD = join(BASE, "home-old");
@@ -390,7 +397,12 @@ try {
     const reader = (address, who = "ai:lecteur") => spawnSync(process.execPath, [join(SCRIPTS, "readers", "document.mjs"), address], { env: { ...base, HVBRAIN_DIR: BRAIN, HVBRAIN_WHO: who }, encoding: "utf8", windowsHide: true });
     const leaked = Object.keys(files).filter((f) => f !== "work/plan.txt").map((f) => [f, reader(`files://${f}`)]).filter(([, x]) => x.status === 0 || /PRIVATE|DANGER|RECOVERY|PASSWORDS|PEM|KEY|MDP|X=1/.test(x.stdout));
     check("for a judge, the reader opens no folder of keys, no danger-zone, no file whose name says a secret", leaked.length === 0, JSON.stringify(leaked.map(([f, x]) => [f, x.stdout.slice(0, 60)])));
-    check("nor the brain's own files nor the plugin's settings through a wide root", [`wide://brain/brain.json`, "wide://brain/.env", "wide://home/.hypervibe-brain/config.json", "wide://BRAIN/vault/notes/given-text.md"].every((a) => reader(a).status !== 0));
+    check("nor the brain's own files nor the plugin's settings through a wide root", [`wide://brain/brain.json`, "wide://brain/.env", "wide://home/.hypervibe-brain/config.json", "wide://brain/vault/notes/given-text.md"].every((a) => reader(a).status !== 0));
+    // The brain's folder written in another case. Where the disk has no case (Windows, macOS) it is the brain, and
+    // it is refused; where it has one (Linux) it names another folder, which is not there: nothing is read, and the
+    // reader says so (2026-11-27: the check asked for a refusal on every system, and failed on Linux).
+    const otherCase = reader("wide://BRAIN/vault/notes/given-text.md");
+    check("nor through another case of the brain's folder (refused where the disk has no case, another folder where it has one)", CASELESS ? otherCase.status !== 0 : /no longer exists/.test(otherCase.stdout) && !otherCase.stdout.includes("A text given as an argument."), `${otherCase.status} ${otherCase.stdout}${otherCase.stderr}`);
     check("an ordinary document is still read", reader("files://work/plan.txt").stdout.includes("An ordinary plan."));
 
     // The environment of a judge.
@@ -474,7 +486,9 @@ try {
     let open = through([
       ["Write", { file_path: `${b}/executive/./guards/new.mjs` }],
       ["Write", { file_path: `${b}/executive/skills/../guards/new.mjs` }],
-      ["Edit", { file_path: `${b}/EXECUTIVE/Guards/send-guard.mjs` }],
+      // (Another case is the same folder only where the disk has no case: Windows, macOS. On Linux it is another
+      // folder, and the lock has nothing to say of it: it is among what is let through, below.)
+      ...(CASELESS ? [["Edit", { file_path: `${b}/EXECUTIVE/Guards/send-guard.mjs` }]] : []),
       ["MultiEdit", { file_path: g }],
       ["Write", { file_path: "guards/new.mjs" }, join(BRAIN, "executive")],
       ["Bash", { command: `echo x >| ${g}` }],
@@ -557,8 +571,30 @@ try {
       ["mcp__mail__create_draft", { to: "someone@example.invalid", body: "see executive summary" }],
       ["mcp__mail__create_draft", { to: "someone@example.invalid", subject: "executive/guards/readme.md" }],
       ["Bash", { command: `ls ${fwd(HB)}/logs` }],
+      ...(CASELESS ? [] : [["Edit", { file_path: `${b}/EXECUTIVE/Guards/send-guard.mjs` }]]),
     ].filter(([tool, input]) => locks(tool, input) !== "pass").map(([tool, input]) => `${tool} ${JSON.stringify(input).slice(0, 160)}`);
     check("what is not a write there is let through: a plain reading (alone or piped), the plugin's own commands, a skill of the floor, an archive, a note", closed.length === 0, closed.join("\n        "));
+    if (process.platform === "win32") {
+      // A SHORT NAME AND THE LONG ONE ARE THE SAME FOLDER (2026-11-27). Windows gives a folder whose name is long a
+      // second, short one (C:/Users/RUNNER~1 for C:/Users/runneradmin, on the bench's computer): a write named by
+      // either is refused, whichever of the two the brain is known by, and a plain reading sent to a file named by
+      // its short name is let through (its tilde is a letter of the name, not a home folder).
+      const shortOf = (p) => fwd(String(spawnSync("cmd.exe", ["/d", "/s", "/c", `for %I in ("${p}") do @echo %~sI`], { encoding: "utf8", windowsVerbatimArguments: true, windowsHide: true }).stdout ?? "").trim());
+      const [short, real] = [shortOf(GUARDS), fwd(realpathSync.native(GUARDS))];
+      if (short && short.toLowerCase() !== real.toLowerCase()) {
+        const refused = through([
+          ["Write", { file_path: `${short}/new.mjs` }],
+          ["Bash", { command: `echo x > ${short}/send-guard.mjs` }],
+          ["Bash", { command: "echo x > g.mjs" }, short],
+          ["Write", { file_path: `${real}/new.mjs` }],
+          ["Bash", { command: `echo x > ${real}/send-guard.mjs` }],
+          ["Write", { file_path: `${shortOf(HB)}/config.json` }],
+          ["Write", { file_path: `${shortOf(memory)}/note.md` }],
+        ]);
+        const read = locks("Bash", { command: `cat ${short}/send-guard.mjs | head -3 > ${shortOf(BASE)}/out.txt 2>&1` });
+        check("on Windows, a short name and the long one are the same folder: a write by either is refused, a reading sent to a file named by its short name is let through", refused.length === 0 && read === "pass", `${refused.join("\n        ")} ${read} (${short})`);
+      } else console.log("  (this disk gives no short names: the two spellings of a folder are not checked here)");
+    }
     const long = `${Array.from({ length: 400 }, (_, i) => `word${i} --flag${i} folder${i}/file${i}.txt`).join(" ")} && echo done`;
     const t0 = Date.now();
     const quick = locks("Bash", { command: long });

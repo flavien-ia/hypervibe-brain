@@ -30,7 +30,7 @@
 //   node scripts/components.mjs cold-copy <folder> | off
 //   node scripts/components.mjs viz-app <folder> [--auto-push] | off
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { HOME, ROOT, requireBrain } from "./lib.mjs";
 import { ensureRoot } from "./roots.mjs";
@@ -70,10 +70,26 @@ if (command === "source") {
   // a watched folder is read by a background reader, and what it reads may end
   // in a note.
   if (a1 === "add") {
-    const low = (p) => fwd(p).toLowerCase().replace(/\/+$/, "");
-    const inside = (outer, inner) => low(inner) === low(outer) || low(inner).startsWith(`${low(outer)}/`);
+    // AS WRITTEN, AND AS THE DISK KNOWS THEM (2026-11-27): the two folders
+    // were compared by their text alone, so a link to the brain, its short
+    // name on Windows, or the other spelling of a folder reached through a
+    // link (/var and /private/var on a Mac) was not the brain. Another case
+    // is the same folder only where the disk has none.
+    const low = (p) => {
+      const k = fwd(p).replace(/\/+$/, "");
+      return process.platform === "linux" ? k : k.toLowerCase();
+    };
+    const real = (p) => {
+      try {
+        return realpathSync.native(resolve(String(p)));
+      } catch {
+        return p;
+      }
+    };
+    const within = (outer, inner) => low(inner) === low(outer) || low(inner).startsWith(`${low(outer)}/`);
+    const inside = (outer, inner) => within(outer, inner) || within(real(outer), real(inner));
     for (const kept of [ROOT, join(HOME, ".hypervibe-brain")]) if (inside(kept, dir) || inside(dir, kept)) fail(`${dir} holds, or is inside, the brain or the plugin's settings: it cannot be watched`);
-    if (/(^|\/)\.(ssh|aws|gnupg|kube|docker|azure|config)(\/|$)/i.test(dir)) fail(`${dir} is a folder where keys are kept: it cannot be watched`);
+    if ([dir, fwd(real(dir))].some((d) => /(^|\/)\.(ssh|aws|gnupg|kube|docker|azure|config)(\/|$)/i.test(d))) fail(`${dir} is a folder where keys are kept: it cannot be watched`);
   }
   // ONLY THE WIDEST FOLDERS (2026-11-20). A watched folder is read with all
   // that is under it: a folder inside one already watched adds nothing (it is
