@@ -69,7 +69,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
-import { CONFIG_FILE, HOME, PLUGIN_ROOT, ROOT, config, hasBrain, isFrench, isRunner, readJsonFile, userConfig, userConfigProblem, writeFileAtomic } from "./lib.mjs";
+import { CONFIG_FILE, HOME, PLUGIN_ROOT, ROOT, config, hasBrain, isFrench, isRunner, readJsonFile, saidWrong, userConfig, userConfigProblem, writeFileAtomic } from "./lib.mjs";
 import { logEvent } from "./journal.mjs";
 import { interval, tickPassed } from "./pure.mjs";
 import { duePiles, liveSources, mayRun, nowAsked, nowFile, run as judge, waiting as pileSize } from "./judge.mjs";
@@ -267,7 +267,8 @@ function askVault() {
 // -------------------------------------------------------------------- one beat
 function node(script, extra = [], timeoutMin = 15, env = {}) {
   const r = spawnSync(process.execPath, [join(PLUGIN_ROOT, "scripts", script), ...extra], { encoding: "utf8", windowsHide: true, timeout: timeoutMin * 60_000, env: { ...process.env, ...env } });
-  return { ok: r.status === 0, out: String(r.stdout ?? ""), err: String(r.stderr ?? "") };
+  // (What it says went wrong, without the lines Node 22 writes whenever SQLite is loaded: they took the place of the reason in the hub's log.)
+  return { ok: r.status === 0, out: String(r.stdout ?? ""), err: saidWrong(r.stderr) };
 }
 
 /** Runs one source; says whether it wrote anything. */

@@ -315,7 +315,26 @@ const foldedTo = () => {
 // the same file has only grown, only what was added is read. Never kept
 // longer: a program that stays up (the MCP server) must not hold a month of
 // events in memory.
-/** @type {{ ino: number, size: number, head: string, rows: any[] } | null} */
+//
+// THE SAME FILE, GROWN, IS TOLD BY ITS LAST BYTES TOO (2026-11-27). It was
+// told by its number on the disk, its first bytes and its size. On Linux a new
+// file is often given the number of one just removed: after two other folds
+// had replaced the live file (its first line unchanged, old lines gone from
+// its middle, new ones at its end), a program that had read it took the new
+// file for the old one grown, and read on from where it had stopped, in a
+// file where every line had moved. The lines it never saw were not in what it
+// wrote as "folded in the last ten seconds", and the next fold added them to
+// the brain's journal a second time (one event of 240 counted twice, on the
+// bench on Linux). So the last bytes read are kept, and looked for at the
+// same place: a line carries its instant and a random id, another file does
+// not have the same ones there.
+const EDGE = 96;
+const bytesAt = (fd, from, to) => {
+  const buf = Buffer.alloc(Math.max(0, to - from));
+  const n = buf.length ? readSync(fd, buf, 0, buf.length, from) : 0;
+  return buf.subarray(0, n).toString("latin1");
+};
+/** @type {{ ino: number, size: number, head: string, tail: string, rows: any[] } | null} */
 let liveKept = null;
 let liveTimer = null;
 function liveRows() {
@@ -328,11 +347,9 @@ function liveRows() {
   }
   try {
     const st = fstatSync(fd);
-    const headBuf = Buffer.alloc(Math.min(96, st.size));
-    readSync(fd, headBuf, 0, headBuf.length, 0);
-    const head = headBuf.toString("latin1");
-    // The same file, grown: its first bytes did not change and it is not smaller.
-    const grown = liveKept && liveKept.ino === st.ino && st.size >= liveKept.size && head.startsWith(liveKept.head);
+    const head = bytesAt(fd, 0, Math.min(EDGE, st.size));
+    // The same file, grown: it is not smaller, and neither its first bytes nor the last ones read have changed.
+    const grown = liveKept && liveKept.ino === st.ino && st.size >= liveKept.size && head.startsWith(liveKept.head) && bytesAt(fd, liveKept.size - liveKept.tail.length, liveKept.size) === liveKept.tail;
     const from = grown ? liveKept.size : 0;
     const rows = grown ? liveKept.rows : [];
     let size = from;
@@ -351,7 +368,7 @@ function liveRows() {
       }
       size = from + end;
     }
-    liveKept = { ino: st.ino, size, head, rows };
+    liveKept = { ino: st.ino, size, head, tail: bytesAt(fd, Math.max(0, size - EDGE), size), rows };
     clearTimeout(liveTimer);
     liveTimer = setTimeout(() => {
       liveKept = null;

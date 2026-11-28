@@ -6,7 +6,7 @@
 //   node tests/zones/executif.mjs
 
 import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -119,6 +119,36 @@ try {
     writeFileSync(config, kept, "utf8");
     const declared = JSON.parse(readFileSync(join(PLUGIN, "hooks", "hooks.json"), "utf8")).hooks.PreToolUse.flatMap((g) => g.hooks.map((h) => h.command));
     check("the plugin declares one program for the locks, not two", declared.some((c) => c.includes("hook-locks.mjs")) && !declared.some((c) => /hook-(memory|executive)\.mjs/.test(c)), JSON.stringify(declared));
+  }
+
+  // 2026-11-27, the bench on a Mac: its temporary folder, /var/folders/..., is a link to /private/var/folders/...
+  // The floor compared the place a link leads to, read from the disk, with the brain's folder as it is written:
+  // no skill was ever seen as linked there. The same here on every system, with a link of the check's own.
+  console.log("\nA home and a brain reached through a link");
+  {
+    mkdirSync(join(BASE, "real"), { recursive: true });
+    symlinkSync(join(BASE, "real"), join(BASE, "through"), "junction");
+    const [home, brain] = [join(BASE, "through", "home"), join(BASE, "through", "brain")];
+    mkdirSync(join(home, ".claude", "skills", "liee"), { recursive: true });
+    writeFileSync(join(home, ".claude", "skills", "liee", "SKILL.md"), "---\nname: liee\ndescription: A skill reached through a link.\n---\n\n# Liee\n", "utf8");
+    mkdirSync(join(home, ".hypervibe-brain"), { recursive: true });
+    writeFileSync(join(home, ".hypervibe-brain", "config.json"), JSON.stringify({ brain: fwd(brain) }), "utf8");
+    mkdirSync(join(brain, "vault"), { recursive: true });
+    writeFileSync(join(brain, "brain.json"), JSON.stringify({ lang: "en", format: "en" }), "utf8");
+    const through = (...args) => {
+      const x = spawnSync(process.execPath, [join(PLUGIN, "scripts", "executive.mjs"), ...args], { env: { ...process.env, HVBRAIN_HOME: home, HVBRAIN_DIR: brain }, encoding: "utf8" });
+      let out = null;
+      try { out = JSON.parse(x.stdout); } catch { out = null; }
+      return { out, raw: x.stdout + x.stderr };
+    };
+    const adopted = through("adopt-skill", "liee");
+    const link = join(home, ".claude", "skills", "liee");
+    check("a skill adopted there is seen as linked to the brain", adopted.out?.ok === true && lstatSync(link).isSymbolicLink() && through("state").out?.skills?.[0]?.placed === "linked" && through("adopt-skill", "liee").out?.already === true, adopted.raw);
+    // (And by the real folder too: the same brain, the same link.)
+    const real = spawnSync(process.execPath, [join(PLUGIN, "scripts", "executive.mjs"), "state"], { env: { ...process.env, HVBRAIN_HOME: join(BASE, "real", "home"), HVBRAIN_DIR: join(BASE, "real", "brain") }, encoding: "utf8" });
+    check("and the same brain named by its real folder sees the same link", JSON.parse(real.stdout || "{}").skills?.[0]?.placed === "linked", real.stdout + real.stderr);
+    const off = through("switch", "skill", "liee", "off");
+    check("switched off, its link is removed, and the skill stays in the brain", off.out?.ok === true && !existsSync(link) && existsSync(join(brain, "executive", "skills", "liee", "SKILL.md")), off.raw);
   }
 
   console.log("\nA skill in use is noted for the live view");

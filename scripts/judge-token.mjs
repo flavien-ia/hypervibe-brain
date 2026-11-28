@@ -145,11 +145,15 @@ function writeFile(token) {
     // Windows: an access list that names the person alone (a file renamed
     // within its folder keeps its own list). Granted FIRST, the inherited
     // entries removed only once that worked: the other order could leave a
-    // file nobody reads.
+    // file nobody reads. Then an entry of its own for a group that is
+    // everybody (Everyone, Authenticated Users, Users, by their identifiers)
+    // is removed too. The system and the administrators may stay on the list
+    // (a file made by an administrator's account is born with them): both
+    // read any file of the computer whatever its list says (2026-11-27).
     const who = process.env.USERDOMAIN && process.env.USERNAME ? `${process.env.USERDOMAIN}\\${process.env.USERNAME}` : process.env.USERNAME;
     if (who) {
       const icacls = (a) => spawnSync("icacls", [tmp, ...a], { encoding: "utf8", windowsHide: true, timeout: 30_000 }).status === 0;
-      if (icacls(["/grant:r", `${who}:(F)`]) && icacls(["/inheritance:r"])) kept = "access list: this account only";
+      if (icacls(["/grant:r", `${who}:(F)`]) && icacls(["/inheritance:r"]) && icacls(["/remove:g", "*S-1-1-0", "*S-1-5-11", "*S-1-5-32-545"])) kept = "access list: this account only";
     }
   }
   // On Windows a rename over a file being read is refused for an instant.

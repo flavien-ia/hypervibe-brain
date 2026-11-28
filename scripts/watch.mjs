@@ -23,7 +23,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
-import { PLUGIN_ROOT, ROOT, config, isFrench, userConfig } from "./lib.mjs";
+import { PLUGIN_ROOT, ROOT, config, isFrench, saidWrong, userConfig } from "./lib.mjs";
 import { add, pileOf } from "./judge.mjs";
 import { watchedApproved } from "./trust.mjs";
 import { excludedBy, exclusionsOf } from "./exclude.mjs";
@@ -65,7 +65,7 @@ export function watchConversations({ judge = "conversations", calm, from, cap } 
   requireJudge(judge);
   const floor = Date.parse(from ?? "") || 0;
   const r = spawnSync(process.execPath, [join(PLUGIN_ROOT, "scripts", "readers", "conversation.mjs"), "--list", "--calm", String(minutes(calm, 30) / 60_000), ...(floor ? ["--since", new Date(floor).toISOString()] : [])], { encoding: "utf8", windowsHide: true, timeout: 8 * 60_000, maxBuffer: 32 * 1024 * 1024 });
-  if (r.status !== 0) throw new Error(String(r.stderr ?? "").trim().slice(0, 400) || "the list of conversations failed");
+  if (r.status !== 0) throw new Error(saidWrong(r.stderr).slice(0, 400) || "the list of conversations failed");
   const list = JSON.parse(r.stdout);
 
   // Up to where each conversation was read: the references already judged.
@@ -251,7 +251,7 @@ export function conversationsBacklog({ judge = "conversations", days = 30, calm,
     return { items: r.fresh + r.resumed, waiting: pileOf(judge).length, days: span, put: r.fresh + r.resumed };
   }
   const r = spawnSync(process.execPath, [join(PLUGIN_ROOT, "scripts", "readers", "conversation.mjs"), "--list", "--calm", String(minutes(calm, 30) / 60_000), "--since", from], { encoding: "utf8", windowsHide: true, timeout: 8 * 60_000, maxBuffer: 32 * 1024 * 1024 });
-  if (r.status !== 0) throw new Error(String(r.stderr ?? "").trim().slice(0, 400) || "the list of conversations failed");
+  if (r.status !== 0) throw new Error(saidWrong(r.stderr).slice(0, 400) || "the list of conversations failed");
   const seen = Object.keys(readJson(join(ROOT, "sources", judge, "seen.json"), {}));
   const readUntil = new Map();
   for (const ref of seen) {

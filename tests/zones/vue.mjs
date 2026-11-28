@@ -183,9 +183,22 @@ async function main() {
   check("2026-11-27: with the token, it says which brain it serves, from where, and under which process", fullPing.text.split("\n")[1] === BRAIN.replaceAll("\\", "/") && Number.isInteger(said.pid) && typeof said.root === "string", fullPing.text);
   check("2026-11-27: the token's file is kept for the person alone (an access list of their own on Windows, its mode elsewhere)", process.platform === "win32" ? said.tokenKept === "access list: this account only" : said.tokenKept === "mode 600", String(said.tokenKept));
   if (process.platform === "win32") {
-    const acl = spawnSync("icacls", [join(HB, "live-token.json")], { encoding: "utf8", windowsHide: true }).stdout;
-    const entries = String(acl).split(/\r?\n/).filter((l) => /:\(/.test(l));
-    check("2026-11-27: on Windows, the token's file names one account, and inherits no other", entries.length === 1 && !/\(I\)/.test(entries[0]), acl);
+    // WHO IS ON THE FILE'S LIST, by identifier (the names icacls prints are translated). The check asked for ONE
+    // entry: on the bench's Windows, whose account is an administrator, the file is born with entries of its own for
+    // the system and the administrators, and three were found. Those two read any file of the computer whatever its
+    // list says: they are let be. What the rule forbids is anybody else: another account, or a group that is
+    // everybody; and nothing may come down from the folder.
+    const script = "$me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; Write-Output ('me|' + $me); foreach ($e in (Get-Acl -LiteralPath $env:HVB_FILE).Access) { try { $s = $e.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value } catch { $s = [string]$e.IdentityReference }; Write-Output ($s + '|' + [string]$e.AccessControlType + '|' + [string]$e.IsInherited) }";
+    const acl = String(spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], { encoding: "utf8", windowsHide: true, env: { ...process.env, HVB_FILE: join(HB, "live-token.json") } }).stdout);
+    const rows = acl.split(/\r?\n/).map((l) => l.trim().split("|")).filter((x) => x.length === 3 || x[0] === "me");
+    const me = rows.find((x) => x[0] === "me")?.[1] ?? "";
+    const entries = rows.filter((x) => x[0] !== "me");
+    const admitted = new Set([me, "S-1-5-18", "S-1-5-32-544"]);
+    check(
+      "2026-11-27: on Windows, the token's file names the person's account, the system and the administrators at most, and inherits nothing",
+      Boolean(me) && entries.some((x) => x[0] === me && x[1] === "Allow") && entries.every((x) => admitted.has(x[0]) && x[2] === "False"),
+      acl,
+    );
   }
   check("audit 2: the headers are on the answers of the API too", ping.headers.get("x-frame-options") === "DENY");
   const without = await ask("/api/map", { noToken: true });
@@ -687,6 +700,26 @@ async function pageChecks() {
   check("the server's dictionaries no longer word a private note", !("notePrivate" in sen) && !("notePrivate" in sfr) && !("privateBody" in en) && !("privateBody" in fr));
   const sBrackets = [...outputs(sen), ...outputs(sfr)].filter(([, s]) => /\w\(s\)/.test(s));
   check("E2: no plural between brackets in the server's words", !sBrackets.length, sBrackets.slice(0, 5).map(([k, s]) => `${k}: ${s}`).join(" | "));
+  // The server's reader of the journals (2026-11-27). The computer's live journal is written again once a day
+  // without its old lines: replaced by a file that is no shorter, it was taken for the same file grown, and read on
+  // from the old place.
+  {
+    const { journalReader } = await import(pathToFileURL(join(REPO, "live", "journal.mjs")).href);
+    const dir = join(tmpdir(), `hvb-zone-vue-reader-${process.pid}`);
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, "events.jsonl");
+    const line = (id) => `${JSON.stringify({ at: new Date().toISOString(), id, act: "write", who: "ai:zone", note: "n", what: "fact" })}\n`;
+    const reader = journalReader(() => () => true);
+    const ids = () => reader(file).map((e) => e.id).join(",");
+    writeFileSync(file, ["a1", "a2", "a3", "a4"].map(line).join(""), "utf8");
+    const first = ids();
+    appendFileSync(file, line("a5"), "utf8");
+    const grown = ids();
+    writeFileSync(file, ["a1", "a3", "a4", "a5", "b1", "b2"].map(line).join(""), "utf8");
+    const replaced = ids();
+    rmSync(dir, { recursive: true, force: true });
+    check("2026-11-27: a journal that only grew is read on, one replaced by a file that is no shorter is read again whole", first === "a1,a2,a3,a4" && grown === "a1,a2,a3,a4,a5" && replaced === "a1,a3,a4,a5,b1,b2", `${first} | ${grown} | ${replaced}`);
+  }
 }
 
 /**
