@@ -351,8 +351,17 @@ function paintCrown(c) {
     const x = e.x + Math.cos(out) * 6, y = e.y + Math.sin(out) * 6;
     const w = c.measureText(label).width, h = 14;
     arcNames.push({ arc: a, x: (align === "left" ? x : align === "right" ? x - w : x - w / 2) - 5, y: (baseline === "top" ? y : baseline === "bottom" ? y - h : y - h / 2) - 4, w: w + 10, h: h + 8 });
-    c.globalAlpha = a.harness.off ? 0.6 : 1;
-    writeText(c, label, x, y, chosen === harnessKey(a.key) ? colors.mark : inkOf(a.color));
+    // Hovered, the name lights up and is underlined: it is clickable (2026-11-28).
+    const over = hoveredArc === harnessKey(a.key);
+    c.globalAlpha = a.harness.off && !over ? 0.6 : 1;
+    writeText(c, label, x, y, over || chosen === harnessKey(a.key) ? colors.mark : inkOf(a.color));
+    if (over) {
+      const box = arcNames[arcNames.length - 1];
+      const under = box.y + box.h - 5;
+      c.beginPath();
+      c.moveTo(box.x + 5, under); c.lineTo(box.x + box.w - 5, under);
+      c.strokeStyle = colors.mark; c.lineWidth = 1.2; c.stroke();
+    }
     c.globalAlpha = 1;
     c.textBaseline = "alphabetic";
   }
@@ -990,8 +999,22 @@ export function glowSkills(c) {
   return alive;
 }
 
-/** The card closes with the panel. */
-export const forgetPiece = () => { chosen = null; };
+/** The card closes with the panel, and what it showed is no longer marked on the floor (2026-11-28). */
+export const forgetPiece = () => {
+  if (chosen === null) return;
+  chosen = null;
+  paint();
+};
+
+/** The key of the arc whose name is under the pointer, lit up by paintCrown. @type {string | null} */
+let hoveredArc = null;
+/** The name of an arc under the pointer (pointer.js), or none. @param {Arc | null} a */
+export function hoverArc(a) {
+  const next = a ? harnessKey(a.key) : null;
+  if (next === hoveredArc) return;
+  hoveredArc = next;
+  paint();
+}
 
 // THE SKILL UNDER THE POINTER (2026-11-24). Hovered, the dot of a skill is
 // circled by a ring in its harness's colour, a dark edge on each side, set a

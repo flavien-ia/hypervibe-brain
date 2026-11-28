@@ -93,6 +93,7 @@ const refusalWords = (answer) => (!answer ? t("validateNoServer") : !answer.ok &
  * @returns {string | null}
  */
 export function nextSeed(besides = null) {
+  /** @type {string | null} */
   let best = null;
   let most = -1;
   for (const n of state.notes) {

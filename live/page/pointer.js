@@ -8,7 +8,7 @@ import { glideTo, stopGlide, viewOn } from "./camera.js";
 import { scene } from "./canvas.js";
 import { loadTerritories } from "./data.js";
 import { $ } from "./dom.js";
-import { arcNameAt, chooseHarness, choosePiece, describeArc, describePiece, floorFocus, floorNameAt, forgetPiece, hoverPiece, pieceAt, toggleFocus, turnFloors } from "./executive.js";
+import { arcNameAt, chooseHarness, choosePiece, describeArc, describePiece, floorFocus, floorNameAt, forgetPiece, hoverArc, hoverPiece, pieceAt, toggleFocus, turnFloors } from "./executive.js";
 import { clockSeconds, conversationName, escapeHtml, shorten, wordWhy } from "./format.js";
 import { t } from "./i18n.js";
 import { domainName, typeName } from "./map.js";
@@ -246,6 +246,7 @@ function onHover(ev) {
   const floorName = floorNameAt(ev.clientX, ev.clientY);
   if (floorName) {
     hoverPiece(null);
+    hoverArc(null);
     onPiece = true;
     scene.classList.add("over-something");
     showHover(ev, escapeHtml(t(floorFocus() === floorName ? "execFloorBoth" : "execFloorForward")));
@@ -256,6 +257,7 @@ function onHover(ev) {
   const piece = pieceAt(ev.clientX, ev.clientY);
   hoverPiece(piece);
   if (piece) {
+    hoverArc(null);
     onPiece = true;
     scene.classList.add("over-something");
     showHover(ev, describePiece(piece));
@@ -263,6 +265,7 @@ function onHover(ev) {
   }
   // The name of an arc of the crown: a click opens the card of its harness (2026-11-27).
   const arc = arcNameAt(ev.clientX, ev.clientY);
+  hoverArc(arc);
   if (arc) {
     onPiece = true;
     scene.classList.add("over-something");
@@ -434,6 +437,7 @@ export function setUpPointer() {
   scene.addEventListener("pointerleave", () => {
     if (state.hoverNote || state.hoverTool) { state.hoverNote = null; state.hoverTool = null; paintLive(); }
     hoverPiece(null);
+    hoverArc(null);
     hoverBox.hidden = true;
   });
 }
