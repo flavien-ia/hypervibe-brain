@@ -413,6 +413,57 @@ export function gestureRefusal(input) {
   );
 }
 
+// THE KEYS BESIDE THE SETTINGS (2026-11-28): the key of the live view
+// (live-token.json), the background readers' access (judge-token.json) and an
+// online agent's key to the cloud copy (token-<name>.txt). The plugin's own
+// programs read them; the AI never does, not even to look: whoever holds the
+// view's key acts on the view as the person does (validates a note, pauses a
+// source, switches a plugin). A vault would not keep them better: the view
+// and the readers need them with nobody there to open it, and an AI reads an
+// open vault as it reads a file.
+const KEY_FILE = /^(live-token\.json|judge-token\.json|token-[\w.-]+\.txt)$/i;
+const KEY_NAME = /(live-token\.json|judge-token\.json|token-[\w.-]+\.txt)/i;
+/** What reads a whole folder: a pattern, or a reader told to go down. */
+const WHOLE_FOLDER = /[*?]|(^|\s)(-[a-z]*r[a-z]*|-R|--recursive|-recurse)(\s|$)/i;
+/** The tools that only read, which the lock of the keys alone looks at. */
+export const READ_TOOL = /^(Read|Grep|Glob)$/;
+/**
+ * The refusal for a tool or a command that would read one of the keys kept
+ * beside the plugin's settings (or the whole folder they are in), or null.
+ * @param {{ tool_name?: string, tool_input?: any, cwd?: string }} input
+ * @returns {string | null}
+ */
+export function keyRefusal(input) {
+  const tool = String(input?.tool_name ?? "");
+  const cwd = typeof input?.cwd === "string" && input.cwd ? input.cwd : undefined;
+  const folder = spellings(SETTINGS_DIR);
+  const isKey = (p) => folder.some((f) => p.startsWith(`${f}/`) && KEY_FILE.test(p.slice(f.length + 1)));
+  const inFolder = (p) => folder.some((f) => under(f, p));
+  let aimed = false;
+  if (!isShell(tool)) {
+    const paths = pathsOf(input).map((p) => spellings(p, cwd));
+    aimed = paths.some((list) => list.some(isKey));
+    // A search through the folder reads what is in its files (Grep), a list of it only their names (Glob).
+    if (!aimed && tool === "Grep") aimed = paths.some((list) => list.some(inFolder)) || (!paths.length && folder.some((f) => under(f, spelled(cwd ?? process.cwd()))));
+  }
+  const command = commandOf(input);
+  if (!aimed && command) {
+    if (KEY_NAME.test(command)) aimed = true;
+    else {
+      const { paths, folders } = commandPaths(command, cwd);
+      const there = paths.some((list) => list.some(isKey));
+      const whole = WHOLE_FOLDER.test(command) && (paths.some((list) => list.some(inFolder)) || folders.some((list) => list.some(inFolder)));
+      aimed = there || whole;
+    }
+  }
+  if (!aimed) return null;
+  return (
+    "Refused: this would read one of the keys the brain plugin keeps beside its settings (the live view's key, the background readers' access, an online agent's key), or the whole folder they are in. " +
+    "The plugin's own programs read them; the AI never does, not even to look or to check one: with the view's key, anything acts on the view as the person does. " +
+    "What you need from them, a plugin command gives (judge-token.mjs state, /brain:live, cloud.mjs). Do not look for another way."
+  );
+}
+
 /**
  * The refusal for a write into the plugin's own settings on this computer
  * (~/.hypervibe-brain/config.json: the brain's place, the locks, the

@@ -2,7 +2,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell|mcp__terminal__run_in_terminal|mcp__.*(write|edit|create|move|rename|delete|remove|append|save|copy|patch|replace|insert|exec|shell|command|process).*",
+        "matcher": "Read|Grep|Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell|mcp__terminal__run_in_terminal|mcp__.*(write|edit|create|move|rename|delete|remove|append|save|copy|patch|replace|insert|exec|shell|command|process).*",
         "hooks": [
           {
             "type": "command",

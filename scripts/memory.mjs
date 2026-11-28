@@ -179,7 +179,12 @@ export function backup() {
   const found = find();
   if (!found.files) return { ok: true, files: 0, nothing: true };
   const at = new Date().toISOString();
-  const dest = join(BACKUPS(), at.replace(/[:.]/g, "-").slice(0, 19));
+  // (Two backups in the same second had one folder, the second over the first:
+  // seen on 2026-11-28 on Linux, quick enough for it. A folder that is there
+  // already gets a number after its name.)
+  const stem = join(BACKUPS(), at.replace(/[:.]/g, "-").slice(0, 19));
+  let dest = stem;
+  for (let n = 2; existsSync(dest); n++) dest = `${stem}-${n}`;
   const files = [];
   for (const p of found.projects) {
     for (const f of p.list) {

@@ -94,7 +94,7 @@ Seul ce qui est éteint y est écrit : un fichier absent veut dire que tout est 
 
 **Un garde-fou.** Aucune commande ne met un garde-fou en pause, et une clé `guards` écrite à la main dans `switches.json` n'est pas lue. La vue n'a pas non plus de bouton pour cela, et c'est voulu. Un tel bouton ne vaudrait que si la personne seule pouvait l'actionner, or la vue ne sait pas distinguer la personne d'un programme de son compte :
 
-- le jeton de la vue est un fichier de son compte (`~/.hypervibe-brain/live-token.json`), que le plugin lit lui-même pour ses suggestions. Il est fermé aux autres comptes et aux pages web, pas à un programme du compte : une IA qui a un terminal peut le lire, puis appeler n'importe quelle route ;
+- le jeton de la vue est un fichier de son compte (`~/.hypervibe-brain/live-token.json`), que le plugin lit lui-même pour ses suggestions. Il est fermé aux autres comptes et aux pages web, pas à un programme du compte. Depuis le 28 novembre 2026, le verrou refuse les outils et les commandes de l'IA qui nomment ce fichier ; un programme écrit pour le trouver sans le nommer passe encore, puis appelle n'importe quelle route : le verrou ralentit, il ne garde pas ;
 - une IA qui pilote un navigateur clique dans la vue et tape une confirmation comme n'importe qui.
 
 Le verrou du plugin lit le texte d'une commande et ne peut fermer ni l'un ni l'autre avec certitude. Mettre un garde-fou en pause reste donc un geste à la main : la personne ouvre son fichier, ou retire sa ligne des réglages de Claude Code. Le jour où ce geste existera, il passera par le même chemin que les approbations (une fenêtre de terminal de la personne), pas par la vue.

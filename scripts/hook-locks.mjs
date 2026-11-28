@@ -29,14 +29,15 @@ let out = "";
 try {
   const { executiveRefusal, lockedBrain } = await import("./hook-executive.mjs");
   const { memoryRefusal } = await import("./hook-memory.mjs");
-  const { deny, gestureRefusal, readInput, readSettings, settingsRefusal } = await import("./lock-paths.mjs");
+  const { READ_TOOL, deny, gestureRefusal, keyRefusal, readInput, readSettings, settingsRefusal } = await import("./lock-paths.mjs");
   try {
     const settings = readSettings();
     const brain = lockedBrain(settings);
     const input = readInput();
     if (!input) out = deny("Refused: the brain plugin's lock could not read what this tool is about to do, so it let nothing through (it guards the person's memory folders, the guards of their brain and the plugin's settings). Try again; if it goes on, tell the person.");
     else {
-      const reason = gestureRefusal(input) ?? settingsRefusal(input) ?? memoryRefusal(input, settings) ?? executiveRefusal(input, brain);
+      // (A tool that only reads meets the lock of the keys alone: reading stays free everywhere else.)
+      const reason = READ_TOOL.test(String(input.tool_name ?? "")) ? keyRefusal(input) : gestureRefusal(input) ?? keyRefusal(input) ?? settingsRefusal(input) ?? memoryRefusal(input, settings) ?? executiveRefusal(input, brain);
       if (reason) out = deny(reason);
     }
   } catch (e) {

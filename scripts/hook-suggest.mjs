@@ -40,6 +40,7 @@
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { reloadReminder } from "./reload-reminder.mjs";
 import { brainSettings, correctionText, soundsLikeRule } from "./reminders.mjs";
 
 const BUDGET = 1500;
@@ -96,6 +97,8 @@ try {
 } catch {
   reminder = "";
 }
+// A plugin switched since this conversation started: the person types /reload-plugins (2026-11-28).
+reminder = [reloadReminder(input), reminder].filter(Boolean).join("\n\n");
 /** Writes what the AI should read with the message, then leaves. */
 function say(text) {
   const all = [reminder, text].filter(Boolean).join("\n\n");

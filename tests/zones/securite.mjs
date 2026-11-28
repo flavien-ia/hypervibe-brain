@@ -463,7 +463,7 @@ try {
     const got = readJ(seen, {});
     const after = (flag) => got.args?.[got.args.indexOf(flag) + 1];
     check("no settings of the person, no MCP server, no tool, nobody to ask", /A name/.test(r.out) && got.args?.includes("--setting-sources") && after("--setting-sources") === "" && got.args.includes("--strict-mcp-config") && after("--mcp-config") === '{"mcpServers":{}}' && after("--tools") === "" && after("--permission-mode") === "dontAsk" && got.args.includes("--disable-slash-commands"), `${r.all} ${JSON.stringify(got.args)}`);
-    check("an empty folder of its own to stand in, and none of the keys of the session", fwd(got.cwd ?? "").toLowerCase() === fwd(join(HB, "judge", "room")).toLowerCase() && got.here?.length === 0 && !(got.env ?? []).includes("A_KEY_OF_THE_SESSION"), JSON.stringify({ cwd: got.cwd, here: got.here }));
+    check("an empty folder of its own to stand in, and none of the keys of the session", fwd(got.cwd ?? "").toLowerCase() === fwd(realpathSync(join(HB, "judge", "room"))).toLowerCase() && got.here?.length === 0 && !(got.env ?? []).includes("A_KEY_OF_THE_SESSION"), JSON.stringify({ cwd: got.cwd, here: got.here }));
   }
 
   // ================================================================ 8. the locks
@@ -599,10 +599,28 @@ try {
     const t0 = Date.now();
     const quick = locks("Bash", { command: long });
     check("a long command that names no lock is let through, and quickly (one start of Node, no walk of the disk for each word)", quick === "pass" && Date.now() - t0 < 5000, `${quick} in ${Date.now() - t0} ms`);
+    // The keys beside the settings: never read by the AI, not even to look (2026-11-28).
+    const hbf = fwd(HB);
+    const keyCases = [
+      ["Read", { file_path: `${hbf}/live-token.json` }, "deny"],
+      ["Read", { file_path: `${hbf}/judge-token.json` }, "deny"],
+      ["Grep", { pattern: "token", path: hbf }, "deny"],
+      ["Bash", { command: "cat ~/.hypervibe-brain/judge-token.json" }, "deny"],
+      ["Bash", { command: `head -c 20 ${hbf}/token-agent.txt` }, "deny"],
+      ["Bash", { command: `grep -r token ${hbf}` }, "deny"],
+      ["Bash", { command: `cat ${hbf}/*` }, "deny"],
+      ["PowerShell", { command: `Get-Content ${hbf.replaceAll("/", "\\")}\\live-token.json` }, "deny"],
+      ["Read", { file_path: `${hbf}/config.json` }, "pass"],
+      ["Read", { file_path: fwd(join(SCRIPTS, "live.mjs")) }, "pass"],
+      ["Grep", { pattern: "token", path: fwd(SCRIPTS) }, "pass"],
+      ["Bash", { command: `tail -3 ${hbf}/events.jsonl` }, "pass"],
+    ];
+    const keyWrong = keyCases.filter(([tool, input, want]) => locks(String(tool), input) !== want).map(([tool, input, want]) => `${tool} ${JSON.stringify(input)} wanted ${want}`);
+    check("the keys beside the settings (the view's, the readers', an agent's) are never read by the AI, by Read, Grep or a command; the settings and the rest of the folder stay readable", keyWrong.length === 0, keyWrong.join("\n        "));
     check("closed when it cannot tell: an input that cannot be read is refused, not let through", locks("", {}, BASE, "{ not json") === "deny" && locks("", {}, BASE, "") === "deny");
     const declared = readJ(join(PLUGIN, "hooks", "hooks.json")).hooks.PreToolUse.find((x) => x.hooks.some((h) => h.command.includes("hook-locks.mjs")));
     const matches = (tool) => new RegExp(`^(?:${declared.matcher})$`).test(tool);
-    check("the plugin calls its lock for the tools that write a file, the shells, and the tools of another server that write or run", ["Write", "Edit", "MultiEdit", "NotebookEdit", "Bash", "PowerShell", "mcp__terminal__run_in_terminal", "mcp__files__write_file", "mcp__files__move_file", "mcp__shell__execute_command"].every(matches) && !matches("Read") && !matches("mcp__plugin_brain_brain__brain_search"), declared.matcher);
+    check("the plugin calls its lock for the tools that write a file, the shells, the tools of another server that write or run, and Read and Grep (for the keys)", ["Write", "Edit", "MultiEdit", "NotebookEdit", "Bash", "PowerShell", "mcp__terminal__run_in_terminal", "mcp__files__write_file", "mcp__files__move_file", "mcp__shell__execute_command"].every(matches) && matches("Read") && matches("Grep") && !matches("mcp__plugin_brain_brain__brain_search"), declared.matcher);
     writeFileSync(cfgFile, "{ this is not json", "utf8");
     check("settings that are there and cannot be read do not open the memory's lock", locks("Write", { file_path: `${memory}/note.md` }) === "deny");
     writeFileSync(cfgFile, JSON.stringify({ brain: fwd(BRAIN), trustSince: { [fwd(BRAIN)]: new Date().toISOString() } }), "utf8");

@@ -96,6 +96,7 @@ import { homedir } from "node:os";
 import { basename, join, relative, resolve } from "node:path";
 import { logEvent } from "./journal.mjs";
 import { HOME, PLUGIN_ROOT, ROOT, hasBrain, readJsonFile, requireBrain, writeFileAtomic, writeJsonAtomic } from "./lib.mjs";
+import { noteSwitch } from "./reload-reminder.mjs";
 import { scanSecrets } from "./secret-scan.mjs";
 import { NOT_THE_PERSON, approval, approve, guardPending, guardPrint, personAsks, skillPending, skillPrint } from "./trust.mjs";
 
@@ -679,6 +680,7 @@ export function switchHarness(name, to, { confirmed = false } = {}) {
     if (!applied.ok) return { ok: false, harness: key, error: applied.error ?? "the platform's settings did not take the change" };
     writeSwitches((s) => s.harnesses.add(key));
     logEvent({ act: "signal", who: asker(), what: "switched", kind: "harness", name: key, to: "off", ...(protects.length ? { confirmed: true, hooks: protects.length } : {}) });
+    noteSwitch(key, "off");
     return { ok: true, harness: key, switch: "off", here: "disabled", how: applied.how, effect: HARNESS_EFFECT, ...(applied.backup ? { backup: applied.backup } : {}), ...(protects.length ? { protectionRemoved: protects } : {}) };
   }
   writeSwitches((s) => s.harnesses.delete(key));
@@ -686,6 +688,7 @@ export function switchHarness(name, to, { confirmed = false } = {}) {
   if (!plugin) return { ok: true, harness: key, switch: "on", here: "not installed", effect: "it is on in the brain again; it is not installed on this computer, so nothing changed here" };
   const applied = applyHarness(key, true);
   if (!applied.ok) return { ok: false, harness: key, error: applied.error ?? "the platform's settings did not take the change" };
+  noteSwitch(key, "on");
   return { ok: true, harness: key, switch: "on", here: "enabled", how: applied.how, effect: HARNESS_EFFECT, ...(applied.backup ? { backup: applied.backup } : {}) };
 }
 

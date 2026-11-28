@@ -9,7 +9,7 @@
 //   node tests/zones/interrupteurs.mjs
 
 import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -258,11 +258,13 @@ try {
     check("the switches of the skills and the harnesses are the AI's to ask for", lock("Bash", { command: `node "${fwd(join(PLUGIN, "scripts", "executive.mjs"))}" switch skill essai off` }) === "pass");
     // WHY THE LIVE VIEW HAS NO BUTTON THAT PAUSES A GUARD (docs/executive.md).
     // Such a button would be worth what the view's token is worth against the
-    // AI, and the token is a file of the person's account that any program of
-    // theirs reads (the plugin's own suggestion hook does). The day this check
-    // fails, a lock keeps the token from the AI, and the question can be asked again.
+    // AI. Since 2026-11-28 a lock refuses the AI's tools and commands that name
+    // the token's file; but the token is still a file of the person's account
+    // that a program of theirs reads (the plugin's own suggestion hook does),
+    // and a program written to find it is not a command that names it. Still
+    // no button: the lock slows, it does not keep.
     const tokenFile = fwd(join(HOME, ".hypervibe-brain", "live-token.json"));
-    check("(why the view pauses no guard) the view's token is a file the AI's own tools may read: no lock stands in the way", lock("Bash", { command: `cat ${tokenFile}` }) === "pass" && lock("Read", { file_path: tokenFile }) === "pass");
+    check("the view's token is refused to the AI's tools and commands that name it (a lock that slows: the view still pauses no guard)", lock("Bash", { command: `cat ${tokenFile}` }) === "deny" && lock("Read", { file_path: tokenFile }) === "deny");
   }
   run(["switch", "skill", "essai", "on"]);
   check("the script writes only its own keys in the switches", JSON.stringify(readJ(SWITCHES)) === '{"skills":{},"harnesses":{}}', readFileSync(SWITCHES, "utf8"));
@@ -319,6 +321,28 @@ try {
     check("a password with words between its name and its value", kinds(`Mot de pa${"sse"} de dev : \`${value}\`.`) === "a password" && kinds(`pass${"word"} for the admin: ${value}`) === "a password");
     check("a deposit address whose name ends with a random part", kinds(`- purchases: acme-shop-${"y9k2" + "m4p7q1"}@suppliers.example.com`) === "an email address that works as a key");
     check("a sentence about passwords, plain addresses and a year in an address are left alone", !kinds("Le mot de passe se saisit dans la fenêtre : jamais dans le chat.") && !kinds("marie.durand@example.com, jean-pierre@example.com") && !kinds("contact-2026@example.com, team-support@example.com"));
+  }
+
+  console.log("\nA plugin switched while a conversation is open: its next message says to type /reload-plugins (2026-11-28)");
+  {
+    const talk = join(BASE, "talks");
+    mkdirSync(talk, { recursive: true });
+    const before = join(talk, "before.jsonl");
+    writeFileSync(before, "", "utf8");
+    await new Promise((r) => setTimeout(r, 60));
+    const note = spawnSync(process.execPath, ["--input-type=module", "-e", `import { noteSwitch } from ${JSON.stringify(pathToFileURL(join(PLUGIN, "scripts", "reload-reminder.mjs")).href)}; noteSwitch("demo-plugin@a-market", "off");`], { env: base, encoding: "utf8" });
+    await new Promise((r) => setTimeout(r, 60));
+    const after = join(talk, "after.jsonl");
+    writeFileSync(after, "", "utf8");
+    const said = (session, transcript) => {
+      const r = spawnSync(process.execPath, [join(PLUGIN, "scripts", "hook-suggest.mjs")], { env: { ...base, HVBRAIN_SUGGEST: "off" }, input: JSON.stringify({ prompt: "Where were we?", session_id: session, transcript_path: transcript }), encoding: "utf8" });
+      try { return String(JSON.parse(r.stdout).hookSpecificOutput.additionalContext); } catch { return ""; }
+    };
+    const first = said("talk-1", before);
+    check("a conversation open before the switch is told, with the plugin's name", note.status === 0 && /\/reload-plugins/.test(first) && /demo-plugin switched off/.test(first), `${note.stderr} ${first}`);
+    check("told once: its next message says nothing more", said("talk-1", before) === "");
+    if (statSync(after).birthtimeMs > 0) check("a conversation that started after the switch has it already: it is not told", said("talk-2", after) === "");
+    else console.log("  (this disk gives no birth time to a file: a conversation started later is told too, which does no harm)");
   }
 } finally {
   for (let tries = 0; tries < 5; tries++) {
